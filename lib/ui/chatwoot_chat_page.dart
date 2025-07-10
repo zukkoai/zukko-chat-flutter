@@ -43,7 +43,7 @@ class ChatwootChat extends StatefulWidget {
   final double? onEndReachedThreshold;
 
   /// See [Message.onMessageLongPress]
-  final void Function(types.Message)? onMessageLongPress;
+  final void Function(BuildContext context, types.Message)? onMessageLongPress;
 
   /// See [Message.onMessageTap]
   final void Function(types.Message)? onMessageTap;
@@ -51,16 +51,13 @@ class ChatwootChat extends StatefulWidget {
   /// See [Input.onSendPressed]
   final void Function(types.PartialText)? onSendPressed;
 
-  /// See [Input.onTextChanged]
-  final void Function(String)? onTextChanged;
-
   /// Show avatars for received messages.
   final bool showUserAvatars;
 
   /// Show user names for received messages.
   final bool showUserNames;
 
-  final ChatwootChatTheme theme;
+  final ChatwootChatTheme? theme;
 
   /// See [ChatwootL10n]
   final ChatwootL10n l10n;
@@ -128,10 +125,9 @@ class ChatwootChat extends StatefulWidget {
       this.onMessageLongPress,
       this.onMessageTap,
       this.onSendPressed,
-      this.onTextChanged,
       this.showUserAvatars = true,
       this.showUserNames = true,
-      this.theme = const ChatwootChatTheme(),
+      this.theme,
       this.l10n = const ChatwootL10n(),
       this.timeFormat,
       this.dateFormat,
@@ -333,7 +329,7 @@ class _ChatwootChatState extends State<ChatwootChat> {
     });
   }
 
-  void _handleMessageTap(types.Message message) async {
+  void _handleMessageTap(BuildContext context, types.Message message) async {
     if (message.status == types.Status.error && message is types.TextMessage) {
       _handleResendMessage(message);
     }
@@ -345,7 +341,9 @@ class _ChatwootChatState extends State<ChatwootChat> {
     types.PreviewData previewData,
   ) {
     final index = _messages.indexWhere((element) => element.id == message.id);
-    final updatedMessage = _messages[index].copyWith(previewData: previewData);
+    final updatedMetaData = _messages[index].metadata ?? Map();
+    updatedMetaData["previewData"] = previewData;
+    final updatedMessage = _messages[index].copyWith(metadata: updatedMetaData);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
@@ -402,7 +400,7 @@ class _ChatwootChatState extends State<ChatwootChat> {
     final horizontalPadding = widget.isPresentedInDialog ? 8.0 : 16.0;
     return Scaffold(
       appBar: widget.appBar,
-      backgroundColor: widget.theme.backgroundColor,
+      backgroundColor: widget.theme?.backgroundColor,
       body: Column(
         children: [
           Flexible(
@@ -418,12 +416,11 @@ class _ChatwootChatState extends State<ChatwootChat> {
                 onEndReached: widget.onEndReached,
                 onEndReachedThreshold: widget.onEndReachedThreshold,
                 onMessageLongPress: widget.onMessageLongPress,
-                onTextChanged: widget.onTextChanged,
                 showUserAvatars: widget.showUserAvatars,
                 showUserNames: widget.showUserNames,
                 timeFormat: widget.timeFormat ?? DateFormat.Hm(),
                 dateFormat: widget.timeFormat ?? DateFormat("EEEE MMMM d"),
-                theme: widget.theme,
+                theme: widget.theme ?? ChatwootChatTheme(),
                 l10n: widget.l10n,
               ),
             ),

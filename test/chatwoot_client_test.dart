@@ -21,7 +21,9 @@ void main() {
     final testBaseUrl = "https://testbaseurl.com";
     late ProviderContainer mockProviderContainer;
     final mockLocalStorage = MockLocalStorage();
+    final mockLocalStorageProvider = Provider.family((ref,params)=>mockLocalStorage);
     final mockRepository = MockChatwootRepository();
+    final mockRepositoryProvider = Provider.family((ref,params)=>mockRepository);
 
     final testUser = ChatwootUser(
         identifier: "identifier",
@@ -38,13 +40,14 @@ void main() {
     setUp(() async {
       when(mockRepository.initialize(testUser))
           .thenAnswer((realInvocation) => Future.microtask(() {}));
-      mockProviderContainer = ProviderContainer();
-      mockProviderContainer.updateOverrides([
-        localStorageProvider
-            .overrideWithProvider((ref, param) => mockLocalStorage),
-        chatwootRepositoryProvider
-            .overrideWithProvider((ref, param) => mockRepository)
-      ]);
+      mockProviderContainer = ProviderContainer(
+          overrides:[
+            localStorageProvider
+                .overrideWithProvider(mockLocalStorageProvider),
+            chatwootRepositoryProvider
+                .overrideWithProvider(mockRepositoryProvider)
+          ]
+      );
       ChatwootClient.providerContainerMap.update(
           testClientInstanceKey, (_) => mockProviderContainer,
           ifAbsent: () => mockProviderContainer);
