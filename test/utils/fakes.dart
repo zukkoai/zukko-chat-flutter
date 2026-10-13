@@ -1,0 +1,139 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
+import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
+import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+/// Scriptable [ChatwootClientService]: set the `*Result`s, inspect the records.
+class FakeClientService extends Fake implements ChatwootClientService {
+  Object? contactResult; // ChatwootContact or an exception
+  Object? conversationsResult = <ChatwootConversation>[];
+  Object? messagesResult = <ChatwootMessage>[];
+  Object? createMessageResult; // ChatwootMessage or an exception
+
+  final createdMessageRequests = <ChatwootNewMessageRequest>[];
+  var getAllMessagesCalls = 0;
+
+  T _unwrap<T>(Object? result) {
+    if (result is Exception || result is Error) throw result as Object;
+    return result as T;
+  }
+
+  @override
+  Future<ChatwootContact> getContact() async => _unwrap(contactResult);
+
+  @override
+  Future<List<ChatwootConversation>> getConversations() async =>
+      _unwrap(conversationsResult);
+
+  @override
+  Future<List<ChatwootMessage>> getAllMessages() async {
+    getAllMessagesCalls++;
+    return _unwrap(messagesResult);
+  }
+
+  @override
+  Future<ChatwootMessage> createMessage(
+    ChatwootNewMessageRequest request,
+  ) async {
+    createdMessageRequests.add(request);
+    return _unwrap(createMessageResult);
+  }
+}
+
+/// A scripted websocket peer: [emit] frames as the server, inspect what the
+/// client [sent], close it from either side.
+class FakeChannel extends Fake implements WebSocketChannel {
+  final _incoming = StreamController<dynamic>();
+  final FakeSink _sink = FakeSink();
+
+  @override
+  Stream<dynamic> get stream => _incoming.stream;
+
+  @override
+  WebSocketSink get sink => _sink;
+
+  @override
+  Future<void> get ready => Future.value();
+
+  /// Decoded frames the client wrote.
+  List<Map<String, dynamic>> get sent => [
+    for (final f in _sink.added)
+      jsonDecode(f as String) as Map<String, dynamic>,
+  ];
+
+  /// Decoded `update_presence` frames among [sent].
+  int get presenceFrames => sent
+      .where(
+        (f) =>
+            f['command'] == 'message' &&
+            jsonDecode(f['data'] as String)['action'] == 'update_presence',
+      )
+      .length;
+
+  bool get isClosedByClient => _sink.closeCode != null;
+  int? get closeCodeByClient => _sink.closeCode;
+  set failOnAdd(bool value) => _sink.failOnAdd = value;
+
+  /// A JSON object/list is encoded, a String is sent as is, anything else raw.
+  void emit(Object frame) =>
+      _incoming.add(frame is Map || frame is List ? jsonEncode(frame) : frame);
+
+  void welcome() => emit({'type': 'welcome'});
+  void confirm() => emit({'type': 'confirm_subscription'});
+  void ping() => emit({'type': 'ping', 'message': 1});
+
+  /// ActionCable broadcast: `{identifier, message: {event, data}}`.
+  void event(String name, Map<String, Object?> data) => emit({
+    'identifier': '{"channel":"RoomChannel"}',
+    'message': {'event': name, 'data': data},
+  });
+
+  void serverClose() => _incoming.close();
+  void serverError() => _incoming.addError(const SocketException('lost'));
+}
+
+class FakeSink extends Fake implements WebSocketSink {
+  final added = <Object?>[];
+  int? closeCode;
+  bool failOnAdd = false;
+
+  @override
+  void add(Object? data) {
+    if (failOnAdd || closeCode != null) throw StateError('sink is closed');
+    added.add(data);
+  }
+
+  @override
+  Future<void> close([int? closeCode, String? closeReason]) async {
+    this.closeCode ??= closeCode ?? 1005;
+  }
+}
+
+/// Channel factory handed to `ChatwootSocket`: records urls, hands out
+/// [FakeChannel]s.
+class FakeSocketHub {
+  final urls = <Uri>[];
+  final channels = <FakeChannel>[];
+  Object? failWith;
+
+  FakeChannel get last => channels.last;
+
+  WebSocketChannel connect(Uri url) {
+    urls.add(url);
+    if (failWith != null) throw failWith!;
+    final channel = FakeChannel();
+    channels.add(channel);
+    return channel;
+  }
+}
+
+ChatwootClientException failure(ChatwootClientExceptionType type) =>
+    ChatwootClientException('boom', type);
