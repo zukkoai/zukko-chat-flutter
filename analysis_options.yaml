@@ -1,4 +1,23 @@
+include: package:flutter_lints/flutter.yaml
+
 analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
   exclude:
     - "**.g.dart"
     - "**.mocks.dart"
+    - build/**
+
+linter:
+  rules:
+    unawaited_futures: true
+    avoid_print: true
+    always_declare_return_types: true
+    prefer_final_fields: true
+    use_build_context_synchronously: true
+    depend_on_referenced_packages: true
+    # Public enum values (error types, wire names) keep their established
+    # UPPER_CASE / snake_case names; renaming them would break every caller.
+    constant_identifier_names: false

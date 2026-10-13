@@ -1,0 +1,15 @@
+targets:
+  $default:
+    sources:
+      # codegen is only needed in lib/; keeps example/ (and its ios/.symlinks) out
+      include:
+        - lib/**
+        - $package$
+        - pubspec.*
+    builders:
+      # lib/hive_registrar.g.dart would duplicate hive_adapters.dart (typeIds
+      # are registered there, with the foreign-adapter check) and is unused.
+      hive_ce_generator:hive_registrar_generator:
+        enabled: false
+      hive_ce_generator:hive_registrar_intermediate_generator:
+        enabled: false
