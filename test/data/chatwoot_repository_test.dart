@@ -1,535 +1,404 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:chatwoot_sdk/chatwoot_callbacks.dart';
-import 'package:chatwoot_sdk/data/chatwoot_repository.dart';
-import 'package:chatwoot_sdk/data/local/entity/chatwoot_contact.dart';
-import 'package:chatwoot_sdk/data/local/entity/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/data/local/entity/chatwoot_message.dart';
-import 'package:chatwoot_sdk/data/local/entity/chatwoot_user.dart';
-import 'package:chatwoot_sdk/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/data/remote/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/data/remote/requests/chatwoot_action_data.dart';
-import 'package:chatwoot_sdk/data/remote/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/data/remote/service/chatwoot_client_service.dart';
+import 'package:chatwoot_sdk/src/core/chatwoot_callbacks.dart';
+import 'package:chatwoot_sdk/src/data/local/dao/chatwoot_messages_dao.dart';
+import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
+import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
+import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
+import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
-import '../utils/test_resources_util.dart';
-import 'chatwoot_repository_test.mocks.dart';
-import 'local/local_storage_test.mocks.dart';
+import '../utils/fakes.dart';
+import '../utils/fixtures.dart';
 
-@GenerateMocks(
-    [LocalStorage, ChatwootClientService, ChatwootCallbacks, WebSocketChannel])
+/// Behaviour tests: a real in-memory [LocalStorage], a scripted service and
+/// recording callbacks.
 void main() {
-  group("Chatwoot Repository Tests", () {
-    late final ChatwootContact testContact;
+  late FakeClientService service;
+  late LocalStorage storage;
+  late ChatwootRepositoryImpl repo;
+  late FakeSocketHub hub;
 
-    late final ChatwootConversation testConversation;
-    final testUser = ChatwootUser(
-        identifier: "identifier",
-        identifierHash: "identifierHash",
-        name: "name",
-        email: "email",
-        avatarUrl: "avatarUrl",
-        customAttributes: {});
-    late final ChatwootMessage testMessage;
+  // recorded callback invocations
+  late List<ChatwootClientException> errors;
+  late List<ChatwootMessage> retrieved;
+  late List<ChatwootMessage> persistedRetrieved;
+  late List<(ChatwootMessage, String)> sent;
+  late List<(ChatwootMessage, String)> delivered;
+  late List<ChatwootMessage> received;
+  late List<ChatwootMessage> updated;
+  late List<String> events;
 
-    final mockLocalStorage = MockLocalStorage();
-    final mockChatwootClientService = MockChatwootClientService();
-    final mockChatwootCallbacks = MockChatwootCallbacks();
-    final mockMessagesDao = MockChatwootMessagesDao();
-    final mockContactDao = MockChatwootContactDao();
-    final mockConversationDao = MockChatwootConversationDao();
-    final mockUserDao = MockChatwootUserDao();
-    StreamController mockWebSocketStream = StreamController.broadcast();
-    final mockWebSocketChannel = MockWebSocketChannel();
+  setUp(() {
+    service = FakeClientService();
+    hub = FakeSocketHub();
+    storage = LocalStorage.inMemory();
+    errors = [];
+    retrieved = [];
+    persistedRetrieved = [];
+    sent = [];
+    delivered = [];
+    received = [];
+    updated = [];
+    events = [];
+    repo = ChatwootRepositoryImpl(
+      clientService: service,
+      localStorage: storage,
+      socket: ChatwootSocket(
+        url: Uri.parse('wss://h/cable'),
+        tokenProvider: () => storage.contact.get()?.pubsubToken,
+        connect: hub.connect,
+      ),
+      streamCallbacks: ChatwootCallbacks(
+        onError: errors.add,
+        onMessagesRetrieved: retrieved.addAll,
+        onPersistedMessagesRetrieved: persistedRetrieved.addAll,
+        onMessageSent: (m, echo) => sent.add((m, echo)),
+        onMessageDelivered: (m, echo) => delivered.add((m, echo)),
+        onMessageReceived: received.add,
+        onMessageUpdated: updated.add,
+        onWelcome: () => events.add('welcome'),
+        onPing: () => events.add('ping'),
+        onConfirmedSubscription: () => events.add('confirmed'),
+        onConversationStartedTyping: () => events.add('typing_on'),
+        onConversationStoppedTyping: () => events.add('typing_off'),
+        onConversationIsOnline: () => events.add('online'),
+        onConversationIsOffline: () => events.add('offline'),
+        onConversationResolved: () => events.add('resolved'),
+      ),
+    );
+  });
 
-    late final ChatwootRepository repo;
+  tearDown(() => repo.dispose());
 
-    setUpAll(() async {
-      testContact = ChatwootContact.fromJson(
-          await TestResourceUtil.readJsonResource(fileName: "contact"));
-      testConversation = ChatwootConversation.fromJson(
-          await TestResourceUtil.readJsonResource(fileName: "conversation"));
-      testMessage = ChatwootMessage.fromJson(
-          await TestResourceUtil.readJsonResource(fileName: "message"));
+  group('getMessages / getPersistedMessages', () {
+    test('fetched messages are stored and reported', () async {
+      service.messagesResult = [message(2), message(1)];
 
-      when(mockLocalStorage.messagesDao).thenReturn(mockMessagesDao);
-      when(mockLocalStorage.contactDao).thenReturn(mockContactDao);
-      when(mockLocalStorage.userDao).thenReturn(mockUserDao);
-      when(mockLocalStorage.conversationDao).thenReturn(mockConversationDao);
-      when(mockChatwootClientService.connection)
-          .thenReturn(mockWebSocketChannel);
-      when(mockWebSocketChannel.stream)
-          .thenAnswer((_) => mockWebSocketStream.stream);
-      when(mockChatwootClientService.startWebSocketConnection(any))
-          .thenAnswer((_) => () {});
-
-      repo = ChatwootRepositoryImpl(
-          clientService: mockChatwootClientService,
-          localStorage: mockLocalStorage,
-          streamCallbacks: mockChatwootCallbacks);
-    });
-
-    setUp(() {
-      reset(mockChatwootCallbacks);
-      reset(mockContactDao);
-      reset(mockConversationDao);
-      reset(mockUserDao);
-      reset(mockMessagesDao);
-      when(mockContactDao.getContact()).thenReturn(testContact);
-      mockWebSocketStream = StreamController.broadcast();
-      when(mockWebSocketChannel.stream)
-          .thenAnswer((_) => mockWebSocketStream.stream);
-    });
-
-    test(
-        'Given messages are successfully fetched when getMessages is called, then callback should be called with fetched messages',
-        () async {
-      //GIVEN
-      final testMessages = [testMessage];
-      when(mockChatwootClientService.getAllMessages())
-          .thenAnswer((_) => Future.value(testMessages));
-      when(mockChatwootCallbacks.onMessagesRetrieved).thenAnswer((_) => (_) {});
-      when(mockMessagesDao.saveAllMessages(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-
-      //WHEN
       await repo.getMessages();
 
-      //THEN
-      verify(mockChatwootClientService.getAllMessages());
-      verify(mockChatwootCallbacks.onMessagesRetrieved?.call(testMessages));
-      verify(mockMessagesDao.saveAllMessages(testMessages));
+      expect(retrieved.map((m) => m.id), [2, 1]);
+      expect(storage.messages.getMessages().map((m) => m.id), [1, 2]);
+      expect(errors, isEmpty);
     });
 
-    test(
-        'Given messages are fails to fetch when getMessages is called, then callback should be called with an error',
-        () async {
-      //GIVEN
-      final testError = ChatwootClientException(
-          "error", ChatwootClientExceptionType.GET_MESSAGES_FAILED);
-      when(mockChatwootClientService.getAllMessages()).thenThrow(testError);
-      when(mockChatwootCallbacks.onError).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onMessagesRetrieved).thenAnswer((_) => (_) {});
+    test('a failing fetch reports the error and stores nothing', () async {
+      service.messagesResult = failure(
+        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+      );
 
-      //WHEN
       await repo.getMessages();
 
-      //THEN
-      verify(mockChatwootClientService.getAllMessages());
-      verifyNever(mockChatwootCallbacks.onMessagesRetrieved);
-      verify(mockChatwootCallbacks.onError?.call(testError));
-      verifyNever(mockMessagesDao.saveAllMessages(any));
+      expect(
+        errors.single.type,
+        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+      );
+      expect(retrieved, isEmpty);
+      expect(storage.messages.getMessages(), isEmpty);
     });
 
-    test(
-        'Given persisted messages are successfully fetched when getPersitedMessages is called, then callback should be called with fetched messages',
-        () async {
-      //GIVEN
-      final testMessages = [testMessage];
-      when(mockMessagesDao.getMessages()).thenReturn(testMessages);
-      when(mockChatwootCallbacks.onPersistedMessagesRetrieved)
-          .thenAnswer((_) => (_) {});
+    // F7 / SEC6: getMessages is also called unawaited after a reconnect
+    group('never throws (F7)', () {
+      for (final entry in <String, Object>{
+        'a non-typed error from the service': StateError('boom'),
+        'a RangeError from the service': RangeError('poisoned'),
+      }.entries) {
+        test(entry.key, () async {
+          service.messagesResult = entry.value;
+          final uncaught = <Object>[];
 
-      //WHEN
+          await runZonedGuarded(
+            () => repo.getMessages(),
+            (e, _) => uncaught.add(e),
+          );
+
+          expect(uncaught, isEmpty);
+          expect(
+            errors.single.type,
+            ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+          );
+          expect(retrieved, isEmpty);
+        });
+      }
+
+      test('a storage that throws synchronously is reported', () async {
+        final broken = ChatwootRepositoryImpl(
+          clientService: service,
+          localStorage: LocalStorage(
+            contact: storage.contact,
+            conversation: storage.conversation,
+            user: storage.user,
+            messages: _ThrowingDao(sync: true),
+          ),
+          socket: ChatwootSocket(
+            url: Uri.parse('wss://h/cable'),
+            tokenProvider: () => null,
+            connect: hub.connect,
+          ),
+          streamCallbacks: ChatwootCallbacks(onError: errors.add),
+        );
+        service.messagesResult = [message(1)];
+
+        await broken.getMessages();
+
+        expect(
+          errors.single.type,
+          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        );
+        await broken.dispose();
+      });
+
+      test('a failing async write is only logged: messages are still '
+          'delivered', () async {
+        final broken = ChatwootRepositoryImpl(
+          clientService: service,
+          localStorage: LocalStorage(
+            contact: storage.contact,
+            conversation: storage.conversation,
+            user: storage.user,
+            messages: _ThrowingDao(sync: false),
+          ),
+          socket: ChatwootSocket(
+            url: Uri.parse('wss://h/cable'),
+            tokenProvider: () => null,
+            connect: hub.connect,
+          ),
+          streamCallbacks: ChatwootCallbacks(
+            onError: errors.add,
+            onMessagesRetrieved: retrieved.addAll,
+          ),
+        );
+        service.messagesResult = [message(1)];
+
+        await broken.getMessages();
+
+        expect(errors, isEmpty);
+        expect(retrieved.map((m) => m.id), [1]);
+        await broken.dispose();
+      });
+
+      test('a host callback that throws is reported through onError, '
+          'not rethrown', () async {
+        final throwing = ChatwootRepositoryImpl(
+          clientService: service,
+          localStorage: storage,
+          socket: ChatwootSocket(
+            url: Uri.parse('wss://h/cable'),
+            tokenProvider: () => null,
+            connect: hub.connect,
+          ),
+          streamCallbacks: ChatwootCallbacks(
+            onError: errors.add,
+            onMessagesRetrieved: (_) => throw StateError('app bug'),
+          ),
+        );
+        service.messagesResult = [message(1)];
+
+        await throwing.getMessages();
+
+        expect(errors, hasLength(1));
+        await throwing.dispose();
+      });
+
+      test('an onError callback that throws is swallowed', () async {
+        final throwing = ChatwootRepositoryImpl(
+          clientService: service,
+          localStorage: storage,
+          socket: ChatwootSocket(
+            url: Uri.parse('wss://h/cable'),
+            tokenProvider: () => null,
+            connect: hub.connect,
+          ),
+          streamCallbacks: ChatwootCallbacks(onError: (_) => throw 'bad'),
+        );
+        service.messagesResult = StateError('x');
+
+        await throwing.getMessages();
+        await throwing.dispose();
+      });
+    });
+
+    test('persisted messages are reported oldest first', () async {
+      await storage.messages.saveAllMessages([message(2), message(1)]);
+
       repo.getPersistedMessages();
 
-      //THEN
-      verifyNever(mockChatwootClientService.getAllMessages());
-      verify(mockChatwootCallbacks.onPersistedMessagesRetrieved
-          ?.call(testMessages));
+      expect(persistedRetrieved.map((m) => m.id), [1, 2]);
     });
 
-    test(
-        'Given message is successfully sent when sendMessage is called, then callback should be called with sent message',
-        () async {
-      //GIVEN
-      final messageRequest =
-          ChatwootNewMessageRequest(content: "new message", echoId: "echoId");
-      when(mockChatwootClientService.createMessage(any))
-          .thenAnswer((_) => Future.value(testMessage));
-      when(mockChatwootCallbacks.onMessageSent).thenAnswer((_) => (_, __) {});
-      when(mockMessagesDao.saveMessage(any))
-          .thenAnswer((_) => Future.microtask(() {}));
+    test('nothing is reported when nothing is persisted', () {
+      repo.getPersistedMessages();
 
-      //WHEN
-      await repo.sendMessage(messageRequest);
-
-      //THEN
-      verify(mockChatwootClientService.createMessage(messageRequest));
-      verify(mockChatwootCallbacks.onMessageSent
-          ?.call(testMessage, messageRequest.echoId));
-      verify(mockMessagesDao.saveMessage(testMessage));
-    });
-
-    test(
-        'Given message fails to send when sendMessage is called, then callback should be called with an error',
-        () async {
-      //GIVEN
-      final testError = ChatwootClientException(
-          "error", ChatwootClientExceptionType.SEND_MESSAGE_FAILED);
-      final messageRequest =
-          ChatwootNewMessageRequest(content: "new message", echoId: "echoId");
-      when(mockChatwootClientService.createMessage(any)).thenThrow(testError);
-      when(mockChatwootCallbacks.onError).thenAnswer((_) => (_) {});
-
-      //WHEN
-      await repo.sendMessage(messageRequest);
-
-      //THEN
-      verify(mockChatwootClientService.createMessage(messageRequest));
-      verify(mockChatwootCallbacks.onError?.call(testError));
-      verifyNever(mockMessagesDao.saveMessage(any));
-    });
-
-    test(
-        'Given repo is initialized with user successfully when initialize is called, then client should be properly initialized',
-        () async {
-      //GIVEN
-      when(mockChatwootClientService.getContact())
-          .thenAnswer((_) => Future.value(testContact));
-      when(mockContactDao.getContact()).thenReturn(testContact);
-      when(mockConversationDao.getConversation()).thenReturn(testConversation);
-      when(mockChatwootClientService.getConversations())
-          .thenAnswer((_) => Future.value([testConversation]));
-      when(mockUserDao.saveUser(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockContactDao.saveContact(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockConversationDao.saveConversation(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockChatwootClientService.startWebSocketConnection(any))
-          .thenAnswer((_) => () {});
-
-      //WHEN
-      await repo.initialize(testUser);
-
-      //THEN
-      verify(mockChatwootClientService.getContact());
-      verify(mockUserDao.saveUser(testUser));
-      verify(mockContactDao.saveContact(testContact));
-      verify(mockConversationDao.saveConversation(testConversation));
-    });
-
-    test(
-        'Given repo is initialized with null user successfully when initialize is called, then client should be properly initialized',
-        () async {
-      //GIVEN
-      when(mockChatwootClientService.getContact())
-          .thenAnswer((_) => Future.value(testContact));
-      when(mockContactDao.getContact()).thenReturn(testContact);
-      when(mockConversationDao.getConversation()).thenReturn(testConversation);
-      when(mockChatwootClientService.getConversations())
-          .thenAnswer((_) => Future.value([testConversation]));
-      when(mockUserDao.saveUser(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockContactDao.saveContact(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockConversationDao.saveConversation(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockChatwootClientService.startWebSocketConnection(any))
-          .thenAnswer((_) => () {});
-
-      //WHEN
-      await repo.initialize(null);
-
-      //THEN
-      verifyNever(mockUserDao.saveUser(testUser));
-      verify(mockContactDao.saveContact(testContact));
-      verify(mockConversationDao.saveConversation(testConversation));
-    });
-
-    test(
-        'Given welcome event is received when listening for events, then callback welcome event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onWelcome).thenAnswer((_) => () {});
-      final dynamic welcomeEvent = {"type": "welcome"};
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(welcomeEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onWelcome?.call());
-    });
-
-    test(
-        'Given ping event is received when listening for events, then callback onPing event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onPing).thenAnswer((_) => () {});
-      final dynamic pingEvent = {"type": "ping", "message": 12243849943};
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(pingEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onPing?.call());
-    });
-
-    test(
-        'Given confirm subscription event is received when listening for events, then callback onConfirmSubscription event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootClientService.sendAction(any, any))
-          .thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConfirmedSubscription)
-          .thenAnswer((_) => () {});
-      final dynamic confirmSubscriptionEvent = {"type": "confirm_subscription"};
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(confirmSubscriptionEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConfirmedSubscription?.call());
-      verify(mockChatwootClientService.sendAction(
-          testContact.pubsubToken, ChatwootActionType.update_presence));
-    });
-
-    test(
-        'Given typing on event is received when listening for events, then callback onConversationStartedTyping event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConversationStartedTyping)
-          .thenAnswer((_) => () {});
-      final dynamic typingOnEvent = await TestResourceUtil.readJsonResource(
-          fileName: "websocket_conversation_typing_on");
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(typingOnEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConversationStartedTyping?.call());
-    });
-
-    test(
-        'Given online presence update event is received when listening for events, then callback onConversationIsOnline event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConversationIsOnline)
-          .thenAnswer((_) => () {});
-      final dynamic presenceUpdateOnlineEvent =
-          await TestResourceUtil.readJsonResource(
-              fileName: "websocket_presence_update");
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(presenceUpdateOnlineEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConversationIsOnline?.call());
-    });
-
-    test(
-        'Given conversation is offline when listening for events, then callback onConversationIsOffline event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConversationIsOffline)
-          .thenAnswer((_) => () {});
-      when(mockChatwootCallbacks.onConversationIsOnline)
-          .thenAnswer((_) => () {});
-      final dynamic presenceUpdateOnlineEvent =
-          await TestResourceUtil.readJsonResource(
-              fileName: "websocket_presence_update");
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(presenceUpdateOnlineEvent));
-      await Future.delayed(Duration(seconds: 41));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConversationIsOnline?.call());
-      verify(mockChatwootCallbacks.onConversationIsOffline?.call());
-    }, timeout: Timeout(Duration(seconds: 45)));
-
-    test(
-        'Given typing off event is received when listening for events, then callback onConversationStoppedTyping event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConversationStoppedTyping)
-          .thenAnswer((_) => () {});
-      final dynamic typingOffEvent = await TestResourceUtil.readJsonResource(
-          fileName: "websocket_conversation_typing_off");
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(typingOffEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConversationStoppedTyping?.call());
-    });
-
-    test(
-        'Given conversation status changed event is received when listening for events, then callback onConversationResolved event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.conversationDao).thenReturn(mockConversationDao);
-      when(mockConversationDao.getConversation()).thenReturn(testConversation);
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onConversationResolved)
-          .thenAnswer((_) => () {});
-      final dynamic resolvedEvent = await TestResourceUtil.readJsonResource(
-          fileName: "websocket_conversation_status_changed");
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(resolvedEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verify(mockChatwootCallbacks.onConversationResolved?.call());
-    });
-
-    test(
-        'Given an updated message event is received when listening for events, then callback onMessageUpdated event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockMessagesDao.saveMessage(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      when(mockChatwootCallbacks.onMessageUpdated).thenAnswer((_) => (_) {});
-      final dynamic messageUpdatedEvent =
-          await TestResourceUtil.readJsonResource(
-              fileName: "websocket_message_updated");
-
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(messageUpdatedEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      final message =
-          ChatwootMessage.fromJson(messageUpdatedEvent["message"]["data"]);
-      verify(mockChatwootCallbacks.onMessageUpdated?.call(message));
-    });
-
-    test(
-        'Given new message event is sent when listening for events, then callback onMessageSent event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      when(mockChatwootCallbacks.onMessageDelivered)
-          .thenAnswer((_) => (_, __) {});
-      when(mockMessagesDao.saveMessage(any))
-          .thenAnswer((_) => Future.microtask(() {}));
-      final dynamic messageSentEvent = {
-        "type": "message",
-        "message": {
-          "event": "message.created",
-          "data": {
-            "id": 0,
-            "content": "content",
-            "echo_id": "echo_id",
-            "message_type": 0,
-            "content_type": "contentType",
-            "content_attributes": "contentAttributes",
-            "created_at": DateTime.now().toString(),
-            "conversation_id": 0,
-            "attachments": [],
-          }
-        }
-      };
-
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(messageSentEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      final message =
-          ChatwootMessage.fromJson(messageSentEvent["message"]["data"]);
-      verify(mockChatwootCallbacks.onMessageDelivered
-          ?.call(message, messageSentEvent["message"]["echo_id"]));
-    });
-
-    test(
-        'Given unknown event is received when listening for events, then no callback event should be triggered',
-        () async {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-      final dynamic unknownEvent = {"type": "unknown"};
-      repo.listenForEvents();
-
-      //WHEN
-      mockWebSocketStream.add(jsonEncode(unknownEvent));
-      await Future.delayed(Duration(seconds: 1));
-
-      //THEN
-      verifyZeroInteractions(mockChatwootCallbacks);
-      repo.dispose();
-    });
-
-    test(
-        'Given action is successfully sent when sendAction is called, then client service sendAction should be triggered',
-        () {
-      //GIVEN
-      when(mockContactDao.getContact()).thenReturn(testContact);
-      when(mockChatwootClientService.sendAction(any, any))
-          .thenAnswer((realInvocation) => Future.microtask(() {}));
-
-      //WHEN
-      repo.sendAction(ChatwootActionType.update_presence);
-
-      //THEN
-      verify(mockChatwootClientService.sendAction(
-          testContact.pubsubToken, ChatwootActionType.update_presence));
-    });
-
-    test(
-        'Given repository is successfully disposed when dispose is called, then localStorage should be disposed',
-        () {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-
-      //WHEN
-      repo.dispose();
-
-      //THEN
-      verify(mockLocalStorage.dispose());
-    });
-
-    test(
-        'Given repository is successfully cleared when clear is called, then localStorage should be cleared',
-        () {
-      //GIVEN
-      when(mockLocalStorage.dispose()).thenAnswer((_) => (_) {});
-
-      //WHEN
-      repo.clear();
-
-      //THEN
-      verify(mockLocalStorage.clear());
-    });
-
-    tearDown(() async {
-      await mockWebSocketStream.close();
-    });
-
-    tearDownAll(() {
-      repo.dispose();
+      expect(persistedRetrieved, isEmpty);
     });
   });
+
+  group('sendMessage', () {
+    final request = ChatwootNewMessageRequest(content: 'hi', echoId: 'echo-1');
+
+    test('stores and reports the created message with the echo id', () async {
+      service.createMessageResult = message(5);
+
+      await repo.sendMessage(request);
+
+      expect(sent.single.$1.id, 5);
+      expect(sent.single.$2, 'echo-1');
+      expect(storage.messages.getMessage(5), isNotNull);
+    });
+
+    test('a failure is reported with the echo id as data', () async {
+      service.createMessageResult = failure(
+        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+      );
+
+      await repo.sendMessage(request);
+
+      expect(
+        errors.single.type,
+        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+      );
+      expect(errors.single.data, 'echo-1');
+      expect(storage.messages.getMessages(), isEmpty);
+    });
+  });
+
+  group('sendMessage failures (S18)', () {
+    final request = ChatwootNewMessageRequest(content: 'hi', echoId: 'echo-1');
+
+    for (final error in <Object>[
+      const FormatException('bad json'),
+      StateError('boom'),
+      TypeError(),
+    ]) {
+      test('${error.runtimeType} carries the echo id to onError', () async {
+        service.createMessageResult = error;
+
+        await repo.sendMessage(request);
+
+        expect(
+          errors.single.type,
+          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        );
+        expect(errors.single.data, 'echo-1');
+      });
+    }
+  });
+
+  group('initialize', () {
+    test('saves user, contact and the refreshed conversation', () async {
+      final conv = conversation(id: 7);
+      service
+        ..contactResult = contact(pubsubToken: null)
+        ..conversationsResult = [conv];
+      await storage.conversation.save(conversation(id: 7));
+
+      await repo.initialize(user());
+
+      expect(storage.user.get(), user());
+      expect(storage.contact.get(), contact(pubsubToken: null));
+      expect(storage.conversation.get(), conv);
+      expect(errors, isEmpty);
+    });
+
+    test('works without a user', () async {
+      service
+        ..contactResult = contact(pubsubToken: null)
+        ..conversationsResult = [conversation()];
+      await storage.conversation.save(conversation());
+
+      await repo.initialize(null);
+
+      expect(storage.user.get(), isNull);
+      expect(storage.contact.get(), isNotNull);
+    });
+
+    test('starts listening when the contact has a pubsub token', () async {
+      service
+        ..contactResult = contact(pubsubToken: 'tok')
+        ..conversationsResult = [conversation()];
+      await storage.conversation.save(conversation());
+
+      await repo.initialize(null);
+
+      expect(hub.urls, hasLength(1));
+    });
+
+    // P5: the missing persisted conversation used to be a null-check crash
+    test(
+      'no conversation after refresh: reports an error, does not throw',
+      () async {
+        service
+          ..contactResult = contact(pubsubToken: null)
+          ..conversationsResult = [conversation()];
+        // storage.conversation is empty
+
+        await repo.initialize(null);
+
+        expect(
+          errors.single.type,
+          ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+        );
+      },
+    );
+
+    test('a failing service call is reported', () async {
+      service.contactResult = failure(
+        ChatwootClientExceptionType.GET_CONTACT_FAILED,
+      );
+
+      await repo.initialize(null);
+
+      expect(
+        errors.single.type,
+        ChatwootClientExceptionType.GET_CONTACT_FAILED,
+      );
+    });
+
+    test('an unexpected error is wrapped and reported, never thrown', () async {
+      service.contactResult = 'not a contact'; // cast error inside the service
+
+      await repo.initialize(null);
+
+      expect(
+        errors.single.type,
+        ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
+      );
+    });
+  });
+
+  group('clear / dispose', () {
+    test('clear removes the instance data', () async {
+      await storage.contact.save(contact());
+      await storage.messages.saveMessage(message(1));
+
+      await repo.clear();
+
+      expect(storage.contact.get(), isNull);
+      expect(storage.messages.getMessages(), isEmpty);
+    });
+
+    test('clear(clearChatwootUserStorage: false) keeps the contact', () async {
+      await storage.contact.save(contact());
+      await storage.messages.saveMessage(message(1));
+
+      await repo.clear(clearChatwootUserStorage: false);
+
+      expect(storage.contact.get(), isNotNull);
+      expect(storage.messages.getMessages(), isEmpty);
+    });
+  });
+}
+
+class _ThrowingDao extends InMemoryChatwootMessagesDao {
+  _ThrowingDao({required this.sync});
+
+  final bool sync;
+
+  @override
+  Future<void> saveAllMessages(List<ChatwootMessage> messages) {
+    if (sync) throw StateError('disk on fire');
+    return Future.error(StateError('disk on fire'));
+  }
 }
