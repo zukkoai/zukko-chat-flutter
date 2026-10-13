@@ -1,216 +1,186 @@
-[![Pub Version](https://img.shields.io/pub/v/chatwoot_client_sdk?color=blueviolet)](https://pub.dev/packages/chatwoot_sdk)
+[![Pub Version](https://img.shields.io/pub/v/chatwoot_sdk?color=blueviolet)](https://pub.dev/packages/chatwoot_sdk)
 
-# Integrate Chatwoot with Flutter app
+# Integrate Chatwoot with a Flutter app
 
-Integrate Chatwoot flutter client into your flutter app and talk to your visitors in real time. [Chatwoot](https://github.com/chatwoot/chatwoot) helps you to chat with your visitors and provide exceptional support in real time. To use Chatwoot in your flutter app, follow the steps described below.
+Talk to your visitors in real time from a Flutter app. Two independent ways to embed [Chatwoot](https://github.com/chatwoot/chatwoot):
+
+1. **Native chat** (`ChatwootChat`, `ChatwootChatDialog`, or build your own UI on `ChatwootClient`): talks to an *API inbox*.
+2. **Web widget** (`ChatwootWidget`): shows the Chatwoot website widget in a webview (*website channel*).
 
 <img src="https://user-images.githubusercontent.com/22669874/225545427-bd3fe38c-d116-4286-b542-67b03a51e2d2.jpg" alt="chatwoot screenshot" height="560"/>
 
-## 1. Add the package to your project
+## 1. Install
 
-Run the command below in your terminal
+```
+flutter pub add chatwoot_sdk
+```
 
-`flutter pub add chatwoot_sdk`
+Requires Dart `^3.13.0` and Flutter `>=3.47.0`. Everything public is exported from `package:chatwoot_sdk/chatwoot_sdk.dart`.
 
-or
+## 2. Native chat
 
-Add
-`chatwoot_sdk:<<version>>`
-to your project's [pubspec.yml](https://flutter.dev/docs/development/tools/pubspec) file. You can check [here](https://pub.dev/packages/chatwoot_sdk) for the latest version.
+Create an API channel on your server ([docs](https://www.chatwoot.com/docs/product/channels/api/create-channel)) and take its *inbox identifier*.
 
-## 2. How to use
-
-### a. Using ChatwootWidget
-
-* Create a website channel in chatwoot server by following the steps described here https://www.chatwoot.com/docs/channels/website
-* Replace websiteToken prop and baseUrl
+### Full-screen page
 
 ```dart
-import 'dart:io';
-
 import 'package:chatwoot_sdk/chatwoot_sdk.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image/image.dart' as image;
-import 'package:image_picker/image_picker.dart' as image_picker;
-import 'package:path_provider/path_provider.dart';
 
-void main() {
-  runApp(MyApp());
-}
+const options = ChatwootChatOptions(
+  baseUrl: 'https://chat.example.com',
+  inboxIdentifier: 'inbox-identifier',
+);
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Chatwoot Example"),
-      ),
-      body: ChatwootWidget(
-        websiteToken: "websiteToken",
-        baseUrl: "https://app.chatwoot.com",
-        user: ChatwootUser(
-          identifier: "test@test.com",
-          name: "Tester test",
-          email: "test@test.com",
+void openChat(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => ChatwootChat(
+        options: options,
+        appBar: AppBar(title: const Text('Support')),
+        callbacks: ChatwootCallbacks(
+          onError: (e) => debugPrint('chat error: ${e.cause} (${e.type})'),
         ),
-        locale: "fr",
-        closeWidget: () {
-          if (Platform.isAndroid) {
-            SystemNavigator.pop();
-          } else if (Platform.isIOS) {
-            exit(0);
-          }
-        },
-        //attachment only works on android for now
-        onAttachFile: _androidFilePicker,
-        onLoadStarted: () {
-          print("loading widget");
-        },
-        onLoadProgress: (int progress) {
-          print("loading... ${progress}");
-        },
-        onLoadCompleted: () {
-          print("widget loaded");
-        },
+        interactions: ChatwootChatInteractions(
+          onSendPressed: (text) => debugPrint('sent ${text.length} chars'),
+        ),
       ),
-    );
-  }
-
-  Future<List<String>> _androidFilePicker() async {
-    final picker = image_picker.ImagePicker();
-    final photo =
-        await picker.pickImage(source: image_picker.ImageSource.gallery);
-
-    if (photo == null) {
-      return [];
-    }
-
-    final imageData = await photo.readAsBytes();
-    final decodedImage = image.decodeImage(imageData);
-    final scaledImage = image.copyResize(decodedImage, width: 500);
-    final jpg = image.encodeJpg(scaledImage, quality: 90);
-
-    final filePath = (await getTemporaryDirectory()).uri.resolve(
-          './image_${DateTime.now().microsecondsSinceEpoch}.jpg',
-        );
-    final file = await File.fromUri(filePath).create(recursive: true);
-    await file.writeAsBytes(jpg, flush: true);
-
-    return [file.uri.toString()];
-  }
+    ),
+  );
 }
 ```
 
-Horray! You're done.
-
-
-#### Available Parameters
-
-| Name             | Default | Type                            | Description                                                                                            |
-|------------------|---------|---------------------------------|--------------------------------------------------------------------------------------------------------|
-| websiteToken     | -       | String                          | Website inbox channel token                                                                            |
-| baseUrl          | -       | String                          | Installation url for chatwoot                                                                          |
-| user             | -       | ChatwootUser                    | User information about the user like email, username and avatar_url                                    |
-| locale           | en      | String                          | User locale                                                                                            |
-| closeWidget      | -       | void Function()                 | widget close event                                                                                     |
-| customAttributes | -       | dynamic                         | Additional information about the customer                                                              |
-| onAttachFile     | -       | Future<List<String>> Function() | Widget Attachment event. Should return a list of File Uris Currently supported only on Android devices |
-| onLoadStarted    | -       | void Function()                 | Widget load start event                                                                                |
-| onLoadProgress   | -       | void Function(int)              | Widget Load progress event                                                                             |
-| onLoadCompleted  | -       | void Function()                 | Widget Load completed event                                                                            |
-
-### b. Using Chatwoot Client
-* Create an Api inbox in Chatwoot. Refer to [Create API Channel](https://www.chatwoot.com/docs/product/channels/api/create-channel) document.
-* Create your own customized chat ui and use `ChatwootClient` to load and sendMessages. Messaging events like `onMessageSent` and `onMessageReceived` will be triggered on `ChatwootCallback` argument passed when creating the client instance.
-
-
-NB: This chatwoot client uses [Hive](https://pub.dev/packages/hive) for local storage.
+### Dialog
 
 ```dart
-final chatwootCallbacks = ChatwootCallbacks(
-      onWelcome: (){
-        print("on welcome");
-      },
-      onPing: (){
-        print("on ping");
-      },
-      onConfirmedSubscription: (){
-        print("on confirmed subscription");
-      },
-      onConversationStartedTyping: (){
-        print("on conversation started typing");
-      },
-      onConversationStoppedTyping: (){
-        print("on conversation stopped typing");
-      },
-      onPersistedMessagesRetrieved: (persistedMessages){
-        print("persisted messages retrieved");
-      },
-      onMessagesRetrieved: (messages){
-        print("messages retrieved");
-      },
-      onMessageReceived: (chatwootMessage){
-        print("message received");
-      },
-      onMessageDelivered: (chatwootMessage, echoId){
-        print("message delivered");
-      },
-      onMessageSent: (chatwootMessage, echoId){
-        print("message sent");
-      },
-      onError: (error){
-        print("Ooops! Something went wrong. Error Cause: ${error.cause}");
-      },
+Future<void> openDialog(BuildContext context) => ChatwootChatDialog.show(
+      context,
+      options: options,
+      title: 'Support',
     );
-
-    ChatwootClient.create(
-        baseUrl: widget.baseUrl,
-        inboxIdentifier: widget.inboxIdentifier,
-        user: widget.user,
-        enablePersistence: widget.enablePersistence,
-        callbacks: chatwootCallbacks
-    ).then((client) {
-        client.loadMessages();
-    }).onError((error, stackTrace) {
-      print("chatwoot client creation failed with error $error: $stackTrace");
-    });
 ```
 
-#### Available Parameters
+### `ChatwootChatOptions`
 
-| Name              | Default | Type              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|-------------------|---------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| baseUrl           | -       | String            | Installation url for chatwoot                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| inboxIdentifier   | -       | String            | Identifier for target chatwoot inbox                                                                                                                                                                                                                                                                                                                                                                                                               |
-| enablePersistance | true    | bool              | Enables persistence of chatwoot client instance's contact, conversation and messages to disk <br>for convenience.<br>true - persists chatwoot client instance's data(contact, conversation and messages) to disk. To clear persisted <br>data call ChatwootClient.clearData or ChatwootClient.clearAllData<br>false - holds chatwoot client instance's data in memory and is cleared as<br>soon as chatwoot client instance is disposed<br>Setting |
-| user              | null    | ChatwootUser      | Custom user details to be attached to chatwoot contact                                                                                                                                                                                                                                                                                                                                                                                             |
-| callbacks         | null    | ChatwootCallbacks | Callbacks for handling chatwoot events                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Name | Default | Description |
+|---|---|---|
+| `baseUrl` | required | Installation URL. Must be `https` (see "https" below). |
+| `inboxIdentifier` | required | Identifier of the API inbox. |
+| `user` | `null` | `ChatwootUser` attached to the contact. |
+| `enablePersistence` | `true` | Keep contact, conversation and messages on disk (encrypted). `false`: memory only. |
+| `allowInsecure` | `false` | Allow plain `http://` for non-loopback hosts. Development only. |
+| `theme` | from `ColorScheme` | `ChatwootChatTheme` (a `ThemeExtension`; may also be registered in `ThemeData.extensions`). |
+| `l10n` | English | `ChatwootL10n` texts. |
+| `timeFormat` | `Hm` | `intl` `DateFormat` for message time. |
+| `showUserAvatars`, `showUserNames`, `showBranding` | `true` | UI switches. |
+| `style` | `classic` | `ChatwootChatStyle` (only `classic` for now). |
+
+`ChatwootChatInteractions` carries UI events: `onEndReached`, `onEndReachedThreshold`, `onMessageLongPress`, `onMessageTap`, `onSendPressed`. The `Message` type in them is re-exported from `flutter_chat_core`.
+
+## 3. `ChatwootClient` (your own UI)
+
+```dart
+import 'package:chatwoot_sdk/chatwoot_sdk.dart';
+
+Future<ChatwootClient> startClient() async {
+  final callbacks = ChatwootCallbacks(
+    onConnectionStateChanged: (state) => debugPrint('connection: $state'),
+    onPersistedMessagesRetrieved: (messages) {/* show cached messages */},
+    onMessagesRetrieved: (messages) {/* show fresh messages */},
+    onMessageReceived: (message) {/* an agent wrote */},
+    onMessageSent: (message, echoId) {/* confirmed by the server */},
+    onMessageDelivered: (message, echoId) {/* delivered */},
+    onMessageUpdated: (message) {},
+    onConversationStartedTyping: () {},
+    onConversationStoppedTyping: () {},
+    onConversationIsOnline: () {},
+    onConversationIsOffline: () {},
+    onConversationResolved: () {},
+    onError: (error) => debugPrint('${error.type}: ${error.cause}'),
+  );
+
+  final client = await ChatwootClient.create(
+    baseUrl: 'https://chat.example.com',
+    inboxIdentifier: 'inbox-identifier',
+    user: ChatwootUser(identifier: 'user-42', name: 'Jane', email: 'jane@example.com'),
+    callbacks: callbacks,
+  );
+  await client.loadMessages();
+  return client;
+}
+
+Future<void> send(ChatwootClient client) =>
+    client.sendMessage(content: 'Hello', echoId: DateTime.now().microsecondsSinceEpoch.toString());
+```
+
+- `create()` completes after the first contact/conversation refresh. Failures arrive via `onError` and are not thrown; only an invalid `baseUrl` throws an `ArgumentError`.
+- `sendMessage` carries your temporary `echoId`; `onMessageSent`/`onError` give it back.
+- `sendAction(ChatwootActionType.update_presence)` returns `false` while the realtime connection is not subscribed.
+- `onConnectionStateChanged` reports the realtime connection (`ChatwootConnectionState`).
+- Call `await client.dispose()` when done (safe to call twice).
+- Persisted clients with the same `baseUrl`, `inboxIdentifier`, `user.identifier` and `user.identifierHash` share their data.
+
+## 4. Web widget
+
+Create a website channel ([docs](https://www.chatwoot.com/docs/channels/website)) and use its *website token*.
+
+```dart
+ChatwootWidget(
+  websiteToken: 'website-token',
+  baseUrl: 'https://chat.example.com',
+  user: ChatwootUser(identifier: 'user-42', name: 'Jane', email: 'jane@example.com'),
+  locale: 'en',
+  closeWidget: () => Navigator.of(context).maybePop(),
+  onAttachFile: pickFiles, // Android only; returns a list of file URIs
+  onLoadStarted: () {},
+  onLoadProgress: (progress) {},
+  onLoadCompleted: () {},
+  onError: (description) => debugPrint('widget error: $description'),
+)
+```
+
+The conversation token is kept in secure storage per `baseUrl` + `websiteToken` + user. Custom `tokenStore` and `allowInsecure` are available.
+
+## 5. Sign out
+
+On logout, forget everything this SDK stored for the user. Dispose running clients and remove the widget first.
+
+```dart
+await chatwootSignOut(
+  baseUrl: 'https://chat.example.com',
+  inboxIdentifier: 'inbox-identifier', // native client data
+  websiteToken: 'website-token',       // webview token + cookies/storage/cache
+  user: currentUser,                   // same identifier / identifierHash as used before
+);
+```
+
+Either identifier may be omitted. `ChatwootClient.clearAllData()` removes all persisted native data of every user.
+
+## 6. `ChatwootUser`
+
+`identifier`, `name`, `email`, `avatarUrl`, `customAttributes`, `identifierHash`. `identifierHash` (HMAC of the identifier) must be computed by **your backend** with the inbox secret; never embed the secret in the app. `identifierHash` and `customAttributes` are never written to disk.
+
+## 7. https and `allowInsecure`
+
+`baseUrl` must be `https://`. Plain `http://` is accepted only for `localhost`, `127.0.0.1` and `10.0.2.2`, or for any host when `allowInsecure: true` (development only). Android 9+ also needs `android:usesCleartextTraffic="true"` for cleartext; iOS needs an App Transport Security exception.
+
+## 8. Platform notes
+
+- **Android**: Declare the `INTERNET` permission in your app manifest. `ChatwootWidget` file upload (`onAttachFile`) is Android only; your picker may need `READ_MEDIA_IMAGES`/storage permissions. `minSdk` follows `webview_flutter_android` and `flutter_secure_storage` (see their READMEs).
+- **iOS**: deployment target per `webview_flutter_wkwebview` / `flutter_secure_storage`. Keychain entries use `first_unlock_this_device`.
+- Persisted data and the widget token use the platform keystore/keychain; they need a device with secure storage available. If storage cannot be opened the client still works in memory and reports `STORAGE_FAILED`.
+
+## 9. Security notes
+
+- The server and its agents are trusted: messages are rendered as plain text, never executed.
+- `identifierHash` must be signed by your backend; the SDK is not a trust anchor.
+- The webview runs JavaScript (required by the widget). A hostile iframe inside the widget page is a residual risk; the bridge ignores messages from other pages.
+- The widget URL carries `website_token` and conversation id (web widget protocol).
+- The websocket has no connection auth beyond the `pubsub_token`.
+- There is no certificate pinning by default; add your own if your threat model needs it.
+- Rooted or jailbroken devices are out of scope.
+- `onError` text may end up in your crash reporter; it can include server response details, so treat it as diagnostic data.
+
+## 10. Development
+
+See [doc/Develop.md](doc/Develop.md). Generated `*.g.dart` files are gitignored: run `dart run build_runner build --delete-conflicting-outputs` after cloning.
