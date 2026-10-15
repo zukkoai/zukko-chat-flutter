@@ -29,7 +29,7 @@ class StylesHomeScreen extends StatelessWidget {
         title: 'Zukko AI',
         options: ChatwootChatOptions(
           baseUrl: 'https://demo.zukko.ai',
-          inboxIdentifier: 'demo',
+          websiteToken: 'demo',
           enablePersistence: false,
           style: style,
           l10n: ChatwootL10n.uzLatn,

@@ -11,7 +11,7 @@ class DemoChatwootClient implements ChatwootClient {
   /// Same signature as [ChatwootClient.create].
   static Future<ChatwootClient> create({
     required String baseUrl,
-    required String inboxIdentifier,
+    required String websiteToken,
     ChatwootUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,
@@ -36,6 +36,7 @@ class DemoChatwootClient implements ChatwootClient {
     required String content,
     required String echoId,
     List<ChatwootUpload> attachments = const [],
+    int? replyTo,
   }) async {
     // Stands in for the server's stored copies of the uploaded files.
     final sent = _message(
@@ -58,6 +59,12 @@ class DemoChatwootClient implements ChatwootClient {
       );
     });
   }
+
+  @override
+  Future<void> markSeen() async {}
+
+  @override
+  Future<void> setTyping(bool on) async {}
 
   @override
   Future<void> dispose() async {
@@ -155,11 +162,7 @@ class DemoChatwootClient implements ChatwootClient {
         mine: true,
         content: null,
         attachments: [
-          {
-            'file_type': 'audio',
-            'data_url': _sampleAudio,
-            'file_size': 40960,
-          },
+          {'file_type': 'audio', 'data_url': _sampleAudio, 'file_size': 40960},
         ],
       ),
       _message(
