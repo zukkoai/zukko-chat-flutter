@@ -22,14 +22,17 @@ String chatwootInstanceKey({
       : '$base${_sep}h:${_digest(identifierHash)}';
 }
 
-/// FNV-1a (64 bit) of [value] as hex. Not a security primitive: it only keeps
-/// the raw hash out of the key and makes keys differ per hash.
+/// FNV-1a (64 bit) of [value] as 16 lowercase hex chars. Not a security
+/// primitive: it only keeps the raw hash out of the key and makes keys differ
+/// per hash. BigInt keeps the result identical on the VM and on web.
 String _digest(String value) {
-  var h = 0xcbf29ce484222325;
+  final mask = (BigInt.one << 64) - BigInt.one;
+  final prime = BigInt.from(0x100000001b3);
+  var h = BigInt.parse('cbf29ce484222325', radix: 16);
   for (final byte in utf8.encode(value)) {
-    h = (h ^ byte) * 0x100000001b3;
+    h = ((h ^ BigInt.from(byte)) * prime) & mask;
   }
-  return h.toUnsigned(64).toRadixString(16).padLeft(16, '0');
+  return h.toRadixString(16).padLeft(16, '0');
 }
 
 const _sep = '|||';
