@@ -66,6 +66,19 @@ class ChatwootEventMessageData {
   @JsonKey()
   final dynamic users;
 
+  /// Conversation payloads (`conversation.created/updated/status_changed`).
+  @JsonKey(name: "inbox_id")
+  final int? inboxId;
+
+  /// Unix seconds (0 = never) on conversation payloads.
+  @JsonKey(name: "contact_last_seen_at")
+  final dynamic contactLastSeenAt;
+
+  /// Raw attachment maps of a `message.*` event (`id`, `file_type`,
+  /// `data_url`, ...); kept so realtime messages show their files.
+  @JsonKey()
+  final dynamic attachments;
+
   ChatwootEventMessageData({
     this.id,
     this.echoId,
@@ -80,6 +93,9 @@ class ChatwootEventMessageData {
     this.private,
     this.isPrivate,
     this.users,
+    this.inboxId,
+    this.contactLastSeenAt,
+    this.attachments,
   });
 
   factory ChatwootEventMessageData.fromJson(Map<String, dynamic> json) =>
@@ -87,7 +103,13 @@ class ChatwootEventMessageData {
 
   Map<String, dynamic> toJson() => _$ChatwootEventMessageDataToJson(this);
 
-  ChatwootMessage getMessage() => ChatwootMessage.fromJson(toJson());
+  /// The message fields as a [ChatwootMessage]; a malformed `attachments`
+  /// value is dropped instead of losing the whole message.
+  ChatwootMessage getMessage() {
+    final json = toJson();
+    if (json['attachments'] is! List) json.remove('attachments');
+    return ChatwootMessage.fromJson(json);
+  }
 }
 
 /// Server events a contact receives, with their wire names.
@@ -97,7 +119,9 @@ enum ChatwootEventMessageType {
   message_updated('message.updated'),
   conversation_typing_off('conversation.typing_off'),
   conversation_typing_on('conversation.typing_on'),
-  conversation_status_changed('conversation.status_changed');
+  conversation_status_changed('conversation.status_changed'),
+  conversation_created('conversation.created'),
+  conversation_updated('conversation.updated');
 
   const ChatwootEventMessageType(this.wire);
 

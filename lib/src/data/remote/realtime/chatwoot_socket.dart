@@ -101,9 +101,10 @@ class ChatwootSocket {
     required this.url,
     required this._tokenProvider,
     WebSocketChannel Function(Uri)? connect,
-    this.presenceEvery = const Duration(seconds: 20),
+    this.presenceEvery = const Duration(seconds: 15), // server window: 20 s
     this.staleAfter = const Duration(seconds: 6),
     this.connectTimeout = const Duration(seconds: 15),
+    this.subscribeTimeout = const Duration(seconds: 10),
     Duration Function(int attempt)? backoff,
   }) : _connect = connect ?? WebSocketChannel.connect,
        _backoff = backoff ?? defaultSocketBackoff;
@@ -118,6 +119,11 @@ class ChatwootSocket {
   /// How long a new connection may take to deliver its first frame.
   final Duration connectTimeout;
 
+  /// How long a welcomed connection may wait for `confirm_subscription`. A
+  /// dead pubsub token most likely yields silence, not a reject frame: the 1st
+  /// timeout reconnects, the 2nd in a row stops like a rejected subscription.
+  final Duration subscribeTimeout;
+
   /// Read on every (re)connect, so a new session's pubsub token is picked up.
   final String? Function() _tokenProvider;
   final WebSocketChannel Function(Uri) _connect;
@@ -131,6 +137,8 @@ class ChatwootSocket {
   Timer? _presenceTimer;
   Timer? _watchdog;
   Timer? _retryTimer;
+  Timer? _subscribeTimer;
+  int _subscribeTimeouts = 0;
   int _attempt = 0;
   bool _wasSubscribed = false;
   bool _disposed = false;
@@ -142,11 +150,20 @@ class ChatwootSocket {
   String get _identifier =>
       jsonEncode({'channel': 'RoomChannel', 'pubsub_token': _token});
 
-  /// Opens the connection with the current token. Idempotent: an existing
-  /// connection is closed first, so there is never more than one channel.
+  /// Opens the connection with the current token. Idempotent: a live or
+  /// opening connection with the same token is left alone, any other is closed
+  /// first, so there is never more than one channel.
   void connect() {
     if (_disposed) return;
+    if (_channel != null &&
+        _token == _tokenProvider() &&
+        (_state == ChatwootConnectionState.subscribed ||
+            _state == ChatwootConnectionState.connecting ||
+            _state == ChatwootConnectionState.connected)) {
+      return;
+    }
     _attempt = 0;
+    _subscribeTimeouts = 0;
     _open();
   }
 
@@ -218,21 +235,23 @@ class ChatwootSocket {
       case WelcomeFrame():
         _setState(ChatwootConnectionState.connected);
         _write({'command': 'subscribe', 'identifier': _identifier});
+        _subscribeTimer?.cancel();
+        _subscribeTimer = Timer(
+          subscribeTimeout,
+          () => _onSubscribeTimeout(channel),
+        );
       case PingFrame():
         _emit(const SocketPing());
       case ConfirmFrame():
         _attempt = 0;
+        _subscribeTimeouts = 0;
+        _subscribeTimer?.cancel();
         final isReconnect = _wasSubscribed;
         _wasSubscribed = true;
         _setState(ChatwootConnectionState.subscribed, isReconnect: isReconnect);
         _startPresence();
       case RejectFrame():
-        _stop(
-          ChatwootClientException(
-            'subscription rejected: unknown or expired pubsub token',
-            ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
-          ),
-        );
+        _rejected();
       case DisconnectFrame(:final reason, :final reconnect):
         if (reconnect) {
           _onLost(channel);
@@ -248,6 +267,23 @@ class ChatwootSocket {
         _emit(SocketMessage(message));
       case UnknownFrame():
         sdkLog('ignored unknown socket frame');
+    }
+  }
+
+  void _rejected() => _stop(
+    ChatwootClientException(
+      'subscription rejected: unknown or expired pubsub token',
+      ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+    ),
+  );
+
+  void _onSubscribeTimeout(WebSocketChannel channel) {
+    if (_disposed || channel != _channel) return;
+    if (++_subscribeTimeouts >= 2) {
+      _rejected();
+    } else {
+      _teardown();
+      _scheduleRetry();
     }
   }
 
@@ -303,7 +339,8 @@ class ChatwootSocket {
     _presenceTimer?.cancel();
     _watchdog?.cancel();
     _retryTimer?.cancel();
-    _presenceTimer = _watchdog = _retryTimer = null;
+    _subscribeTimer?.cancel();
+    _presenceTimer = _watchdog = _retryTimer = _subscribeTimer = null;
     final channel = _channel;
     _channel = null;
     if (channel == null) return;
