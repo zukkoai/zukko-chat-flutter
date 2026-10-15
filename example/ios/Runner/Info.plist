@@ -14,10 +14,10 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice messages in chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pick images to send in chat.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Take photos to send in chat.</string>
+	<string>Pick photos to send in chat.</string>
 	<key>CFBundleName</key>
 	<string>example</string>
 	<key>CFBundlePackageType</key>
