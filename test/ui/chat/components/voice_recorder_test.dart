@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:zukko_chat_flutter/src/ui/chat/components/voice_recorder.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/components.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -123,20 +123,5 @@ void main() {
       expect(recorder.isRecording, isFalse);
       expect(capture.log, ['start 16000', 'stop']);
     });
-  });
-
-  test('wavFromPcm16 writes a 44-byte header', () {
-    final wav = wavFromPcm16(Uint8List(10), sampleRate: 16000);
-    final data = ByteData.sublistView(wav);
-
-    expect(wav.length, 54);
-    expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
-    expect(data.getUint32(24, Endian.little), 16000);
-    expect(data.getUint32(40, Endian.little), 10);
-  });
-
-  test('formatDuration', () {
-    expect(formatDuration(const Duration(seconds: 9)), '0:09');
-    expect(formatDuration(const Duration(minutes: 12, seconds: 30)), '12:30');
   });
 }

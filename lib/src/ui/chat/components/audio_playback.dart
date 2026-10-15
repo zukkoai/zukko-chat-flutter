@@ -1,53 +1,109 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart';
 
 import '../../../shared/sdk_log.dart';
+import '../../../shared/url_policy.dart';
+import 'audio_engine.dart';
+
+/// What one voice message shows: playing or not, how far, how long.
+@immutable
+class AudioPlaybackView {
+  final bool playing;
+
+  /// 0..1; 0 unless this message is the current one.
+  final double progress;
+
+  /// Length once loaded, else null.
+  final Duration? length;
+
+  const AudioPlaybackView({
+    this.playing = false,
+    this.progress = 0,
+    this.length,
+  });
+
+  static const idle = AudioPlaybackView();
+
+  @override
+  bool operator ==(Object other) =>
+      other is AudioPlaybackView &&
+      playing == other.playing &&
+      progress == other.progress &&
+      length == other.length;
+
+  @override
+  int get hashCode => Object.hash(playing, progress, length);
+}
 
 /// Plays the chat's voice messages, one at a time: starting another one
 /// stops the current. One per chat view, shared by every style.
-class AudioPlaybackController extends ChangeNotifier {
-  AudioPlayer? _player;
+///
+/// Each message listens to its own [watch]er, so a position tick rebuilds
+/// only the message that is playing.
+class AudioPlaybackController {
+  AudioPlaybackController({AudioEngine Function()? engine})
+    : _createEngine = engine ?? JustAudioEngine.new;
+
+  final AudioEngine Function() _createEngine;
+  AudioEngine? _engine;
   final _subscriptions = <StreamSubscription<Object?>>[];
+  final _watchers = <String, ValueNotifier<AudioPlaybackView>>{};
 
   String? _source;
+  String? _published;
   bool _playing = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _disposed = false;
 
+  /// Bumped by every load: a load that finished late is dropped.
+  int _loadId = 0;
+
   /// Only http(s) sources can be played (local previews cannot).
-  static bool canPlay(String source) =>
-      source.startsWith('https://') || source.startsWith('http://');
+  static bool canPlay(String source) => isHttpUrl(source);
 
-  bool isPlaying(String source) => _source == source && _playing;
+  /// The state of [source], updated only when it changes.
+  ValueListenable<AudioPlaybackView> watch(String source) =>
+      _watchers.putIfAbsent(source, () => ValueNotifier(_viewOf(source)));
 
-  /// 0..1 of [source]; 0 when it is not the current one.
-  double progressOf(String source) {
-    if (_source != source || _duration <= Duration.zero) return 0;
-    return (_position.inMilliseconds / _duration.inMilliseconds)
-        .clamp(0.0, 1.0)
-        .toDouble();
+  AudioPlaybackView _viewOf(String source) {
+    if (_source != source) return AudioPlaybackView.idle;
+    final progress = _duration <= Duration.zero
+        ? 0.0
+        : (_position.inMilliseconds / _duration.inMilliseconds)
+              .clamp(0.0, 1.0)
+              .toDouble();
+    return AudioPlaybackView(
+      playing: _playing,
+      progress: progress,
+      length: _duration > Duration.zero ? _duration : null,
+    );
   }
 
-  /// Length of [source] once loaded, else null.
-  Duration? durationOf(String source) =>
-      _source == source && _duration > Duration.zero ? _duration : null;
+  /// Pushes the new state to the message that was and the one that is
+  /// current; every other message is idle before and after.
+  void _publish() {
+    if (_disposed) return;
+    for (final s in {_published, _source}) {
+      if (s != null) _watchers[s]?.value = _viewOf(s);
+    }
+    _published = _source;
+  }
 
   /// Plays [source], or pauses / resumes it when it is the current one.
   Future<void> toggle(String source) async {
     if (_disposed || !canPlay(source)) return;
     if (_source == source) {
-      final player = _player!;
+      final engine = _engine!;
       if (_playing) {
-        await player.pause();
+        await engine.pause();
       } else {
-        unawaited(player.play());
+        unawaited(engine.play());
       }
       return;
     }
-    if (await _load(source)) unawaited(_player!.play());
+    if (await _load(source)) unawaited(_engine!.play());
   }
 
   /// Jumps to [fraction] (0..1) of [source]. Another message is loaded and
@@ -59,29 +115,36 @@ class AudioPlaybackController extends ChangeNotifier {
     final length = _duration;
     if (length <= Duration.zero) return;
     final target = length * fraction.clamp(0.0, 1.0);
-    _update(() => _position = target);
-    await _player!.seek(target);
-    if (switching) unawaited(_player!.play());
+    _position = target;
+    _publish();
+    await _engine!.seek(target);
+    if (switching) unawaited(_engine!.play());
   }
 
-  /// Makes [source] the current one; false when it cannot be loaded.
+  /// Makes [source] the current one; false when it cannot be loaded or a
+  /// later load replaced it meanwhile.
   Future<bool> _load(String source) async {
-    final player = _ensurePlayer();
+    final engine = _ensureEngine();
+    final id = ++_loadId;
     _source = source;
     _position = Duration.zero;
     _duration = Duration.zero;
-    notifyListeners();
+    _playing = false;
+    _publish();
     try {
-      // play() completes only when playback stops: callers do not await it.
-      final length = await player.setUrl(source);
-      if (length != null) _update(() => _duration = length);
-      return !_disposed;
+      final length = await engine.setUrl(source);
+      if (id != _loadId || _disposed) return false;
+      if (length != null) {
+        _duration = length;
+        _publish();
+      }
+      return true;
     } catch (e) {
       sdkLog('audio playback failed: $e');
-      if (!_disposed) {
+      if (id == _loadId && !_disposed) {
         _source = null;
         _playing = false;
-        notifyListeners();
+        _publish();
       }
       return false;
     }
@@ -89,42 +152,40 @@ class AudioPlaybackController extends ChangeNotifier {
 
   /// Created on first use, so a chat without voice messages never touches
   /// the audio plugin.
-  AudioPlayer _ensurePlayer() {
-    final existing = _player;
+  AudioEngine _ensureEngine() {
+    final existing = _engine;
     if (existing != null) return existing;
-    final player = AudioPlayer();
+    final engine = _createEngine();
     _subscriptions.addAll([
-      player.playerStateStream.listen(_onState),
-      player.positionStream.listen((p) => _update(() => _position = p)),
-      player.durationStream.listen(
-        (d) => _update(() => _duration = d ?? Duration.zero),
+      engine.playingStream.listen((p) {
+        _playing = p;
+        _publish();
+      }),
+      engine.positionStream.listen((p) {
+        _position = p;
+        _publish();
+      }),
+      engine.durationStream.listen((d) {
+        _duration = d ?? Duration.zero;
+        _publish();
+      }),
+      engine.completedStream.listen(
+        (_) =>
+            unawaited(engine.pause().then((_) => engine.seek(Duration.zero))),
       ),
     ]);
-    return _player = player;
+    return _engine = engine;
   }
 
-  void _onState(PlayerState state) {
-    final completed = state.processingState == ProcessingState.completed;
-    _update(() => _playing = state.playing && !completed);
-    if (completed) {
-      final player = _player!;
-      unawaited(player.pause().then((_) => player.seek(Duration.zero)));
-    }
-  }
-
-  void _update(VoidCallback change) {
-    if (_disposed) return;
-    change();
-    notifyListeners();
-  }
-
-  @override
   void dispose() {
     _disposed = true;
     for (final s in _subscriptions) {
       unawaited(s.cancel());
     }
-    unawaited(_player?.dispose());
-    super.dispose();
+    unawaited(_engine?.dispose());
+    for (final w in _watchers.values) {
+      w.dispose();
+    }
+    _watchers.clear();
   }
 }

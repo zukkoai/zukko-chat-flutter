@@ -4,7 +4,7 @@ import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart' show LinkPreviewData;
 
-import 'attachment_preview.dart';
+import 'chat_image.dart';
 import 'link_launcher.dart';
 
 /// Colors and text of a [LinkPreviewCard].

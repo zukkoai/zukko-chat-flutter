@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
-import 'package:record/record.dart';
 
-import '../../../core/chatwoot_upload.dart';
+import '../../../core/zukko_chat_upload.dart';
 import '../../../shared/sdk_log.dart';
+import '../../../shared/wav.dart';
+import 'voice_capture.dart';
 
 /// A finished voice message, ready to send.
 @immutable
@@ -19,43 +20,6 @@ class VoiceRecording {
 
 /// Why a recording did not happen.
 enum VoiceRecorderIssue { permissionDenied, failed }
-
-/// Microphone access; [RecordVoiceCapture] in the app, a fake in tests.
-abstract interface class VoiceCapture {
-  /// Asks for the permission when needed.
-  Future<bool> hasPermission();
-
-  /// Raw 16-bit PCM chunks until [stop].
-  Future<Stream<Uint8List>> start({required int sampleRate});
-  Future<void> stop();
-  Future<void> dispose();
-}
-
-/// [VoiceCapture] on the `record` package (Android, iOS, web, desktop).
-class RecordVoiceCapture implements VoiceCapture {
-  final _recorder = AudioRecorder();
-
-  @override
-  Future<bool> hasPermission() => _recorder.hasPermission();
-
-  @override
-  Future<Stream<Uint8List>> start({required int sampleRate}) =>
-      _recorder.startStream(
-        RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: sampleRate,
-          numChannels: 1,
-        ),
-      );
-
-  @override
-  Future<void> stop() async {
-    await _recorder.stop();
-  }
-
-  @override
-  Future<void> dispose() => _recorder.dispose();
-}
 
 /// Hold-to-record: asks for the microphone, records PCM, keeps time, lets
 /// the user arm cancel, and hands a WAV [VoiceRecording] to [onRecorded].
@@ -129,6 +93,9 @@ class VoiceRecorderController extends ChangeNotifier {
       if (!_disposed) onIssue(VoiceRecorderIssue.failed);
     }
   }
+
+  /// Starts, or sends when already recording (the screen reader path).
+  Future<void> toggle() => _recording ? finish() : start();
 
   void armCancel(bool armed) {
     if (!_recording || armed == _cancelArmed) return;
@@ -210,127 +177,4 @@ class VoiceRecorderController extends ChangeNotifier {
     }());
     super.dispose();
   }
-}
-
-/// Wraps the microphone visual: long press records, sliding towards the
-/// start edge by [cancelDistance] arms cancel, releasing sends.
-class VoiceRecordButton extends StatelessWidget {
-  final VoiceRecorderController recorder;
-  final String semanticLabel;
-  final double cancelDistance;
-  final Widget child;
-
-  const VoiceRecordButton({
-    super.key,
-    required this.recorder,
-    required this.semanticLabel,
-    required this.child,
-    this.cancelDistance = 72,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return Semantics(
-      container: true,
-      button: true,
-      label: semanticLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onLongPressStart: (_) => unawaited(recorder.start()),
-        onLongPressMoveUpdate: (details) {
-          final towardsStart = rtl
-              ? details.offsetFromOrigin.dx
-              : -details.offsetFromOrigin.dx;
-          recorder.armCancel(towardsStart > cancelDistance);
-        },
-        onLongPressEnd: (_) => unawaited(recorder.finish()),
-        onLongPressCancel: () => unawaited(recorder.cancel()),
-        child: child,
-      ),
-    );
-  }
-}
-
-/// Replaces the text field while recording: timer and the cancel hint.
-class VoiceRecordingBar extends StatelessWidget {
-  final VoiceRecorderController recorder;
-  final String cancelHint;
-  final String releaseToCancel;
-  final TextStyle timerStyle;
-  final TextStyle hintStyle;
-  final Color dotColor;
-
-  const VoiceRecordingBar({
-    super.key,
-    required this.recorder,
-    required this.cancelHint,
-    required this.releaseToCancel,
-    required this.timerStyle,
-    required this.hintStyle,
-    required this.dotColor,
-  });
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-      ),
-      const SizedBox(width: 10),
-      Text(
-        formatDuration(recorder.elapsed),
-        style: timerStyle.copyWith(
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Text(
-          recorder.willCancel ? releaseToCancel : cancelHint,
-          style: hintStyle,
-          textAlign: TextAlign.end,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    ],
-  );
-}
-
-/// `m:ss`, e.g. `0:09`, `12:30`.
-String formatDuration(Duration d) {
-  final minutes = d.inMinutes;
-  final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return '$minutes:$seconds';
-}
-
-/// [pcm] (16-bit little-endian) wrapped in a WAV header.
-Uint8List wavFromPcm16(
-  Uint8List pcm, {
-  required int sampleRate,
-  int channels = 1,
-}) {
-  const bitsPerSample = 16;
-  final byteRate = sampleRate * channels * bitsPerSample ~/ 8;
-  final header = ByteData(44)
-    ..setUint32(0, 0x52494646) // "RIFF"
-    ..setUint32(4, 36 + pcm.length, Endian.little)
-    ..setUint32(8, 0x57415645) // "WAVE"
-    ..setUint32(12, 0x666d7420) // "fmt "
-    ..setUint32(16, 16, Endian.little)
-    ..setUint16(20, 1, Endian.little) // PCM
-    ..setUint16(22, channels, Endian.little)
-    ..setUint32(24, sampleRate, Endian.little)
-    ..setUint32(28, byteRate, Endian.little)
-    ..setUint16(32, channels * bitsPerSample ~/ 8, Endian.little)
-    ..setUint16(34, bitsPerSample, Endian.little)
-    ..setUint32(36, 0x64617461) // "data"
-    ..setUint32(40, pcm.length, Endian.little);
-  return (BytesBuilder(copy: false)
-        ..add(header.buffer.asUint8List())
-        ..add(pcm))
-      .takeBytes();
 }

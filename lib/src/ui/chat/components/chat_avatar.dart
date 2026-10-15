@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'attachment_preview.dart';
+import 'chat_image.dart';
+import '../../../shared/url_policy.dart';
 
 /// Avatar: the image when there is an https url, else the initial.
 class ChatAvatar extends StatelessWidget {
@@ -37,9 +38,11 @@ class ChatAvatar extends StatelessWidget {
         borderRadius: shape,
         child: SizedBox.square(
           dimension: size,
-          child: url != null && url.startsWith('https://')
+          child: url != null && isHttpsUrl(url)
               ? ChatImage(
                   url: url,
+                  width: size,
+                  height: size,
                   placeholderColor: background,
                   iconColor: initialStyle.color ?? background,
                 )

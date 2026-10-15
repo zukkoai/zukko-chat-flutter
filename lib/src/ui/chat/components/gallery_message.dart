@@ -3,7 +3,7 @@ import 'package:flutter_chat_core/flutter_chat_core.dart';
 /// A message with several images, carried as a [CustomMessage] (the chat
 /// core has no multi-image type). The controller creates it, styles read it.
 abstract final class GalleryMessage {
-  static const _kind = 'chatwoot.gallery';
+  static const _kind = 'zukko.gallery';
 
   static CustomMessage create({
     required String id,

@@ -1,5 +1,5 @@
 import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
-import 'package:zukko_chat_flutter/src/ui/chat/components/image_viewer.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/components.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapMinTime;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -67,13 +67,13 @@ void main() {
               onMessageTap: (_) => messageTaps++,
             ),
           );
-          expect(_hero('chatwoot-image-1-0'), findsOneWidget);
+          expect(_hero('zukko-image-1-0'), findsOneWidget);
 
-          await tester.tap(_hero('chatwoot-image-1-0'));
+          await tester.tap(_hero('zukko-image-1-0'));
           await _settle(tester);
 
           expect(find.byType(ImageViewer), findsOneWidget);
-          expect(_hero('chatwoot-image-1-0'), findsNWidgets(2));
+          expect(_hero('zukko-image-1-0'), findsNWidgets(2));
           expect(find.text('1 / 1'), findsNothing); // no counter for one image
           expect(messageTaps, 0);
         },
@@ -88,7 +88,7 @@ void main() {
             _img('c.jpg'),
           ]);
 
-          await tester.tap(_hero('chatwoot-image-1-1'));
+          await tester.tap(_hero('zukko-image-1-1'));
           await _settle(tester);
           expect(find.text('2 / 3'), findsOneWidget);
 
@@ -107,7 +107,7 @@ void main() {
         _img('b.jpg'),
         _img('c.jpg'),
       ]);
-      await tester.tap(_hero('chatwoot-image-1-0'));
+      await tester.tap(_hero('zukko-image-1-0'));
       await _settle(tester);
     }
 

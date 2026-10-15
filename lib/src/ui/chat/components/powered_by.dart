@@ -7,6 +7,9 @@ import 'link_launcher.dart';
 const _brandName = 'zukko.ai';
 final _brandUri = Uri.parse('https://zukko.ai');
 
+/// Minimum height of the link's tap target.
+const _tapHeight = 48.0;
+
 /// "Powered by zukko.ai": [prefix] in [style], the brand as a link in
 /// [linkColor].
 class PoweredBy extends StatelessWidget {
@@ -31,15 +34,20 @@ class PoweredBy extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => unawaited(openExternalLink(_brandUri)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            child: Text(
-              _brandName,
-              style: style.copyWith(
-                color: linkColor,
-                fontWeight: FontWeight.w600,
-                decoration: TextDecoration.underline,
-                decorationColor: linkColor,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _tapHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Center(
+                child: Text(
+                  _brandName,
+                  style: style.copyWith(
+                    color: linkColor,
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                    decorationColor: linkColor,
+                  ),
+                ),
               ),
             ),
           ),
