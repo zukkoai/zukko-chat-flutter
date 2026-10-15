@@ -7,7 +7,7 @@ void main() {
   Future<Response<dynamic>> ok() async =>
       Response(requestOptions: RequestOptions(), data: 'body');
 
-  const type = ChatwootClientExceptionType.GET_CONTACT_FAILED;
+  const type = ChatwootClientExceptionType.GET_CONFIG_FAILED;
 
   // SEC6: apiCall used to catch only DioException / FormatException / TypeError
   for (final error in <Object>[
@@ -33,7 +33,7 @@ void main() {
   test('a typed exception from the request is passed on unchanged', () async {
     final original = ChatwootClientException(
       'cause',
-      ChatwootClientExceptionType.CREATE_CONTACT_FAILED,
+      ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
     );
 
     await expectLater(

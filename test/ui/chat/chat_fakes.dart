@@ -11,14 +11,29 @@ class FakeClient extends Fake implements ChatwootClient {
   final sent =
       <({String content, String echoId, List<ChatwootUpload> attachments})>[];
 
+  int seen = 0;
+  final typing = <bool>[];
+
   @override
   Future<void> loadMessages() async => loads++;
+
+  @override
+  Future<void> markSeen() async => seen++;
+
+  int resumes = 0;
+
+  @override
+  void resume() => resumes++;
+
+  @override
+  Future<void> setTyping(bool on) async => typing.add(on);
 
   @override
   Future<void> sendMessage({
     required String content,
     required String echoId,
     List<ChatwootUpload> attachments = const [],
+    int? replyTo,
   }) async {
     if (sendError != null) throw sendError!;
     sent.add((content: content, echoId: echoId, attachments: attachments));
@@ -39,7 +54,7 @@ class FakeFactory {
 
   Future<ChatwootClient> call({
     required String baseUrl,
-    required String inboxIdentifier,
+    required String websiteToken,
     ChatwootUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,

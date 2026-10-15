@@ -1,11 +1,8 @@
 import 'package:chatwoot_sdk/src/data/local/instance_key.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-String _key(String? hash) => chatwootInstanceKey(
-      baseUrl: 'u',
-      inboxIdentifier: 'i',
-      identifierHash: hash,
-    );
+String _key(String? hash) =>
+    chatwootInstanceKey(baseUrl: 'u', websiteToken: 'i', identifierHash: hash);
 
 String _digest(String hash) => _key(hash).split('|||h:').last;
 

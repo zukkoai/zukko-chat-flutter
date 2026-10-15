@@ -51,7 +51,7 @@ void main() {
     String key({String? user, String? hash, String inbox = 'i'}) =>
         ChatwootClient.getClientInstanceKey(
           baseUrl: 'https://b',
-          inboxIdentifier: inbox,
+          websiteToken: inbox,
           userIdentifier: user,
           identifierHash: hash,
         );
@@ -71,7 +71,7 @@ void main() {
     await expectLater(
       ChatwootClient.create(
         baseUrl: 'http://chat.example.com',
-        inboxIdentifier: 'i',
+        websiteToken: 'i',
         enablePersistence: false,
       ),
       throwsArgumentError,

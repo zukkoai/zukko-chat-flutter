@@ -2,9 +2,6 @@ import 'dart:typed_data';
 
 import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
 import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_api_interceptor.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_auth_service.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
 import 'package:dio/dio.dart';
@@ -14,188 +11,205 @@ import '../../../utils/fake_http.dart';
 import '../../../utils/fixtures.dart';
 import '../../../utils/test_resources_util.dart';
 
-const _conv = '/public/api/v1/inboxes/inbox/contacts/source-1/conversations';
+const _widget = '/api/v1/widget';
 
+/// The service on a plain Dio: auth headers are the interceptor's business.
 void main() {
   late FakeHttpAdapter http;
   late ChatwootClientServiceImpl service;
 
-  setUp(() async {
-    // contact + conversation 7 already stored, so no auth calls are involved
-    final storage = LocalStorage.inMemory();
-    await storage.contact.save(contact());
-    await storage.conversation.save(conversation(id: 7));
+  setUp(() {
     http = FakeHttpAdapter((_) => (200, {}));
-    final dio = dioWith(http)
-      ..interceptors.add(
-        ChatwootClientApiInterceptor(
-          'inbox',
-          storage,
-          ChatwootClientAuthServiceImpl(
-            dio: dioWith(FakeHttpAdapter((_) => (500, {}))),
-          ),
-        ),
-      );
-    service = ChatwootClientServiceImpl(dio: dio);
+    service = ChatwootClientServiceImpl(dio: dioWith(http));
   });
 
   group('REST', () {
-    test('createMessage', () async {
+    test('createMessage sends the JSON body of the widget API', () async {
       http.handler = (_) => (200, message(8).toJson());
 
       final created = await service.createMessage(
-        ChatwootNewMessageRequest(content: 'hi', echoId: 'e1'),
+        ChatwootNewMessageRequest(content: 'hi', echoId: 'e1', replyTo: 5),
       );
 
       expect(created.id, 8);
-      expect(http.calls, ['POST $_conv/7/messages']);
-      expect(http.requests.single.data, {'content': 'hi', 'echo_id': 'e1'});
+      expect(http.calls, ['POST $_widget/messages']);
+      final body = http.requests.single.data as Map;
+      final inner = body['message'] as Map;
+      expect(inner['content'], 'hi');
+      expect(inner['echo_id'], 'e1');
+      expect(inner['reply_to'], 5);
+      expect(inner['referer_url'], '');
+      expect(inner['timestamp'], isA<String>());
     });
 
-    test('createMessageWithAttachments sends multipart', () async {
-      http.handler = (_) => (200, message(9).toJson());
-
-      final created = await service.createMessageWithAttachments(
-        ChatwootNewMessageRequest(content: '', echoId: 'e2'),
-        [
-          ChatwootUpload.bytes(
-            name: 'photo.png',
-            bytes: Uint8List.fromList([1, 2, 3]),
-          ),
-        ],
+    test('createMessage tolerates the flat response without content_type', () {
+      http.handler = (_) => (
+        200,
+        {
+          'id': 9,
+          'content': 'x',
+          'inbox_id': 1,
+          'conversation_id': 7,
+          'message_type': 0,
+          'created_at': 1626155918,
+          'private': false,
+        },
       );
 
-      expect(created.id, 9);
-      expect(http.calls, ['POST $_conv/7/messages']);
-      final form = http.requests.single.data as FormData;
-      expect(form.fields.map((f) => '${f.key}=${f.value}'), ['echo_id=e2']);
-      final part = form.files.single;
-      expect(part.key, 'attachments[]');
-      expect(part.value.filename, 'photo.png');
-      expect(part.value.contentType?.mimeType, 'image/png');
+      expectLater(
+        service
+            .createMessage(ChatwootNewMessageRequest(content: 'x', echoId: 'e'))
+            .then((m) => (m.id, m.conversationId, m.contentType)),
+        completion((9, 7, null)),
+      );
     });
 
-    test('getAllMessages', () async {
+    test(
+      'createMessage with attachments sends message[...] multipart',
+      () async {
+        http.handler = (_) => (200, message(9).toJson());
+
+        final created = await service.createMessage(
+          ChatwootNewMessageRequest(content: '', echoId: 'e2'),
+          attachments: [
+            ChatwootUpload.bytes(
+              name: 'photo.png',
+              bytes: Uint8List.fromList([1, 2, 3]),
+            ),
+          ],
+        );
+
+        expect(created.id, 9);
+        expect(http.calls, ['POST $_widget/messages']);
+        final form = http.requests.single.data as FormData;
+        expect(form.fields.map((f) => f.key), contains('message[echo_id]'));
+        expect(
+          form.fields.map((f) => f.key),
+          isNot(contains('message[content]')),
+        );
+        final part = form.files.single;
+        expect(part.key, 'message[attachments][]');
+        expect(part.value.filename, 'photo.png');
+        expect(part.value.contentType?.mimeType, 'image/png');
+      },
+    );
+
+    test('an unsupported attachment fails before any request', () async {
+      await expectLater(
+        service.createMessage(
+          ChatwootNewMessageRequest(content: '', echoId: 'e'),
+          attachments: [
+            ChatwootUpload.bytes(name: 'a.exe', bytes: Uint8List(1)),
+          ],
+        ),
+        throwsA(
+          isA<ChatwootClientException>().having(
+            (e) => e.type,
+            'type',
+            ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ),
+        ),
+      );
+      expect(http.requests, isEmpty);
+    });
+
+    test('getMessages parses {payload, meta}', () async {
+      http.handler = (_) => (
+        200,
+        {
+          'payload': [message(1).toJson(), message(2).toJson()],
+          'meta': {'contact_last_seen_at': 10},
+        },
+      );
+
+      final messages = await service.getMessages();
+
+      expect(messages.map((m) => m.id), [1, 2]);
+      expect(http.calls, ['GET $_widget/messages']);
+      expect(http.requests.single.queryParameters, isEmpty);
+    });
+
+    test('getMessages parses the recorded server response', () async {
       final json = await TestResourceUtil.readJsonResource(
         fileName: 'messages',
       );
       http.handler = (_) => (200, json);
 
-      final messages = await service.getAllMessages();
-
-      expect(messages, isNotEmpty);
-      expect(http.calls, ['GET $_conv/7/messages']);
+      expect(await service.getMessages(), isNotEmpty);
     });
 
-    test('getContact', () async {
-      http.handler = (_) => (200, contact().toJson());
-
-      expect(await service.getContact(), contact());
-      expect(http.calls, [
-        'GET /public/api/v1/inboxes/inbox/contacts/source-1',
-      ]);
-    });
-
-    test('getConversations', () async {
-      http.handler = (_) => (200, [conversation(id: 3).toJson()]);
-
-      final conversations = await service.getConversations();
-
-      expect(conversations.single.id, 3);
-      expect(http.calls, ['GET $_conv']);
-    });
-
-    // SEC6
-    test('getAllMessages skips a poisoned item and ids <= 0', () async {
+    test('getMessages(after:) sends the cursor', () async {
       http.handler = (_) => (
         200,
-        [
-          message(1).toJson(),
-          {'id': 2, 'content': 12345}, // wrong type
-          'not even an object',
-          {'content': 'no id'},
-          {...message(5).toJson(), 'id': -3},
-          {...message(4).toJson(), 'created_at': 1e300},
-          message(3).toJson(),
-        ],
+        <String, Object?>{'payload': <Object?>[], 'meta': <String, Object?>{}},
       );
 
-      final messages = await service.getAllMessages();
+      await service.getMessages(after: 42);
+      await service.getMessages(before: 7);
+
+      expect(http.requests[0].queryParameters, {'after': 42});
+      expect(http.requests[1].queryParameters, {'before': 7});
+    });
+
+    test('getMessages skips a poisoned item and ids <= 0', () async {
+      http.handler = (_) => (
+        200,
+        {
+          'payload': [
+            message(1).toJson(),
+            {'id': 2, 'content': 12345}, // wrong type
+            'not even an object',
+            {'content': 'no id'},
+            {...message(5).toJson(), 'id': -3},
+            {...message(4).toJson(), 'created_at': 1e300},
+            message(3).toJson(),
+          ],
+        },
+      );
+
+      final messages = await service.getMessages();
 
       expect(messages.map((m) => m.id), [1, 4, 3]);
     });
 
-    test('getConversations: one broken conversation or message does not '
-        'block the rest', () async {
-      http.handler = (_) => (
-        200,
-        [
-          {
-            ...conversation(id: 3).toJson(),
-            'messages': [
-              message(1).toJson(),
-              {'id': 'x', 'content': 9},
-            ],
-          },
-          {'id': 'garbage'},
-        ],
-      );
-
-      final conversations = await service.getConversations();
-
-      expect(conversations.map((c) => c.id), [3]);
-      expect(conversations.single.messages.map((m) => m.id), [1]);
-    });
-
-    // SEC9
-    test('a hostile source_id stays one encoded path segment', () async {
-      final storage = LocalStorage.inMemory();
-      await storage.contact.save(contact(sourceId: 'a/../b?x=1#y'));
-      await storage.conversation.save(conversation(id: 7));
-      final adapter = FakeHttpAdapter((_) => (200, contact().toJson()));
-      final hostile = ChatwootClientServiceImpl(
-        dio: dioWith(adapter)
-          ..interceptors.add(
-            ChatwootClientApiInterceptor(
-              'in/box',
-              storage,
-              ChatwootClientAuthServiceImpl(dio: dioWith(adapter)),
-            ),
-          ),
-      );
-
-      await hostile.getContact();
-
-      expect(
-        adapter.requests.single.path,
-        '/public/api/v1/inboxes/in%2Fbox/contacts/a%2F..%2Fb%3Fx%3D1%23y',
-      );
-    });
-
-    for (final bad in ['', '.', '..', 'x' * 257]) {
-      test('source_id "${bad.length > 5 ? 'x * ${bad.length}' : bad}" is '
-          'rejected with a typed error and no request', () async {
-        final storage = LocalStorage.inMemory();
-        await storage.contact.save(contact(sourceId: bad));
-        final adapter = FakeHttpAdapter((_) => (200, {}));
-        final rejecting = ChatwootClientServiceImpl(
-          dio: dioWith(adapter)
-            ..interceptors.add(
-              ChatwootClientApiInterceptor(
-                'in',
-                storage,
-                ChatwootClientAuthServiceImpl(dio: dioWith(adapter)),
-              ),
-            ),
+    test(
+      'getConversation: an object is a conversation without contact',
+      () async {
+        http.handler = (_) => (
+          200,
+          {'id': 3, 'inbox_id': 1, 'contact_last_seen_at': 5, 'status': 'open'},
         );
 
-        await expectLater(
-          rejecting.getContact(),
-          throwsA(isA<ChatwootClientException>()),
-        );
-        expect(adapter.requests, isEmpty);
-      });
-    }
+        final conversation = await service.getConversation();
+
+        expect(conversation!.id, 3);
+        expect(conversation.status, 'open');
+        expect(conversation.contact, isNull);
+        expect(conversation.messages, isEmpty);
+        expect(http.calls, ['GET $_widget/conversations']);
+      },
+    );
+
+    test('getConversation: {} means no conversation yet', () async {
+      http.handler = (_) => (200, <String, Object?>{});
+
+      expect(await service.getConversation(), isNull);
+    });
+
+    test('toggleTyping and updateLastSeen are marked noRecover', () async {
+      await service.toggleTyping(true);
+      await service.toggleTyping(false);
+      await service.updateLastSeen();
+
+      expect(http.calls, [
+        'POST $_widget/conversations/toggle_typing',
+        'POST $_widget/conversations/toggle_typing',
+        'POST $_widget/conversations/update_last_seen',
+      ]);
+      expect(http.requests[0].queryParameters, {'typing_status': 'on'});
+      expect(http.requests[1].queryParameters, {'typing_status': 'off'});
+      expect(http.requests.every((r) => r.extra['noRecover'] == true), isTrue);
+    });
   });
 
   group('failures map to the call-specific typed exception', () {
@@ -213,17 +227,13 @@ void main() {
               ChatwootNewMessageRequest(content: 'a', echoId: 'b'),
             ),
           ),
-          'getAllMessages': (
+          'getMessages': (
             ChatwootClientExceptionType.GET_MESSAGES_FAILED,
-            (s) => s.getAllMessages(),
+            (s) => s.getMessages(),
           ),
-          'getContact': (
-            ChatwootClientExceptionType.GET_CONTACT_FAILED,
-            (s) => s.getContact(),
-          ),
-          'getConversations': (
+          'getConversation': (
             ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
-            (s) => s.getConversations(),
+            (s) => s.getConversation(),
           ),
         };
 

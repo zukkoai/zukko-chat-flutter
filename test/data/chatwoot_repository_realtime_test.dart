@@ -6,13 +6,16 @@ import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
 import 'package:chatwoot_sdk/src/data/local/dao/chatwoot_messages_dao.dart';
 import 'package:chatwoot_sdk/src/data/local/dao/single_store.dart';
 import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
+import 'package:chatwoot_sdk/src/data/remote/api/widget_session.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
 import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_action_data.dart';
 import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../utils/fake_http.dart';
 import '../utils/fakes.dart';
 import '../utils/fixtures.dart';
 
@@ -27,7 +30,15 @@ class _Harness {
       connect: hub.connect,
       backoff: (_) => const Duration(seconds: 1),
     );
+    session = WidgetSession(
+      dio: dioWith(http),
+      websiteToken: 'site',
+      storage: storage,
+      onSessionReset: () => repo.onSessionReset(),
+      now: () => async.getClock(DateTime(2026)).now(),
+    );
     repo = ChatwootRepositoryImpl(
+      session: session,
       clientService: service,
       localStorage: storage,
       socket: socket,
@@ -45,6 +56,8 @@ class _Harness {
         onConversationIsOnline: () => log.add('online'),
         onConversationIsOffline: () => log.add('offline'),
         onConversationResolved: () => log.add('resolved'),
+        onConversationUpdated: (c) => conversations.add(c),
+        onSessionReset: () => log.add('reset'),
         onConnectionStateChanged: (s) => states.add(s),
       ),
     );
@@ -54,6 +67,21 @@ class _Harness {
   final service = FakeClientService();
   final LocalStorage storage;
   final hub = FakeSocketHub();
+
+  /// What `POST /config` answers: the pubsub token of the contact.
+  String configPubsub = 'tok';
+  late final http = FakeHttpAdapter(
+    (_) => (
+      200,
+      {
+        'website_channel_config': {'auth_token': 'jwt-1'},
+        'contact': {'id': 1, 'pubsub_token': configPubsub},
+        'global_config': <String, Object?>{},
+      },
+    ),
+  );
+  late final WidgetSession session;
+  final conversations = <ChatwootConversation>[];
   late final ChatwootSocket socket;
   late final ChatwootRepositoryImpl repo;
 
@@ -125,7 +153,7 @@ void main() {
         h.channel.confirm();
         h.flush();
 
-        expect(h.log, ['welcome', 'confirmed']);
+        expect(h.log, ['welcome', 'confirmed', 'retrieved ()']);
         expect(h.pings, 1);
         expect(h.states, [
           ChatwootConnectionState.connecting,
@@ -146,18 +174,17 @@ void main() {
   });
 
   group('listenForEvents is idempotent (S2)', () {
-    test('called twice: the first channel is closed, events arrive once', () {
+    test('called twice while subscribed: the connection is kept, events arrive once', () {
       run((h) {
         h.subscribe();
         final first = h.channel;
         h.repo.listenForEvents();
-        h.channel.welcome();
-        h.channel.confirm();
         h.flush();
 
         h.messageCreated({'id': 4, 'message_type': 1});
 
-        expect(first.closeCodeByClient, 1000);
+        expect(first.isClosedByClient, isFalse);
+        expect(h.hub.channels, hasLength(1));
         expect(h.received.map((m) => m.id), [4]);
         expect(h.storage.messages.getMessages(), hasLength(1));
       });
@@ -322,6 +349,7 @@ void main() {
   group('rejected subscription (S5)', () {
     test('reports SOCKET_SUBSCRIPTION_REJECTED, no presence, no reconnect', () {
       run((h) {
+        h.configPubsub = 'stale'; // the server still hands out the same one
         h.storage.contact.save(contact(pubsubToken: 'stale'));
         h.flush();
         h.repo.listenForEvents();
@@ -342,29 +370,27 @@ void main() {
   });
 
   group('refetch after reconnect (S11)', () {
-    test(
-      'the first subscription does not refetch; each reconnect does once',
-      () {
-        run((h) {
-          h.service.messagesResult = [message(1), message(2)];
-          h.subscribe();
-          expect(h.service.getAllMessagesCalls, 0);
+    test('the first subscription and each reconnect refetch once', () {
+      run((h) {
+        h.service.messagesResult = [message(1), message(2)];
+        h.subscribe();
+        expect(h.service.getMessagesCalls, 1);
+        expect(h.service.messageCursors.single.after, isNull); // no cursor yet
 
-          for (var reconnect = 1; reconnect <= 2; reconnect++) {
-            h.channel.serverClose();
-            h.flush();
-            h.elapse(const Duration(seconds: 1));
-            h.channel.welcome();
-            h.channel.confirm();
-            h.flush();
+        for (var reconnect = 1; reconnect <= 2; reconnect++) {
+          h.channel.serverClose();
+          h.flush();
+          h.elapse(const Duration(seconds: 1));
+          h.channel.welcome();
+          h.channel.confirm();
+          h.flush();
 
-            expect(h.service.getAllMessagesCalls, reconnect);
-          }
-          expect(h.log.where((l) => l.startsWith('retrieved')), hasLength(2));
-          expect(h.storage.messages.getMessages().map((m) => m.id), [1, 2]);
-        });
-      },
-    );
+          expect(h.service.getMessagesCalls, reconnect + 1);
+        }
+        expect(h.log.where((l) => l.startsWith('retrieved')), hasLength(2));
+        expect(h.storage.messages.getMessages().map((m) => m.id), [1, 2]);
+      });
+    });
 
     test('a refetch failure is reported, not thrown', () {
       run((h) {
@@ -380,10 +406,9 @@ void main() {
         h.channel.confirm();
         h.flush();
 
-        expect(
-          h.errors.single.type,
+        expect(h.errors.map((e) => e.type).toSet(), {
           ChatwootClientExceptionType.GET_MESSAGES_FAILED,
-        );
+        });
       });
     });
 
@@ -557,8 +582,8 @@ void main() {
     });
   });
 
-  group('conversation resolved', () {
-    test('clears the open conversation and its messages', () {
+  group('conversation events', () {
+    test('resolved keeps the messages, stores the status, fires once', () {
       run((h) {
         h.subscribe(conversationId: 8);
         h.storage.messages.saveMessage(message(1));
@@ -566,13 +591,20 @@ void main() {
 
         h.channel.event('conversation.status_changed', {
           'id': 8,
+          'inbox_id': 1,
+          'status': 'resolved',
+        });
+        h.channel.event('conversation.updated', {
+          'id': 8,
+          'inbox_id': 1,
           'status': 'resolved',
         });
         h.flush();
 
         expect(h.log, ['resolved']);
-        expect(h.storage.conversation.get(), isNull);
-        expect(h.storage.messages.getMessages(), isEmpty);
+        expect(h.storage.conversation.get()?.status, 'resolved');
+        expect(h.storage.messages.getMessages(), hasLength(1));
+        expect(h.conversations.map((c) => c.status), ['resolved', 'resolved']);
       });
     });
 
@@ -584,10 +616,167 @@ void main() {
           'id': 99,
           'status': 'resolved',
         });
+        h.channel.event('conversation.updated', {'id': 99, 'status': 'open'});
         h.flush();
 
         expect(h.log, isEmpty);
-        expect(h.storage.conversation.get(), isNotNull);
+        expect(h.conversations, isEmpty);
+        expect(h.storage.conversation.get()?.id, 8);
+      });
+    });
+
+    test('conversation.created is adopted; its messages are ours', () {
+      run((h) {
+        h.subscribe(conversationId: 8);
+
+        h.channel.event('conversation.created', {
+          'id': 9,
+          'inbox_id': 1,
+          'status': 'open',
+        });
+        h.flush();
+        h.messageCreated({'id': 5, 'message_type': 1, 'conversation_id': 9});
+        h.messageCreated({'id': 6, 'message_type': 1, 'conversation_id': 8});
+
+        expect(h.storage.conversation.get()?.id, 9);
+        expect(h.storage.conversation.get()?.status, 'open');
+        expect(h.conversations.single.id, 9);
+        expect(h.received.map((m) => m.id), [5]);
+      });
+    });
+
+    test('a conversation of another inbox is ignored', () {
+      run((h) {
+        h.subscribe(conversationId: 8);
+
+        h.channel.event('conversation.created', {
+          'id': 9,
+          'inbox_id': 2,
+          'status': 'open',
+        });
+        h.flush();
+
+        expect(h.storage.conversation.get()?.id, 8);
+        expect(h.conversations, isEmpty);
+      });
+    });
+
+    test('conversation.updated of the open one stores the new status', () {
+      run((h) {
+        h.subscribe(conversationId: 8);
+
+        h.channel.event('conversation.updated', {
+          'id': 8,
+          'inbox_id': 1,
+          'status': 'pending',
+        });
+        h.flush();
+
+        expect(h.storage.conversation.get()?.status, 'pending');
+        expect(h.conversations.single.status, 'pending');
+      });
+    });
+  });
+
+  group('realtime attachments', () {
+    test('agent files arrive with the message', () {
+      run((h) {
+        h.subscribe();
+
+        h.messageCreated({
+          'id': 5,
+          'message_type': 1,
+          'attachments': [
+            {'id': 1, 'file_type': 'image', 'data_url': 'https://h/a.png'},
+          ],
+        });
+
+        expect(h.received.single.attachments, hasLength(1));
+        expect(h.storage.messages.getMessage(5)?.attachments, hasLength(1));
+      });
+    });
+
+    test('a malformed attachments value does not lose the message', () {
+      run((h) {
+        h.subscribe();
+
+        h.messageCreated({'id': 5, 'message_type': 1, 'attachments': 'oops'});
+
+        expect(h.received.single.id, 5);
+        expect(h.received.single.attachments, isNull);
+      });
+    });
+  });
+
+  group('rejected subscription', () {
+    void reject(_Harness h) {
+      h.storage.contact.save(contact(pubsubToken: 'tok'));
+      h.flush();
+      h.repo.listenForEvents();
+      h.channel.welcome();
+      h.channel.emit({'type': 'reject_subscription'});
+      h.elapse(const Duration(milliseconds: 10)); // Dio needs a timer tick
+    }
+
+    test('the same token: reported, socket stays closed', () {
+      run((h) {
+        reject(h);
+        h.elapse(const Duration(seconds: 30)); // the slow retry comes at 60 s
+
+        expect(h.http.calls, ['POST /api/v1/widget/config']);
+        expect(
+          h.errors.single.type,
+          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+        );
+        expect(h.socket.state, ChatwootConnectionState.closed);
+        expect(h.hub.channels, hasLength(1));
+      });
+    });
+
+    test('a new token reconnects', () {
+      run((h) {
+        h.configPubsub = 'fresh';
+        reject(h);
+
+        expect(h.errors, isEmpty);
+        expect(h.hub.channels, hasLength(2));
+        expect(h.socket.state, ChatwootConnectionState.connecting);
+      });
+    });
+
+    test('refreshing too often ends in SESSION_EXPIRED, no loop', () {
+      run((h) {
+        reject(h);
+        for (var i = 0; i < 3; i++) {
+          h.repo.listenForEvents();
+          h.channel.welcome();
+          h.channel.emit({'type': 'reject_subscription'});
+          h.elapse(const Duration(milliseconds: 10));
+        }
+
+        expect(
+          h.errors.map((e) => e.type),
+          contains(ChatwootClientExceptionType.SESSION_EXPIRED),
+        );
+        expect(h.http.requests.length, WidgetSession.maxRefreshes);
+      });
+    });
+  });
+
+  group('session reset', () {
+    test('tells the UI, then loads conversation and latest messages', () {
+      run((h) {
+        h.subscribe();
+        h.service
+          ..conversationResult = conversation(id: 3)
+          ..messagesResult = [message(30)];
+
+        h.repo.onSessionReset();
+        h.flush();
+
+        expect(h.log, ['reset', 'retrieved (30)']);
+        expect(h.storage.conversation.get()?.id, 3);
+        expect(h.service.messageCursors.last.after, isNull);
       });
     });
   });

@@ -21,7 +21,14 @@ class _RecordingRepository extends Fake implements ChatwootRepository {
   void getPersistedMessages() => log.add('getPersistedMessages');
 
   @override
-  Future<void> getMessages() async => log.add('getMessages');
+  Future<void> getMessages({int? after}) async =>
+      log.add(after == null ? 'getMessages' : 'getMessages after=$after');
+
+  @override
+  Future<void> setTyping(bool on) async => log.add('setTyping $on');
+
+  @override
+  Future<void> markSeen() async => log.add('markSeen');
 
   @override
   Future<void> sendMessage(
@@ -69,7 +76,7 @@ void main() {
       client = ChatwootClient.withRepository(
         repo,
         baseUrl: 'https://x',
-        inboxIdentifier: 'in',
+        websiteToken: 'in',
       );
     });
 
@@ -82,13 +89,18 @@ void main() {
       },
     );
 
-    test('sendMessage / sendAction / clearClientData', () async {
-      await client.sendMessage(content: 'hi', echoId: 'e');
+    test('sendMessage / setTyping / markSeen / sendAction / clear', () async {
+      await client.sendMessage(content: 'hi', echoId: 'e', replyTo: 5);
+      await client.setTyping(true);
+      await client.markSeen();
       await client.sendAction(ChatwootActionType.update_presence);
       await client.clearClientData();
 
+      expect(client.config, isNull);
       expect(repo.log, [
         'sendMessage hi e 0',
+        'setTyping true',
+        'markSeen',
         'sendAction ChatwootActionType.update_presence',
         'clear keepUser=true',
       ]);
@@ -110,14 +122,16 @@ void main() {
     setUp(() {
       errors = [];
       messages = [];
-      server.requests.clear();
+      server.calls.clear();
       server.forceStatus = null;
+      server.hasConversation = true;
+      server.contacts.clear();
     });
 
     Future<ChatwootClient> create({bool persist = false, ChatwootUser? user}) =>
         ChatwootClient.create(
           baseUrl: server.baseUrl,
-          inboxIdentifier: 'inbox',
+          websiteToken: FakeChatServer.websiteToken,
           user: user,
           enablePersistence: persist,
           callbacks: ChatwootCallbacks(
@@ -126,34 +140,34 @@ void main() {
           ),
         );
 
-    test(
-      'refreshes contact and conversation before create() completes',
-      () async {
-        final client = await create();
+    test('establishes the session and reads the conversation before create() '
+        'completes', () async {
+      final client = await create();
 
-        expect(
-          server.requests,
-          containsAll([
-            'POST /public/api/v1/inboxes/inbox/contacts',
-            'POST /public/api/v1/inboxes/inbox/contacts/source-1/conversations',
-            'GET /public/api/v1/inboxes/inbox/contacts/source-1',
-            'GET /public/api/v1/inboxes/inbox/contacts/source-1/conversations',
-          ]),
-        );
-        expect(errors, isEmpty);
-        await client.loadMessages();
-        expect(messages.map((m) => m.id), [1, 2]);
-        await client.dispose();
-      },
-    );
+      expect(server.requests, [
+        'POST /api/v1/widget/config',
+        'GET /api/v1/widget/conversations',
+      ]);
+      expect(client.config?.websiteName, 'Zukko');
+      expect(
+        server.calls.every(
+          (c) => c.query['website_token'] == FakeChatServer.websiteToken,
+        ),
+        isTrue,
+      );
+      expect(errors, isEmpty);
+      await client.loadMessages();
+      expect(messages.map((m) => m.id), [1, 2]);
+      await client.dispose();
+    });
 
     // P4
     test('two clients with the same key are independent; dispose of one '
         'leaves the other working', () async {
       final a = await create();
       final b = await create();
-      // non-persisted clients no longer share state: each created its own contact
-      expect(server.count('POST', (p) => p.endsWith('/contacts')), 2);
+      // non-persisted clients do not share state: each got its own contact
+      expect(server.contacts, hasLength(2));
 
       await a.dispose();
       await b.loadMessages();
@@ -189,10 +203,37 @@ void main() {
       await client.dispose();
     });
 
+    test('rejected identifier hash fails closed: onError, nothing else is '
+        'requested, no websocket', () async {
+      server.pubsubToken = 'would-connect';
+      addTearDown(() {
+        server.pubsubToken = null;
+      });
+
+      final client = await create(
+        user: ChatwootUser(identifier: 'u', identifierHash: 'bad'),
+      );
+
+      expect(errors.map((e) => e.type), [
+        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+      ]);
+      expect(server.requests, [
+        'POST /api/v1/widget/config',
+        'PATCH /api/v1/widget/contact/set_user',
+      ]);
+      await client.loadMessages();
+      expect(
+        errors.last.type,
+        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+      );
+      expect(server.to('/messages'), isEmpty);
+      await client.dispose();
+    });
+
     test('unreachable server: onError, no throw', () async {
       final client = await ChatwootClient.create(
         baseUrl: 'http://127.0.0.1:1',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         enablePersistence: false,
         callbacks: ChatwootCallbacks(onError: errors.add),
       );
@@ -209,7 +250,7 @@ void main() {
       await expectLater(
         ChatwootClient.create(
           baseUrl: 'http://chat.example.com',
-          inboxIdentifier: 'in',
+          websiteToken: 'in',
           enablePersistence: false,
         ),
         throwsArgumentError,
@@ -221,7 +262,7 @@ void main() {
         await expectLater(
           ChatwootClient.create(
             baseUrl: url,
-            inboxIdentifier: 'in',
+            websiteToken: 'in',
             enablePersistence: false,
             allowInsecure: true,
           ),
@@ -236,7 +277,7 @@ void main() {
 
       final client = await ChatwootClient.create(
         baseUrl: 'http://nonexistent.invalid',
-        inboxIdentifier: 'in',
+        websiteToken: 'in',
         enablePersistence: false,
         allowInsecure: true,
         callbacks: ChatwootCallbacks(onError: errors.add),
@@ -251,7 +292,7 @@ void main() {
   test('sendAction completes with false while not subscribed', () async {
     final client = await ChatwootClient.create(
       baseUrl: server.baseUrl,
-      inboxIdentifier: 'inbox',
+      websiteToken: FakeChatServer.websiteToken,
       enablePersistence: false,
     );
 
@@ -270,40 +311,39 @@ void main() {
       LocalStorage.keyStore = _BrokenKeyStore();
       addTearDown(() => LocalStorage.keyStore = saved);
       final errors = <ChatwootClientException>[];
-      server.requests.clear();
+      server.calls.clear();
 
       final client = await ChatwootClient.create(
         baseUrl: server.baseUrl,
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         callbacks: ChatwootCallbacks(onError: errors.add),
       );
 
       expect(errors.map((e) => e.type), [
         ChatwootClientExceptionType.STORAGE_FAILED,
       ]);
-      expect(
-        server.count('POST', (p) => p.endsWith('/contacts')),
-        1,
-      ); // still talks to the server
+      expect(server.to('/config'), hasLength(1)); // still talks to the server
       await client.dispose();
     });
   });
 
   // SEC5 + SEC3 through create()
   group('identifier hash', () {
+    final good = FakeChatServer.hashFor('u');
     Future<ChatwootClient> create(String? hash) => ChatwootClient.create(
       baseUrl: server.baseUrl,
-      inboxIdentifier: 'inbox',
+      websiteToken: FakeChatServer.websiteToken,
       user: ChatwootUser(identifier: 'u', identifierHash: hash),
     );
 
     test('same identifier with another hash does not reuse the stored '
         'contact; the same hash does', () async {
-      server.requests.clear();
-      int contacts() => server.count('POST', (p) => p.endsWith('/contacts'));
+      server.calls.clear();
+      server.contacts.clear();
+      int contacts() => server.contacts.length;
 
-      await (await create('hash-1')).dispose();
-      await (await create('hash-1')).dispose();
+      await (await create(good)).dispose();
+      await (await create(good)).dispose();
       expect(contacts(), 1);
 
       await (await create('hash-FORGED')).dispose();
@@ -311,12 +351,12 @@ void main() {
     });
 
     test('the hash is never written to disk', () async {
-      final client = await create('hash-1');
+      final client = await create(good);
       final key = ChatwootClient.getClientInstanceKey(
         baseUrl: server.baseUrl,
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
-        identifierHash: 'hash-1',
+        identifierHash: good,
       );
 
       // what a new process reads from disk
@@ -327,19 +367,19 @@ void main() {
     });
 
     test('clearData needs the same hash to find the instance', () async {
-      await (await create('hash-1')).dispose();
+      await (await create(good)).dispose();
       final key = ChatwootClient.getClientInstanceKey(
         baseUrl: server.baseUrl,
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
-        identifierHash: 'hash-1',
+        identifierHash: good,
       );
 
       await ChatwootClient.clearData(
         baseUrl: server.baseUrl,
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
-        identifierHash: 'hash-1',
+        identifierHash: good,
       );
 
       expect(LocalStorage.persisted(key).contact.get(), isNull);
@@ -352,7 +392,7 @@ void main() {
     setUp(() {
       key = ChatwootClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u1',
       );
     });
@@ -378,7 +418,7 @@ void main() {
       await env.open();
       final other = ChatwootClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u2',
       );
       await seed(key);
@@ -386,7 +426,7 @@ void main() {
 
       await ChatwootClient.clearData(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u1',
       );
 
@@ -402,7 +442,7 @@ void main() {
     test('clearData works before any box is open (fresh process)', () async {
       await ChatwootClient.clearData(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
       );
     });
 
@@ -431,14 +471,14 @@ void main() {
       await env.open();
       final anonymous = ChatwootClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
       );
       await seed(anonymous);
       await seed(key);
 
       await ChatwootClient.clearData(
         baseUrl: 'https://a.example',
-        inboxIdentifier: 'inbox',
+        websiteToken: FakeChatServer.websiteToken,
       );
 
       expectEmpty(anonymous);
@@ -446,25 +486,23 @@ void main() {
     });
 
     test(
-      'persisted clients with the same key reuse the stored contact',
+      'persisted clients with the same key reuse the stored contact and send '
+      'its JWT',
       () async {
-        server.requests.clear();
+        server.calls.clear();
+        server.contacts.clear();
         Future<ChatwootClient> create() => ChatwootClient.create(
           baseUrl: server.baseUrl,
-          inboxIdentifier: 'inbox',
+          websiteToken: FakeChatServer.websiteToken,
         );
 
-        final first = await create();
-        final createdContacts = server.count(
-          'POST',
-          (p) => p.endsWith('/contacts'),
-        );
-        await first.dispose();
-        final second = await create();
-        await second.dispose();
+        await (await create()).dispose();
+        await (await create()).dispose();
 
-        expect(createdContacts, 1);
-        expect(server.count('POST', (p) => p.endsWith('/contacts')), 1);
+        expect(server.contacts, hasLength(1));
+        final configs = server.to('/config');
+        expect(configs.first.jwt, isEmpty);
+        expect(configs.last.jwt, 'jwt-${server.contacts.keys.single}');
       },
     );
   });

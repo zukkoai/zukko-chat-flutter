@@ -302,77 +302,79 @@ void main() {
   });
 
   group('initialize', () {
-    test('saves user, contact and the refreshed conversation', () async {
+    test('saves the user and the current conversation', () async {
       final conv = conversation(id: 7);
-      service
-        ..contactResult = contact(pubsubToken: null)
-        ..conversationsResult = [conv];
-      await storage.conversation.save(conversation(id: 7));
+      service.conversationResult = conv;
 
       await repo.initialize(user());
 
       expect(storage.user.get(), user());
-      expect(storage.contact.get(), contact(pubsubToken: null));
       expect(storage.conversation.get(), conv);
       expect(errors, isEmpty);
     });
 
     test('works without a user', () async {
-      service
-        ..contactResult = contact(pubsubToken: null)
-        ..conversationsResult = [conversation()];
-      await storage.conversation.save(conversation());
+      service.conversationResult = conversation();
 
       await repo.initialize(null);
 
       expect(storage.user.get(), isNull);
-      expect(storage.contact.get(), isNotNull);
+      expect(storage.conversation.get(), isNotNull);
+    });
+
+    test('a contact without a conversation yet is not an error', () async {
+      service.conversationResult = null;
+
+      await repo.initialize(null);
+
+      expect(storage.conversation.get(), isNull);
+      expect(errors, isEmpty);
+    });
+
+    test('another current conversation drops the old messages', () async {
+      await storage.conversation.save(conversation(id: 7));
+      await storage.messages.saveMessage(message(1));
+      service.conversationResult = conversation(id: 9);
+
+      await repo.initialize(null);
+
+      expect(storage.conversation.get()!.id, 9);
+      expect(storage.messages.getMessages(), isEmpty);
     });
 
     test('starts listening when the contact has a pubsub token', () async {
-      service
-        ..contactResult = contact(pubsubToken: 'tok')
-        ..conversationsResult = [conversation()];
-      await storage.conversation.save(conversation());
+      await storage.contact.save(contact(pubsubToken: 'tok'));
+      service.conversationResult = conversation();
 
       await repo.initialize(null);
 
       expect(hub.urls, hasLength(1));
     });
 
-    // P5: the missing persisted conversation used to be a null-check crash
-    test(
-      'no conversation after refresh: reports an error, does not throw',
-      () async {
-        service
-          ..contactResult = contact(pubsubToken: null)
-          ..conversationsResult = [conversation()];
-        // storage.conversation is empty
+    test('does not connect without a pubsub token', () async {
+      await storage.contact.save(contact(pubsubToken: null));
+      service.conversationResult = conversation();
 
-        await repo.initialize(null);
+      await repo.initialize(null);
 
-        expect(
-          errors.single.type,
-          ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
-        );
-      },
-    );
+      expect(hub.urls, isEmpty);
+    });
 
     test('a failing service call is reported', () async {
-      service.contactResult = failure(
-        ChatwootClientExceptionType.GET_CONTACT_FAILED,
+      service.conversationResult = failure(
+        ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
       );
 
       await repo.initialize(null);
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.GET_CONTACT_FAILED,
+        ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
       );
     });
 
     test('an unexpected error is wrapped and reported, never thrown', () async {
-      service.contactResult = 'not a contact'; // cast error inside the service
+      service.conversationResult = 'not a conversation'; // cast error
 
       await repo.initialize(null);
 
@@ -380,6 +382,52 @@ void main() {
         errors.single.type,
         ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
       );
+    });
+  });
+
+  group('first message creates the conversation', () {
+    test('its conversation becomes the stored one', () async {
+      service.createMessageResult = message(100);
+
+      await repo.sendMessage(
+        ChatwootNewMessageRequest(content: 'hi', echoId: 'e'),
+      );
+
+      expect(storage.conversation.get()!.id, 7);
+    });
+  });
+
+  group('typing / last seen', () {
+    test('forwarded to the service', () async {
+      await repo.setTyping(true);
+      await repo.markSeen();
+
+      expect(service.typing, [true]);
+      expect(service.updateLastSeenCalls, 1);
+    });
+
+    test('failures are swallowed, never reported', () async {
+      service.typingResult = StateError('404');
+
+      await repo.setTyping(false);
+
+      expect(errors, isEmpty);
+    });
+  });
+
+  group('getMessages(after:)', () {
+    test('pages of 100 are followed until a short page', () async {
+      final full = [for (var i = 1; i <= 100; i++) message(i)];
+      service.messagePages = [
+        full,
+        [message(101)],
+      ];
+
+      await repo.getMessages(after: 0);
+
+      expect(service.messageCursors.map((c) => c.after), [0, 100]);
+      expect(storage.messages.getMessages(), hasLength(101));
+      expect(retrieved, hasLength(101));
     });
   });
 

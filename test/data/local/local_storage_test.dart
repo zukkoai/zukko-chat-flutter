@@ -70,11 +70,11 @@ void main() {
         expect(storage.user.get(), anonymous);
       });
 
-      // P11: contact without source_id used to crash with a null check
-      test('a contact without source_id can be stored', () async {
+      // P11: contact without an identifier used to crash with a null check
+      test('an anonymous contact (no identifier) can be stored', () async {
         final storage = make('k');
 
-        await storage.contact.save(contact(sourceId: null));
+        await storage.contact.save(contact(identifier: null));
 
         expect(storage.contact.get()!.contactIdentifier, isNull);
       });
@@ -148,8 +148,8 @@ void main() {
 
         await a.conversation.save(conversation(id: 1));
         await b.conversation.save(conversation(id: 1));
-        await a.contact.save(contact(sourceId: 'same'));
-        await b.contact.save(contact(sourceId: 'same', pubsubToken: 'other'));
+        await a.contact.save(contact(identifier: 'same'));
+        await b.contact.save(contact(identifier: 'same', pubsubToken: 'other'));
         await a.messages.saveMessage(message(1, content: 'from a'));
         await b.messages.saveMessage(message(1, content: 'from b'));
 
@@ -195,7 +195,7 @@ void main() {
     test('data survives closing and reopening the boxes', () async {
       final key = chatwootInstanceKey(
         baseUrl: 'https://a',
-        inboxIdentifier: 'in',
+        websiteToken: 'in',
         userIdentifier: 'u',
       );
       await LocalStorage.persisted(key).contact.save(contact());
@@ -223,14 +223,14 @@ void main() {
       final short = LocalStorage.persisted(
         chatwootInstanceKey(
           baseUrl: 'https://a',
-          inboxIdentifier: 'in',
+          websiteToken: 'in',
           userIdentifier: 'u',
         ),
       );
       final long = LocalStorage.persisted(
         chatwootInstanceKey(
           baseUrl: 'https://a',
-          inboxIdentifier: 'in|m|1',
+          websiteToken: 'in|m|1',
           userIdentifier: 'u',
         ),
       );
@@ -274,7 +274,7 @@ void main() {
     const legacyKey = 'https://old.example|||null|||inbox-1';
     final newKey = chatwootInstanceKey(
       baseUrl: 'https://old.example',
-      inboxIdentifier: 'inbox-1',
+      websiteToken: 'inbox-1',
     );
 
     Future<Box<T>> legacy<T>(String name) => Hive.openBox<T>(name);
@@ -343,7 +343,7 @@ void main() {
       await seedLegacy();
       // a second contact whose index key cannot be parsed (4 parts)
       await Hive.box<ChatwootContact>(ChatwootBoxNames.legacyContacts)
-          .put('source-2', contact(id: 2, sourceId: 'source-2'));
+          .put('source-2', contact(id: 2, identifier: 'source-2'));
       await Hive.box<String>(ChatwootBoxNames.legacyContactIndex)
           .put('a|||b|||c|||d', 'source-2');
       await Hive.box<ChatwootMessage>(ChatwootBoxNames.legacyMessages)
@@ -447,7 +447,11 @@ void main() {
     test('secrets are not readable in the box files', () async {
       final storage = LocalStorage.persisted('k');
       await storage.contact.save(
-        contact(sourceId: 'SOURCE-ID-SECRET', pubsubToken: 'PUBSUB-SECRET'),
+        contact(
+          identifier: 'SOURCE-ID-SECRET',
+          pubsubToken: 'PUBSUB-SECRET',
+          authToken: 'JWT-SECRET',
+        ),
       );
       await storage.messages.saveMessage(message(1, content: 'PRIVATE-TEXT'));
 
@@ -460,14 +464,20 @@ void main() {
 
       expect(contains(contactBytes, 'SOURCE-ID-SECRET'), isFalse);
       expect(contains(contactBytes, 'PUBSUB-SECRET'), isFalse);
+      expect(contains(contactBytes, 'JWT-SECRET'), isFalse);
       expect(contains(messageBytes, 'PRIVATE-TEXT'), isFalse);
     });
 
     test('control: the same data IS readable in a plaintext box', () async {
       final plain = await Hive.openBox<ChatwootContact>('plain_control');
-      await plain.put('k', contact(sourceId: 'SOURCE-ID-SECRET'));
+      await plain.put(
+        'k',
+        contact(identifier: 'SOURCE-ID-SECRET', authToken: 'JWT-SECRET'),
+      );
 
-      expect(contains(await bytesOf(plain), 'SOURCE-ID-SECRET'), isTrue);
+      final bytes = await bytesOf(plain);
+      expect(contains(bytes, 'SOURCE-ID-SECRET'), isTrue);
+      expect(contains(bytes, 'JWT-SECRET'), isTrue);
     });
 
     test('the key is generated once, 256 bits, and reused', () async {
@@ -482,12 +492,16 @@ void main() {
     });
 
     test('data is readable after a restart with the same key', () async {
-      await LocalStorage.persisted('k').contact.save(contact());
+      await LocalStorage.persisted('k').contact
+          .save(contact(authToken: 'jwt-1'));
 
       await Hive.close();
       await LocalStorage.openDB();
 
-      expect(LocalStorage.persisted('k').contact.get(), contact());
+      expect(
+        LocalStorage.persisted('k').contact.get(),
+        contact(authToken: 'jwt-1'),
+      );
     });
 
     test(
@@ -551,7 +565,7 @@ void main() {
 
         final key = chatwootInstanceKey(
           baseUrl: 'https://a',
-          inboxIdentifier: 'in',
+          websiteToken: 'in',
         );
         expect(LocalStorage.persisted(key).contact.get(), contact());
         expect(env.keys.writes, 1);
@@ -562,7 +576,7 @@ void main() {
   group('chatwootInstanceKey hash (SEC5)', () {
     String key({String? hash}) => chatwootInstanceKey(
       baseUrl: 'https://a',
-      inboxIdentifier: 'in',
+      websiteToken: 'in',
       userIdentifier: 'u',
       identifierHash: hash,
     );
@@ -586,7 +600,7 @@ void main() {
   group('chatwootInstanceKey', () {
     String key({String? user}) => chatwootInstanceKey(
       baseUrl: 'https://a',
-      inboxIdentifier: 'in',
+      websiteToken: 'in',
       userIdentifier: user,
     );
 
@@ -598,12 +612,12 @@ void main() {
     test('a separator inside a component cannot forge another key', () {
       final forged = chatwootInstanceKey(
         baseUrl: 'https://a',
-        inboxIdentifier: 'in',
+        websiteToken: 'in',
         userIdentifier: 'x|||y',
       );
       final other = chatwootInstanceKey(
         baseUrl: 'https://a|||x',
-        inboxIdentifier: 'in',
+        websiteToken: 'in',
         userIdentifier: 'y',
       );
 

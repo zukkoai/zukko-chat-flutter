@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
 import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
@@ -14,13 +13,22 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Scriptable [ChatwootClientService]: set the `*Result`s, inspect the records.
 class FakeClientService extends Fake implements ChatwootClientService {
-  Object? contactResult; // ChatwootContact or an exception
-  Object? conversationsResult = <ChatwootConversation>[];
+  Object? conversationResult; // ChatwootConversation?, or an exception
   Object? messagesResult = <ChatwootMessage>[];
   Object? createMessageResult; // ChatwootMessage or an exception
 
   final createdMessageRequests = <ChatwootNewMessageRequest>[];
-  var getAllMessagesCalls = 0;
+  final uploadedAttachments = <List<ChatwootUpload>>[];
+  final typing = <bool>[];
+  var getMessagesCalls = 0;
+  var updateLastSeenCalls = 0;
+
+  /// `(before, after)` of every [getMessages] call.
+  final messageCursors = <({int? before, int? after})>[];
+
+  /// When set, [getMessages] answers these pages in order (instead of
+  /// [messagesResult]).
+  List<List<ChatwootMessage>>? messagePages;
 
   T _unwrap<T>(Object? result) {
     if (result is Exception || result is Error) throw result as Object;
@@ -28,36 +36,39 @@ class FakeClientService extends Fake implements ChatwootClientService {
   }
 
   @override
-  Future<ChatwootContact> getContact() async => _unwrap(contactResult);
+  Future<ChatwootConversation?> getConversation() async =>
+      _unwrap(conversationResult);
 
   @override
-  Future<List<ChatwootConversation>> getConversations() async =>
-      _unwrap(conversationsResult);
-
-  @override
-  Future<List<ChatwootMessage>> getAllMessages() async {
-    getAllMessagesCalls++;
+  Future<List<ChatwootMessage>> getMessages({int? before, int? after}) async {
+    getMessagesCalls++;
+    messageCursors.add((before: before, after: after));
+    final pages = messagePages;
+    if (pages != null) return pages.isEmpty ? [] : pages.removeAt(0);
     return _unwrap(messagesResult);
   }
 
   @override
   Future<ChatwootMessage> createMessage(
-    ChatwootNewMessageRequest request,
-  ) async {
-    createdMessageRequests.add(request);
-    return _unwrap(createMessageResult);
-  }
-
-  final uploadedAttachments = <List<ChatwootUpload>>[];
-
-  @override
-  Future<ChatwootMessage> createMessageWithAttachments(
-    ChatwootNewMessageRequest request,
-    List<ChatwootUpload> attachments,
-  ) async {
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  }) async {
     createdMessageRequests.add(request);
     uploadedAttachments.add(attachments);
     return _unwrap(createMessageResult);
+  }
+
+  @override
+  Future<void> toggleTyping(bool on) async {
+    typing.add(on);
+    if (typingResult != null) throw typingResult!;
+  }
+
+  Object? typingResult;
+
+  @override
+  Future<void> updateLastSeen() async {
+    updateLastSeenCalls++;
   }
 }
 

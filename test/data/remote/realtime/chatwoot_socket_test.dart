@@ -132,7 +132,7 @@ void main() {
   });
 
   group('presence heartbeat (S7)', () {
-    test('every 20 s: frames at t=0, 20, 40, 60', () {
+    test('every 15 s: frames at t=0, 15, 30, 45, 60', () {
       run((r) {
         r.subscribe();
         // keep the connection alive: pings are not what is tested here
@@ -142,7 +142,7 @@ void main() {
         }
 
         expect(r.hub.channels, hasLength(1));
-        expect(r.hub.last.presenceFrames, 4); // 61 s elapsed
+        expect(r.hub.last.presenceFrames, 5); // 61 s elapsed
       });
     });
 
@@ -156,8 +156,8 @@ void main() {
           r.hub.last.ping();
         }
 
-        // 2 immediate + 3 ticks (20, 40, 60). Stacked timers would add 3 more.
-        expect(r.hub.last.presenceFrames, 5);
+        // 2 immediate + 4 ticks (15, 30, 45, 60). Stacked timers would add 4.
+        expect(r.hub.last.presenceFrames, 6);
       });
     });
 
@@ -398,10 +398,27 @@ void main() {
   });
 
   group('connect is idempotent (S2)', () {
-    test('a 2nd connect closes the old channel; events arrive once', () {
+    test('a 2nd connect with the same token while live is a no-op', () {
+      run((r) {
+        r.subscribe();
+        final first = r.hub.last;
+        r.socket.connect();
+
+        expect(first.isClosedByClient, isFalse);
+        expect(r.hub.channels, hasLength(1));
+        r.socket.connect(); // also while only connecting
+        r.hub.last.event('message.created', {'id': 1});
+        r.async.flushMicrotasks();
+        expect(r.messages, hasLength(1));
+      });
+    });
+
+    test('a 2nd connect with another token closes the old channel; events '
+        'arrive once', () {
       run((r) {
         r.socket.connect();
         final old = r.hub.last;
+        r.token = 'tok-2';
         r.socket.connect();
 
         expect(old.closeCodeByClient, 1000);
@@ -451,6 +468,154 @@ void main() {
         expect(channel.presenceFrames, 0);
         expect(channel.closeCodeByClient, 1000);
         expect(r.hub.channels, hasLength(1)); // no blind retry
+      });
+    });
+  });
+
+  group('subscribe timeout', () {
+    // the server pings every 3 s (here 1 s); keep the stale watchdog quiet meanwhile
+    void silence(_Rig r, Duration d) {
+      for (var t = 0; t < d.inSeconds; t++) {
+        r.hub.last.ping();
+        r.elapse(_s);
+      }
+    }
+
+    test('2 timeouts in a row: one failure, no third attempt', () {
+      run((r) {
+        r.socket.connect();
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10)); // 1st timeout at 10 s
+        expect(r.socket.state, ChatwootConnectionState.backoff);
+        r.elapse(_s); // retry
+        expect(r.hub.channels, hasLength(2));
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10));
+        r.elapse(const Duration(minutes: 2));
+
+        expect(
+          r.failures.single.error.type,
+          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+        );
+        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.hub.channels, hasLength(2));
+      });
+    });
+
+    test('a timeout then confirm subscribes and resets the counter', () {
+      run((r) {
+        r.socket.connect();
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10));
+        r.elapse(_s);
+        r.hub.last.welcome();
+        r.hub.last.confirm();
+        r.async.flushMicrotasks();
+        expect(r.socket.state, ChatwootConnectionState.subscribed);
+
+        // lose the connection; the next attempt may time out once again
+        r.hub.last.serverClose();
+        r.async.flushMicrotasks();
+        r.elapse(const Duration(seconds: 2));
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10));
+        expect(r.failures, isEmpty);
+        expect(r.socket.state, ChatwootConnectionState.backoff);
+      });
+    });
+
+    test('a confirm in time never times out', () {
+      run((r) {
+        r.subscribe();
+        r.elapse(const Duration(minutes: 1));
+        expect(r.failures, isEmpty);
+      });
+    });
+
+    test('connect() after the failure re-reads the token', () {
+      run((r) {
+        r.socket.connect();
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10));
+        r.elapse(_s);
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        silence(r, const Duration(seconds: 10));
+        expect(r.socket.state, ChatwootConnectionState.closed);
+
+        r.token = 'fresh';
+        r.socket.connect();
+        r.hub.last.welcome();
+        r.async.flushMicrotasks();
+        expect(r.hub.channels, hasLength(3));
+        expect(
+          jsonEncode(r.hub.last.sent.single['identifier']),
+          contains('fresh'),
+        );
+        r.hub.last.confirm();
+        r.async.flushMicrotasks();
+        expect(r.socket.state, ChatwootConnectionState.subscribed);
+      });
+    });
+  });
+
+  group('conversation events', () {
+    test('conversation.created / updated parse with the server payload', () {
+      run((r) {
+        r.subscribe();
+        // keys of Conversations::EventDataPresenter#push_data
+        final payload = {
+          'id': 7,
+          'inbox_id': 3,
+          'status': 'open',
+          'contact_last_seen_at': 1700000000,
+          'messages': <Object?>[],
+          'meta': {'sender': <String, Object?>{}},
+          'updated_at': 1.5,
+        };
+        r.hub.last.event('conversation.created', payload);
+        r.hub.last.event('conversation.updated', payload);
+        r.async.flushMicrotasks();
+
+        final msgs = r.messages.map((m) => m.message).toList();
+        expect(msgs.map((m) => m.event), [
+          ChatwootEventMessageType.conversation_created,
+          ChatwootEventMessageType.conversation_updated,
+        ]);
+        final d = msgs.first.data!;
+        expect(
+          [d.id, d.inboxId, d.status, d.contactLastSeenAt],
+          [7, 3, 'open', 1700000000],
+        );
+      });
+    });
+
+    test('message attachments are kept; garbage fields do not throw', () {
+      run((r) {
+        r.subscribe();
+        r.hub.last.event('message.created', {
+          'id': 1,
+          'attachments': [
+            {'id': 2, 'file_type': 'image', 'data_url': 'https://h/a.png'},
+          ],
+        });
+        r.hub.last.event('conversation.updated', {
+          'inbox_id': 'x',
+          'contact_last_seen_at': 'soon',
+        });
+        r.hub.last.event('message.created', {'attachments': 'nope'});
+        r.async.flushMicrotasks();
+
+        final first = r.messages.first.message.data!;
+        expect((first.attachments as List).single['file_type'], 'image');
+        // the malformed 2nd one is dropped as an unknown frame, the 3rd parses
+        expect(r.messages.last.message.data!.attachments, 'nope');
+        expect(r.socket.state, ChatwootConnectionState.subscribed);
       });
     });
   });

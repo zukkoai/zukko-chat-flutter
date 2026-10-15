@@ -93,7 +93,9 @@ void main() {
       unawaited(recorder.start());
       async.flushMicrotasks();
       capture.audio!.add(Uint8List(2));
-      async.elapse(VoiceRecorderController.maxDuration + const Duration(seconds: 5));
+      async.elapse(
+        VoiceRecorderController.maxDuration + const Duration(seconds: 5),
+      );
 
       expect(recorded.single.duration, VoiceRecorderController.maxDuration);
       expect(async.pendingTimers, isEmpty);

@@ -3,7 +3,6 @@ import 'package:chatwoot_sdk/src/ui/chat/components/image_viewer.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapMinTime;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../chat_fakes.dart';
 
@@ -25,7 +24,6 @@ Finder _hero(String tag) =>
 void main() {
   late FakeFactory factory;
 
-  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
   setUp(() => factory = FakeFactory());
 
   Future<void> open(
@@ -40,7 +38,7 @@ void main() {
         home: ChatwootChat(
           options: ChatwootChatOptions(
             baseUrl: 'https://x.test',
-            inboxIdentifier: 'in',
+            websiteToken: 'in',
             style: style,
           ),
           clientFactory: factory.call,

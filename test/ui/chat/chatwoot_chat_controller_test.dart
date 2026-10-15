@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:chatwoot_sdk/chatwoot_sdk.dart';
 import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_controller.dart';
 import 'package:chatwoot_sdk/src/ui/chat/components/gallery_message.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,7 +12,7 @@ import 'chat_fakes.dart';
 
 const _options = ChatwootChatOptions(
   baseUrl: 'https://x.test',
-  inboxIdentifier: 'in',
+  websiteToken: 'in',
 );
 
 void main() {
@@ -123,7 +124,7 @@ void main() {
       controller = ChatwootChatController(
         const ChatwootChatOptions(
           baseUrl: 'http://x.test',
-          inboxIdentifier: 'in',
+          websiteToken: 'in',
           allowInsecure: true,
         ),
         clientFactory: factory.call,
@@ -367,7 +368,7 @@ void main() {
       controller = ChatwootChatController(
         const ChatwootChatOptions(
           baseUrl: 'b',
-          inboxIdentifier: 'i',
+          websiteToken: 'i',
           enablePersistence: false,
         ),
         clientFactory: factory.call,
@@ -493,113 +494,124 @@ void main() {
       expect(texts().single.text, const ChatwootL10n().attachmentLabel);
     });
 
-    test('https attachments become image, gallery, audio and file messages', () async {
-      await ready();
-      Map<String, dynamic> file(String type, String name) => {
-        'file_type': type,
-        'data_url': 'https://cdn.test/$name',
-        'file_size': 2048,
-      };
-      factory.callbacks!.onMessageReceived!(
-        msg(1, content: 'one', attachments: [file('image', 'a.jpg')]),
-      );
-      factory.callbacks!.onMessageReceived!(
-        msg(
-          2,
-          content: 'two',
-          attachments: [file('image', 'b.jpg'), file('image', 'c.jpg')],
-        ),
-      );
-      factory.callbacks!.onMessageReceived!(
-        msg(3, content: null, attachments: [file('audio', 'v.ogg')]),
-      );
-      factory.callbacks!.onMessageReceived!(
-        msg(4, content: null, attachments: [file('file', 'doc.pdf')]),
-      );
-      factory.callbacks!.onMessageReceived!(
-        msg(
-          5,
-          content: null,
-          attachments: [
-            {'file_type': 'image', 'data_url': 'http://insecure.test/x.jpg'},
-          ],
-        ),
-      );
+    test(
+      'https attachments become image, gallery, audio and file messages',
+      () async {
+        await ready();
+        Map<String, dynamic> file(String type, String name) => {
+          'file_type': type,
+          'data_url': 'https://cdn.test/$name',
+          'file_size': 2048,
+        };
+        factory.callbacks!.onMessageReceived!(
+          msg(1, content: 'one', attachments: [file('image', 'a.jpg')]),
+        );
+        factory.callbacks!.onMessageReceived!(
+          msg(
+            2,
+            content: 'two',
+            attachments: [file('image', 'b.jpg'), file('image', 'c.jpg')],
+          ),
+        );
+        factory.callbacks!.onMessageReceived!(
+          msg(3, content: null, attachments: [file('audio', 'v.ogg')]),
+        );
+        factory.callbacks!.onMessageReceived!(
+          msg(4, content: null, attachments: [file('file', 'doc.pdf')]),
+        );
+        factory.callbacks!.onMessageReceived!(
+          msg(
+            5,
+            content: null,
+            attachments: [
+              {'file_type': 'image', 'data_url': 'http://insecure.test/x.jpg'},
+            ],
+          ),
+        );
 
-      final m = chat.messages;
-      expect(m.length, 5);
-      expect((m[0] as ImageMessage).source, 'https://cdn.test/a.jpg');
-      expect((m[0] as ImageMessage).text, 'one');
-      expect(GalleryMessage.imagesOf(m[1]), [
-        'https://cdn.test/b.jpg',
-        'https://cdn.test/c.jpg',
-      ]);
-      expect(GalleryMessage.captionOf(m[1]), 'two');
-      expect((m[2] as AudioMessage).source, 'https://cdn.test/v.ogg');
-      expect((m[3] as FileMessage).name, 'doc.pdf');
-      expect((m[3] as FileMessage).size, 2048);
-      expect((m[4] as TextMessage).text, const ChatwootL10n().attachmentLabel);
-    });
+        final m = chat.messages;
+        expect(m.length, 5);
+        expect((m[0] as ImageMessage).source, 'https://cdn.test/a.jpg');
+        expect((m[0] as ImageMessage).text, 'one');
+        expect(GalleryMessage.imagesOf(m[1]), [
+          'https://cdn.test/b.jpg',
+          'https://cdn.test/c.jpg',
+        ]);
+        expect(GalleryMessage.captionOf(m[1]), 'two');
+        expect((m[2] as AudioMessage).source, 'https://cdn.test/v.ogg');
+        expect((m[3] as FileMessage).name, 'doc.pdf');
+        expect((m[3] as FileMessage).size, 2048);
+        expect(
+          (m[4] as TextMessage).text,
+          const ChatwootL10n().attachmentLabel,
+        );
+      },
+    );
   });
 
   group('sending attachments', () {
-    test('a local preview at once, the server version once confirmed', () async {
-      await ready();
-      final file = ChatwootUpload.bytes(
-        name: 'photo.jpg',
-        bytes: Uint8List.fromList([1, 2]),
-      );
+    test(
+      'a local preview at once, the server version once confirmed',
+      () async {
+        await ready();
+        final file = ChatwootUpload.bytes(
+          name: 'photo.jpg',
+          bytes: Uint8List.fromList([1, 2]),
+        );
 
-      controller.sendAttachments([file]);
-      await pumpEventQueue();
+        controller.sendAttachments([file]);
+        await pumpEventQueue();
 
-      final preview = chat.messages.single as ImageMessage;
-      expect(preview.status, MessageStatus.sending);
-      expect(client.sent.single.attachments, [file]);
-      expect(client.sent.single.content, '');
+        final preview = chat.messages.single as ImageMessage;
+        expect(preview.status, MessageStatus.sending);
+        expect(client.sent.single.attachments, [file]);
+        expect(client.sent.single.content, '');
 
-      factory.callbacks!.onMessageSent!(
-        msg(
-          5,
-          content: null,
-          type: 0,
-          attachments: [
-            {'file_type': 'image', 'data_url': 'https://cdn.test/p.jpg'},
-          ],
-        ),
-        client.sent.single.echoId,
-      );
-      await pumpEventQueue();
+        factory.callbacks!.onMessageSent!(
+          msg(
+            5,
+            content: null,
+            type: 0,
+            attachments: [
+              {'file_type': 'image', 'data_url': 'https://cdn.test/p.jpg'},
+            ],
+          ),
+          client.sent.single.echoId,
+        );
+        await pumpEventQueue();
 
-      final confirmed = chat.messages.single as ImageMessage;
-      expect(confirmed.id, preview.id);
-      expect(confirmed.source, 'https://cdn.test/p.jpg');
-      expect(confirmed.status, MessageStatus.delivered);
-    });
+        final confirmed = chat.messages.single as ImageMessage;
+        expect(confirmed.id, preview.id);
+        expect(confirmed.source, 'https://cdn.test/p.jpg');
+        expect(confirmed.status, MessageStatus.delivered);
+      },
+    );
 
-    test('a voice recording keeps its duration; a failed one resends', () async {
-      await ready();
-      final voice = ChatwootUpload.bytes(
-        name: 'voice.wav',
-        bytes: Uint8List.fromList([1, 2]),
-      );
-      client.sendError = StateError('offline');
+    test(
+      'a voice recording keeps its duration; a failed one resends',
+      () async {
+        await ready();
+        final voice = ChatwootUpload.bytes(
+          name: 'voice.wav',
+          bytes: Uint8List.fromList([1, 2]),
+        );
+        client.sendError = StateError('offline');
 
-      controller.sendAttachments(
-        [voice],
-        audioDuration: const Duration(seconds: 7),
-      );
-      await pumpEventQueue();
-      final failed = chat.messages.single as AudioMessage;
-      expect(failed.duration, const Duration(seconds: 7));
-      expect(failed.status, MessageStatus.error);
+        controller.sendAttachments([
+          voice,
+        ], audioDuration: const Duration(seconds: 7));
+        await pumpEventQueue();
+        final failed = chat.messages.single as AudioMessage;
+        expect(failed.duration, const Duration(seconds: 7));
+        expect(failed.status, MessageStatus.error);
 
-      client.sendError = null;
-      controller.resend(failed.id);
-      await pumpEventQueue();
+        client.sendError = null;
+        controller.resend(failed.id);
+        await pumpEventQueue();
 
-      expect(client.sent.single.attachments, [voice]);
-    });
+        expect(client.sent.single.attachments, [voice]);
+      },
+    );
   });
 
   group('status and callbacks', () {
@@ -646,6 +658,117 @@ void main() {
       cb.onPing!();
 
       expect(got, ['r1', 's2e', 'on', 'ping']);
+    });
+  });
+
+  group('seen, typing and session errors', () {
+    test('opening marks the chat as seen; an agent message does too', () async {
+      await ready();
+      expect(client.seen, 1);
+
+      factory.callbacks!.onMessageReceived!(msg(1));
+      await pumpEventQueue();
+      expect(client.seen, 2);
+    });
+
+    test('nothing is marked while the chat is not visible; becoming visible '
+        'does', () async {
+      await ready();
+      controller.visible = false;
+      factory.callbacks!.onMessageReceived!(msg(1));
+      await pumpEventQueue();
+      expect(client.seen, 1);
+
+      controller.visible = true;
+      await pumpEventQueue();
+      expect(client.seen, 2);
+    });
+
+    test('typing: on at once, off after 3 s idle, input restarts the wait', () {
+      fakeAsync((async) {
+        controller.dispose();
+        factory.completer = Completer<ChatwootClient>(); // in this zone
+        controller = make();
+        factory.completer.complete(client);
+        async.flushMicrotasks();
+
+        controller.typing();
+        controller.typing();
+        async.flushMicrotasks();
+        expect(client.typing, [true]);
+
+        async.elapse(const Duration(seconds: 2));
+        controller.typing();
+        async.elapse(const Duration(seconds: 2));
+        expect(client.typing, [true]);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(client.typing, [true, false]);
+      });
+    });
+
+    test('sending and disposing switch typing off', () async {
+      await ready();
+      controller.typing();
+      controller.send('hi');
+      await pumpEventQueue();
+      expect(client.typing, [true, false]);
+
+      controller.typing();
+      controller.dispose();
+      await pumpEventQueue();
+      expect(client.typing, [true, false, true, false]);
+      expect(client.disposed, isTrue);
+    });
+
+    test(
+      'a session reset drops the server messages, keeps unsent ones',
+      () async {
+        await ready();
+        factory.callbacks!.onMessagesRetrieved!([msg(1), msg(2)]);
+        client.sendError = StateError('offline');
+        controller.send('draft');
+        await pumpEventQueue();
+        expect(chat.messages, hasLength(3));
+
+        factory.callbacks!.onSessionReset!();
+        await pumpEventQueue();
+
+        expect(chat.messages.map((m) => (m as TextMessage).text), ['draft']);
+        factory.callbacks!.onMessagesRetrieved!([msg(9)]);
+        expect(chat.messages, hasLength(2));
+      },
+    );
+
+    test('INVALID_IDENTIFIER_HASH and SESSION_EXPIRED put the chat in an '
+        'error state; retry builds a new client', () async {
+      await ready();
+      factory.callbacks!.onError!(
+        ChatwootClientException(
+          'x',
+          ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ),
+      );
+      expect(
+        controller.error?.type,
+        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+      );
+
+      controller.retry();
+      expect(client.disposed, isTrue);
+      expect(factory.calls, 2);
+      expect(controller.error, isNull);
+    });
+
+    test('an ordinary error does not raise the banner', () async {
+      await ready();
+      factory.callbacks!.onError!(
+        ChatwootClientException(
+          'x',
+          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        ),
+      );
+      expect(controller.error, isNull);
     });
   });
 }

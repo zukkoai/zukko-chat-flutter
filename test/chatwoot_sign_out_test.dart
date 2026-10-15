@@ -17,7 +17,7 @@ void main() {
 
   String keyFor(ChatwootUser u) => ChatwootClient.getClientInstanceKey(
     baseUrl: base,
-    inboxIdentifier: 'inbox',
+    websiteToken: 'inbox',
     userIdentifier: u.identifier,
     identifierHash: u.identifierHash,
   );
@@ -28,7 +28,7 @@ void main() {
     await LocalStorage.persisted(keyFor(user)).contact.save(contact());
     await LocalStorage.persisted(keyFor(other)).contact.save(contact());
 
-    await chatwootSignOut(baseUrl: base, inboxIdentifier: 'inbox', user: user);
+    await chatwootSignOut(baseUrl: base, websiteToken: 'inbox', user: user);
 
     expect(LocalStorage.persisted(keyFor(user)).contact.get(), isNull);
     expect(LocalStorage.persisted(keyFor(other)).contact.get(), isNotNull);

@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
+import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
 import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_action_data.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_event_message_user.dart';
 import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_event.dart';
@@ -13,7 +15,7 @@ void main() {
     test('accepts null name and email (anonymous contact)', () {
       final contact = ChatwootContact.fromJson({
         'id': 1,
-        'source_id': 'abc',
+        'identifier': 'abc',
         'pubsub_token': 't',
         'name': null,
         'email': null,
@@ -24,11 +26,96 @@ void main() {
       expect(contact.contactIdentifier, 'abc');
     });
 
-    test('accepts absent name, email and source_id', () {
+    test('accepts absent name, email and identifier', () {
       final contact = ChatwootContact.fromJson({'id': 1});
 
       expect(contact.contactIdentifier, isNull);
       expect(contact.pubsubToken, isNull);
+    });
+  });
+
+  group('ChatwootContact widget fields', () {
+    test('reads phone_number; the JWT never goes through JSON', () {
+      final fromServer = ChatwootContact.fromJson({
+        'id': 1,
+        'phone_number': '+998901234567',
+        'auth_token': 'jwt-secret', // not a contact field: ignored
+      });
+      const stored = ChatwootContact(
+        id: 1,
+        contactIdentifier: 'u',
+        pubsubToken: 'p',
+        name: null,
+        email: null,
+        authToken: 'jwt-secret',
+      );
+
+      expect(fromServer.phoneNumber, '+998901234567');
+      expect(fromServer.authToken, isNull);
+      expect(stored.toJson().toString(), isNot(contains('jwt-secret')));
+      expect(stored.toString(), isNot(contains('jwt-secret')));
+      expect(stored.copyWith(authToken: 'new').authToken, 'new');
+      expect(stored, isNot(stored.copyWith(authToken: 'new')));
+    });
+  });
+
+  group('ChatwootConversation.fromJson', () {
+    test('GET /conversations: no contact, no messages, status kept', () {
+      final c = ChatwootConversation.fromJson({
+        'id': 4,
+        'inbox_id': 1,
+        'contact_last_seen_at': 0,
+        'status': 'open',
+      });
+
+      expect(c.contact, isNull);
+      expect(c.messages, isEmpty);
+      expect(c.status, 'open');
+    });
+
+    test('{} parses to id 0 instead of throwing', () {
+      expect(ChatwootConversation.fromJson({}).id, 0);
+    });
+  });
+
+  group('ChatwootUser', () {
+    test('phone_number is in the set_user body, nulls are not', () {
+      final json = const ChatwootUser(
+        identifier: 'u',
+        phoneNumber: '+998901234567',
+      ).toJson();
+
+      expect(json, {'identifier': 'u', 'phone_number': '+998901234567'});
+    });
+
+    test('the phone is persistable, the hash is not', () {
+      final persisted = const ChatwootUser(
+        identifier: 'u',
+        identifierHash: 'h',
+        phoneNumber: '+1',
+      ).toPersistable();
+
+      expect(persisted.phoneNumber, '+1');
+      expect(persisted.identifierHash, isNull);
+    });
+  });
+
+  group('parseMessagesPage', () {
+    test('reads payload of {payload, meta} and tolerates a bare list', () {
+      final item = {'id': 3, 'content': 'x', 'created_at': 1626155918};
+
+      expect(
+        parseMessagesPage({
+          'payload': [item],
+          'meta': <String, Object?>{},
+        }).map((m) => m.id),
+        [3],
+      );
+      expect(parseMessagesPage([item]).map((m) => m.id), [3]);
+      expect(
+        () => parseMessagesPage(<String, Object?>{'meta': null}),
+        throwsFormatException,
+      );
     });
   });
 

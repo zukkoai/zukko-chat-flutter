@@ -7,14 +7,10 @@ import 'package:flutter/cupertino.dart'
     show CupertinoLocalizations, DefaultCupertinoLocalizations;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'chat_fakes.dart';
 
-const _o = ChatwootChatOptions(
-  baseUrl: 'https://x.test',
-  inboxIdentifier: 'in',
-);
+const _o = ChatwootChatOptions(baseUrl: 'https://x.test', websiteToken: 'in');
 
 Widget _app(
   Widget home, {
@@ -57,9 +53,6 @@ void main() {
   late FakeFactory factory;
   late FakeClient client;
 
-  // The style fonts come from google_fonts; no network in tests.
-  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
-
   setUp(() {
     factory = FakeFactory();
     client = FakeClient();
@@ -87,6 +80,34 @@ void main() {
       await _settle(tester);
 
       expect(client.sent.single.content, 'hello');
+    });
+
+    testWidgets('typing in the composer tells the agents; the banner explains '
+        'a rejected identity without a retry button', (tester) async {
+      factory.completer.complete(client);
+      await _pump(
+        tester,
+        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+      );
+      await _settle(tester);
+
+      await tester.enterText(find.byType(TextField), 'h');
+      await tester.pump();
+      expect(client.typing, [true]);
+
+      factory.callbacks!.onError!(
+        ChatwootClientException(
+          'x',
+          ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ),
+      );
+      await tester.pump();
+      expect(find.text(const ChatwootL10n().identityRejectedText), findsOne);
+      expect(find.text(const ChatwootL10n().retryLabel), findsNothing);
+
+      await _pump(tester, _app(const SizedBox())); // leaves typing switched off
+      await _settle(tester);
+      expect(client.typing, [true, false]);
     });
 
     testWidgets('leaving the page before the client exists disposes it (U3)', (
@@ -166,7 +187,7 @@ void main() {
         var created = 0;
         Future<ChatwootClient> f({
           required String baseUrl,
-          required String inboxIdentifier,
+          required String websiteToken,
           ChatwootUser? user,
           bool enablePersistence = true,
           bool allowInsecure = false,
@@ -185,7 +206,7 @@ void main() {
             page(
               const ChatwootChatOptions(
                 baseUrl: 'https://x.test',
-                inboxIdentifier: 'in',
+                websiteToken: 'in',
                 l10n: ChatwootL10n(inputPlaceholder: 'new'),
               ),
             ),
@@ -200,7 +221,7 @@ void main() {
             page(
               const ChatwootChatOptions(
                 baseUrl: 'https://y.test',
-                inboxIdentifier: 'in',
+                websiteToken: 'in',
               ),
             ),
           ),
@@ -269,7 +290,7 @@ void main() {
           ChatwootChat(
             options: const ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               l10n: ChatwootL10n(
                 connectionErrorText: 'Ulanmadi',
                 retryLabel: 'Qayta',
@@ -299,7 +320,7 @@ void main() {
             clientFactory: factory.call,
             options: const ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               l10n: ChatwootL10n(
                 inputPlaceholder: 'ZZZ',
                 offlineText: 'OFFLINE!',
@@ -412,7 +433,7 @@ void main() {
           ChatwootChat(
             options: const ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               l10n: ChatwootL10n(poweredByText: 'Quvvat: X'),
             ),
             clientFactory: factory.call,
@@ -431,7 +452,7 @@ void main() {
           ChatwootChat(
             options: const ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               showBranding: false,
             ),
             clientFactory: factory.call,
@@ -490,7 +511,7 @@ void main() {
           ChatwootChat(
             options: ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               theme: explicit,
             ),
             clientFactory: factory.call,
@@ -519,10 +540,13 @@ void main() {
     );
 
     test('equality, hashCode and copyWith', () {
-      expect(a, const ChatwootChatTheme(
-        brightness: Brightness.light,
-        accentColor: Color(0xff112233),
-      ));
+      expect(
+        a,
+        const ChatwootChatTheme(
+          brightness: Brightness.light,
+          accentColor: Color(0xff112233),
+        ),
+      );
       expect(
         ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
         ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
@@ -571,13 +595,11 @@ void main() {
                 title: 'Helper',
                 options: ChatwootChatOptions(
                   baseUrl: 'b',
-                  inboxIdentifier: 'i',
+                  websiteToken: 'i',
                   style: style,
                 ),
                 clientFactory: factory.call,
-                interactions: ChatwootChatInteractions(
-                  onMorePressed: () {},
-                ),
+                interactions: ChatwootChatInteractions(onMorePressed: () {}),
               ),
               theme: ThemeData(brightness: brightness),
             ),
@@ -615,7 +637,7 @@ void main() {
           ChatwootChat(
             options: const ChatwootChatOptions(
               baseUrl: 'b',
-              inboxIdentifier: 'i',
+              websiteToken: 'i',
               enableAttachments: false,
               enableVoiceMessages: false,
             ),

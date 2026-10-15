@@ -5,22 +5,24 @@ import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
 
 ChatwootContact contact({
   int id = 1,
-  String? sourceId = 'source-1',
+  String? identifier = 'source-1',
   String? pubsubToken = 'token-1',
+  String? authToken,
 }) => ChatwootContact(
   id: id,
-  contactIdentifier: sourceId,
+  contactIdentifier: identifier,
   pubsubToken: pubsubToken,
   name: 'name $id',
   email: 'c$id@test.com',
+  authToken: authToken,
 );
 
 ChatwootConversation conversation({int id = 7, ChatwootContact? forContact}) =>
     ChatwootConversation(
       id: id,
       inboxId: 1,
-      messages: const [],
-      contact: forContact ?? contact(),
+      contact: forContact,
+      status: 'open',
     );
 
 /// [createdAt] must be lexicographically sortable (the model stores a string).

@@ -10,8 +10,10 @@ void main() {
       'https://a.test/x?y=1',
       'https://www.b.test',
     ]);
-    expect(text.substring(links.first.start, links.first.end),
-        'https://a.test/x?y=1');
+    expect(
+      text.substring(links.first.start, links.first.end),
+      'https://a.test/x?y=1',
+    );
   });
 
   test('parseLink accepts only http(s) with a host', () {
