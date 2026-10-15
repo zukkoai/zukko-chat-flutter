@@ -11,7 +11,7 @@ import '../../../shared/sdk_log.dart';
 @immutable
 class VoiceRecording {
   /// WAV audio (16 kHz, mono, 16-bit).
-  final ChatwootUpload file;
+  final ZukkoChatUpload file;
   final Duration duration;
 
   const VoiceRecording(this.file, this.duration);
@@ -149,7 +149,7 @@ class VoiceRecorderController extends ChangeNotifier {
     if (keep && pcm.isNotEmpty && !_disposed) {
       onRecorded(
         VoiceRecording(
-          ChatwootUpload.bytes(
+          ZukkoChatUpload.bytes(
             name: 'voice-${DateTime.now().millisecondsSinceEpoch}.wav',
             bytes: wavFromPcm16(pcm, sampleRate: _sampleRate),
           ),

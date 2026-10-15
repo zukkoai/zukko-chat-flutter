@@ -2,23 +2,23 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Scriptable [ChatwootClientService]: set the `*Result`s, inspect the records.
 class FakeClientService extends Fake implements ChatwootClientService {
-  Object? conversationResult; // ChatwootConversation?, or an exception
-  Object? messagesResult = <ChatwootMessage>[];
-  Object? createMessageResult; // ChatwootMessage or an exception
+  Object? conversationResult; // ZukkoChatConversation?, or an exception
+  Object? messagesResult = <ZukkoChatMessage>[];
+  Object? createMessageResult; // ZukkoChatMessage or an exception
 
   final createdMessageRequests = <ChatwootNewMessageRequest>[];
-  final uploadedAttachments = <List<ChatwootUpload>>[];
+  final uploadedAttachments = <List<ZukkoChatUpload>>[];
   final typing = <bool>[];
   var getMessagesCalls = 0;
   var updateLastSeenCalls = 0;
@@ -28,7 +28,7 @@ class FakeClientService extends Fake implements ChatwootClientService {
 
   /// When set, [getMessages] answers these pages in order (instead of
   /// [messagesResult]).
-  List<List<ChatwootMessage>>? messagePages;
+  List<List<ZukkoChatMessage>>? messagePages;
 
   T _unwrap<T>(Object? result) {
     if (result is Exception || result is Error) throw result as Object;
@@ -36,11 +36,11 @@ class FakeClientService extends Fake implements ChatwootClientService {
   }
 
   @override
-  Future<ChatwootConversation?> getConversation() async =>
+  Future<ZukkoChatConversation?> getConversation() async =>
       _unwrap(conversationResult);
 
   @override
-  Future<List<ChatwootMessage>> getMessages({int? before, int? after}) async {
+  Future<List<ZukkoChatMessage>> getMessages({int? before, int? after}) async {
     getMessagesCalls++;
     messageCursors.add((before: before, after: after));
     final pages = messagePages;
@@ -49,9 +49,9 @@ class FakeClientService extends Fake implements ChatwootClientService {
   }
 
   @override
-  Future<ChatwootMessage> createMessage(
+  Future<ZukkoChatMessage> createMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
   }) async {
     createdMessageRequests.add(request);
     uploadedAttachments.add(attachments);
@@ -159,5 +159,5 @@ class FakeSocketHub {
   }
 }
 
-ChatwootClientException failure(ChatwootClientExceptionType type) =>
-    ChatwootClientException('boom', type);
+ZukkoChatException failure(ZukkoChatExceptionType type) =>
+    ZukkoChatException('boom', type);

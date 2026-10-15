@@ -22,11 +22,11 @@ import 'widgets/smooth_silk_header.dart';
 
 /// Entry of the Smooth Silk style.
 class SmoothSilkStyle extends ChatStyle {
-  SmoothSilkStyle(ChatwootChatTheme theme)
+  SmoothSilkStyle(ZukkoChatTheme theme)
     : _theme = theme,
       tokens = SmoothSilkTokens.from(theme);
 
-  final ChatwootChatTheme _theme;
+  final ZukkoChatTheme _theme;
   final SmoothSilkTokens tokens;
 
   static const _mediaWidth = 240.0;
@@ -65,14 +65,14 @@ class SmoothSilkStyle extends ChatStyle {
   Widget buildHeader(
     BuildContext context,
     ChatHeaderData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   ) => SmoothSilkHeader(data: data, l10n: l10n, tokens: tokens);
 
   @override
   Widget buildComposer(
     BuildContext context,
     ChatComposerData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   ) => SmoothSilkComposer(
     data: data,
     l10n: l10n,
@@ -81,7 +81,7 @@ class SmoothSilkStyle extends ChatStyle {
   );
 
   @override
-  Widget buildTypingIndicator(BuildContext context, ChatwootL10n l10n) =>
+  Widget buildTypingIndicator(BuildContext context, ZukkoChatL10n l10n) =>
       Padding(
         padding: EdgeInsetsDirectional.only(
           start: _theme.horizontalPadding,
@@ -106,7 +106,7 @@ class SmoothSilkStyle extends ChatStyle {
       );
 
   @override
-  Widget buildFooter(BuildContext context, ChatwootL10n l10n) => PoweredBy(
+  Widget buildFooter(BuildContext context, ZukkoChatL10n l10n) => PoweredBy(
     prefix: l10n.poweredByText,
     style: tokens.caption,
     linkColor: tokens.accent,

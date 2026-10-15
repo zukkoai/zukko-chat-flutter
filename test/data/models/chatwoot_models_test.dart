@@ -1,19 +1,19 @@
 import 'dart:io';
 
-import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_action_data.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_event_message_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_event.dart';
-import 'package:chatwoot_sdk/src/shared/json_converters.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_contact.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_action_data.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_event_message_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_event.dart';
+import 'package:zukko_chat_flutter/src/shared/json_converters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('ChatwootContact.fromJson', () {
+  group('ZukkoChatContact.fromJson', () {
     test('accepts null name and email (anonymous contact)', () {
-      final contact = ChatwootContact.fromJson({
+      final contact = ZukkoChatContact.fromJson({
         'id': 1,
         'identifier': 'abc',
         'pubsub_token': 't',
@@ -27,21 +27,21 @@ void main() {
     });
 
     test('accepts absent name, email and identifier', () {
-      final contact = ChatwootContact.fromJson({'id': 1});
+      final contact = ZukkoChatContact.fromJson({'id': 1});
 
       expect(contact.contactIdentifier, isNull);
       expect(contact.pubsubToken, isNull);
     });
   });
 
-  group('ChatwootContact widget fields', () {
+  group('ZukkoChatContact widget fields', () {
     test('reads phone_number; the JWT never goes through JSON', () {
-      final fromServer = ChatwootContact.fromJson({
+      final fromServer = ZukkoChatContact.fromJson({
         'id': 1,
         'phone_number': '+998901234567',
         'auth_token': 'jwt-secret', // not a contact field: ignored
       });
-      const stored = ChatwootContact(
+      const stored = ZukkoChatContact(
         id: 1,
         contactIdentifier: 'u',
         pubsubToken: 'p',
@@ -59,9 +59,9 @@ void main() {
     });
   });
 
-  group('ChatwootConversation.fromJson', () {
+  group('ZukkoChatConversation.fromJson', () {
     test('GET /conversations: no contact, no messages, status kept', () {
-      final c = ChatwootConversation.fromJson({
+      final c = ZukkoChatConversation.fromJson({
         'id': 4,
         'inbox_id': 1,
         'contact_last_seen_at': 0,
@@ -74,13 +74,13 @@ void main() {
     });
 
     test('{} parses to id 0 instead of throwing', () {
-      expect(ChatwootConversation.fromJson({}).id, 0);
+      expect(ZukkoChatConversation.fromJson({}).id, 0);
     });
   });
 
-  group('ChatwootUser', () {
+  group('ZukkoChatUser', () {
     test('phone_number is in the set_user body, nulls are not', () {
-      final json = const ChatwootUser(
+      final json = const ZukkoChatUser(
         identifier: 'u',
         phoneNumber: '+998901234567',
       ).toJson();
@@ -89,7 +89,7 @@ void main() {
     });
 
     test('the phone is persistable, the hash is not', () {
-      final persisted = const ChatwootUser(
+      final persisted = const ZukkoChatUser(
         identifier: 'u',
         identifierHash: 'h',
         phoneNumber: '+1',
@@ -119,9 +119,9 @@ void main() {
     });
   });
 
-  group('ChatwootMessage.fromJson', () {
+  group('ZukkoChatMessage.fromJson', () {
     test('accepts null message_type, conversation_id and created_at', () {
-      final message = ChatwootMessage.fromJson({
+      final message = ZukkoChatMessage.fromJson({
         'id': 5,
         'content': 'hi',
         'message_type': null,
@@ -136,11 +136,11 @@ void main() {
     });
 
     test('accepts absent optional keys', () {
-      expect(() => ChatwootMessage.fromJson({'id': 1}), returnsNormally);
+      expect(() => ZukkoChatMessage.fromJson({'id': 1}), returnsNormally);
     });
 
     test('parses numeric strings and unix timestamps', () {
-      final message = ChatwootMessage.fromJson({
+      final message = ZukkoChatMessage.fromJson({
         'id': '12',
         'message_type': '1',
         'conversation_id': '3',
@@ -157,7 +157,7 @@ void main() {
     });
 
     test('keeps an already formatted created_at', () {
-      final message = ChatwootMessage.fromJson({
+      final message = ZukkoChatMessage.fromJson({
         'id': 1,
         'created_at': '2021-07-13T06:58:38.000Z',
       });
@@ -176,7 +176,7 @@ void main() {
         'created_at': null,
       });
 
-      final ChatwootMessage message = data.getMessage();
+      final ZukkoChatMessage message = data.getMessage();
 
       expect(message.id, 3);
       expect(message.messageType, isNull);
@@ -201,7 +201,7 @@ void main() {
   });
 
   // S14: used to be `messageType != 1`
-  group('ChatwootMessage.isMine', () {
+  group('ZukkoChatMessage.isMine', () {
     for (final (type, mine) in [
       (0, true), // incoming: written by the contact
       (1, false), // outgoing: agent
@@ -210,7 +210,7 @@ void main() {
       (null, false),
     ]) {
       test('message_type $type -> $mine', () {
-        final message = ChatwootMessage.fromJson({
+        final message = ZukkoChatMessage.fromJson({
           'id': 1,
           'message_type': type,
         });
@@ -241,8 +241,8 @@ void main() {
     });
 
     test('action wire names', () {
-      expect(ChatwootActionType.update_presence.wire, 'update_presence');
-      expect(ChatwootActionType.values, [ChatwootActionType.update_presence]);
+      expect(ZukkoChatActionType.update_presence.wire, 'update_presence');
+      expect(ZukkoChatActionType.values, [ZukkoChatActionType.update_presence]);
     });
   });
 
@@ -260,7 +260,7 @@ void main() {
     while (!File('${root.path}/pubspec.yaml').existsSync() ||
         !File('${root.path}/pubspec.yaml')
             .readAsStringSync()
-            .contains('name: chatwoot_sdk')) {
+            .contains('name: zukko_chat_flutter')) {
       expect(root.parent.path, isNot(root.path), reason: 'package root');
       root = root.parent;
     }
@@ -276,8 +276,8 @@ void main() {
     expect(offenders, isEmpty);
   });
 
-  test('ChatwootEventMessageUser round-trips JSON and keeps its Hive id', () {
-    final user = ChatwootEventMessageUser.fromJson({
+  test('ZukkoChatEventMessageUser round-trips JSON and keeps its Hive id', () {
+    final user = ZukkoChatEventMessageUser.fromJson({
       'id': '5',
       'name': 'Ann',
       'avatar_url': 'https://a/x.png',
@@ -285,6 +285,6 @@ void main() {
 
     expect(user.id, 5);
     expect(user.toJson()['avatar_url'], 'https://a/x.png');
-    expect(ChatwootEventMessageUserAdapter().typeId, 4);
+    expect(ZukkoChatEventMessageUserAdapter().typeId, 4);
   });
 }

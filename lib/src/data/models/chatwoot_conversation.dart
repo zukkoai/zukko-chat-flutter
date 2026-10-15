@@ -11,7 +11,7 @@ part 'chatwoot_conversation.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 @HiveType(typeId: chatwootConversationHiveTypeId)
-class ChatwootConversation extends Equatable {
+class ZukkoChatConversation extends Equatable {
   ///The numeric ID of the conversation
   @JsonKey(fromJson: idFromJson)
   @HiveField(0)
@@ -25,19 +25,19 @@ class ChatwootConversation extends Equatable {
   ///List of all messages from the conversation
   @JsonKey(fromJson: _messagesFromJson)
   @HiveField(2)
-  final List<ChatwootMessage> messages;
+  final List<ZukkoChatMessage> messages;
 
   ///Contact of the conversation (absent in `GET /conversations`)
   @JsonKey()
   @HiveField(3)
-  final ChatwootContact? contact;
+  final ZukkoChatContact? contact;
 
   ///Conversation status (`open`, `resolved`, `pending`, `snoozed`)
   @JsonKey()
   @HiveField(4)
   final String? status;
 
-  const ChatwootConversation({
+  const ZukkoChatConversation({
     required this.id,
     required this.inboxId,
     this.messages = const [],
@@ -45,14 +45,14 @@ class ChatwootConversation extends Equatable {
     this.status,
   });
 
-  factory ChatwootConversation.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootConversationFromJson(json);
+  factory ZukkoChatConversation.fromJson(Map<String, dynamic> json) =>
+      _$ZukkoChatConversationFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ChatwootConversationToJson(this);
+  Map<String, dynamic> toJson() => _$ZukkoChatConversationToJson(this);
 
   @override
   List<Object?> get props => [id, inboxId, messages, contact, status];
 }
 
-List<ChatwootMessage> _messagesFromJson(Object? data) =>
+List<ZukkoChatMessage> _messagesFromJson(Object? data) =>
     data == null ? const [] : parseMessages(data);

@@ -3,65 +3,65 @@ import '../data/models/chatwoot_message.dart';
 import '../data/remote/realtime/chatwoot_socket.dart';
 import 'chatwoot_client_exception.dart';
 
-///Chatwoot callback are specified for each created client instance. Methods are triggered
+///Zukko Chat callback are specified for each created client instance. Methods are triggered
 ///when a method satisfying their respective conditions occur.
 ///
 ///
 /// {@category FlutterClientSdk}
-class ChatwootCallbacks {
+class ZukkoChatCallbacks {
   ///Triggered when a welcome event/message is received after connecting to
-  ///the chatwoot websocket.
+  ///the Zukko Chat websocket.
   final void Function()? onWelcome;
 
   ///Triggered when a ping event/message is received after connecting to
-  ///the chatwoot websocket.
+  ///the Zukko Chat websocket.
   final void Function()? onPing;
 
   ///Triggered when a subscription confirmation event/message is received after connecting to
-  ///the chatwoot websocket.
+  ///the Zukko Chat websocket.
   final void Function()? onConfirmedSubscription;
 
   ///Triggered when a conversation typing on event/message (conversation typing on)
-  ///is received after connecting to the chatwoot websocket.
+  ///is received after connecting to the Zukko Chat websocket.
   final void Function()? onConversationStartedTyping;
 
   ///Triggered when a presence update event/message (presence update)
-  ///is received after connecting to the chatwoot websocket and conversation is online.
+  ///is received after connecting to the Zukko Chat websocket and conversation is online.
   final void Function()? onConversationIsOnline;
 
   ///Triggered when a presence update event/message (presence update)
-  ///is received after connecting to the chatwoot websocket and conversation is offline.
+  ///is received after connecting to the Zukko Chat websocket and conversation is offline.
   final void Function()? onConversationIsOffline;
 
   ///Triggered when a conversation typing off event/message (conversation typing off)
-  ///is received after connecting to the chatwoot websocket.
+  ///is received after connecting to the Zukko Chat websocket.
   final void Function()? onConversationStoppedTyping;
 
   ///Triggered when a message created event/message (message created)
-  ///is received and message doesn't belong to current user after connecting to the chatwoot websocket.
-  final void Function(ChatwootMessage)? onMessageReceived;
+  ///is received and message doesn't belong to current user after connecting to the Zukko Chat websocket.
+  final void Function(ZukkoChatMessage)? onMessageReceived;
 
   ///Triggered when a message created event/message (message updated)
-  ///is received after connecting to the chatwoot websocket.
-  final void Function(ChatwootMessage)? onMessageUpdated;
+  ///is received after connecting to the Zukko Chat websocket.
+  final void Function(ZukkoChatMessage)? onMessageUpdated;
 
-  final void Function(ChatwootMessage, String)? onMessageSent;
+  final void Function(ZukkoChatMessage, String)? onMessageSent;
 
   ///Triggered when a message created event/message (message created)
-  ///is received and message belongs to current user after connecting to the chatwoot websocket.
-  final void Function(ChatwootMessage, String)? onMessageDelivered;
+  ///is received and message belongs to current user after connecting to the Zukko Chat websocket.
+  final void Function(ZukkoChatMessage, String)? onMessageDelivered;
 
   ///Triggered when a conversation's messages persisted on device are successfully retrieved
-  final void Function(List<ChatwootMessage>)? onPersistedMessagesRetrieved;
+  final void Function(List<ZukkoChatMessage>)? onPersistedMessagesRetrieved;
 
   ///Triggered when a conversation's messages is successfully retrieved from remote server
-  final void Function(List<ChatwootMessage>)? onMessagesRetrieved;
+  final void Function(List<ZukkoChatMessage>)? onMessagesRetrieved;
 
   ///Triggered when an agent resolves the current conversation
   final void Function()? onConversationResolved;
 
   /// Triggered when the conversation is created or changes (status, assignee).
-  final void Function(ChatwootConversation)? onConversationUpdated;
+  final void Function(ZukkoChatConversation)? onConversationUpdated;
 
   /// Triggered when the visitor's session was replaced (the server no longer
   /// knew the old one, so this is a new contact): messages shown so far belong
@@ -72,14 +72,14 @@ class ChatwootCallbacks {
   /// subscribed, reconnecting after a drop, ...). Use it to show an offline
   /// banner. Messages missed while disconnected are refetched automatically
   /// after the connection is back.
-  final void Function(ChatwootConnectionState)? onConnectionStateChanged;
+  final void Function(ZukkoChatConnectionState)? onConnectionStateChanged;
 
-  /// Triggered when any error occurs in chatwoot client's operations with the error
+  /// Triggered when any error occurs in Zukko Chat client's operations with the error
   ///
-  /// See [ChatwootClientExceptionType] for the various types of exceptions that can be triggered
-  final void Function(ChatwootClientException)? onError;
+  /// See [ZukkoChatExceptionType] for the various types of exceptions that can be triggered
+  final void Function(ZukkoChatException)? onError;
 
-  ChatwootCallbacks({
+  ZukkoChatCallbacks({
     this.onWelcome,
     this.onPing,
     this.onConfirmedSubscription,

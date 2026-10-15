@@ -1,14 +1,14 @@
-import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_contact.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
 
-ChatwootContact contact({
+ZukkoChatContact contact({
   int id = 1,
   String? identifier = 'source-1',
   String? pubsubToken = 'token-1',
   String? authToken,
-}) => ChatwootContact(
+}) => ZukkoChatContact(
   id: id,
   contactIdentifier: identifier,
   pubsubToken: pubsubToken,
@@ -17,8 +17,8 @@ ChatwootContact contact({
   authToken: authToken,
 );
 
-ChatwootConversation conversation({int id = 7, ChatwootContact? forContact}) =>
-    ChatwootConversation(
+ZukkoChatConversation conversation({int id = 7, ZukkoChatContact? forContact}) =>
+    ZukkoChatConversation(
       id: id,
       inboxId: 1,
       contact: forContact,
@@ -26,12 +26,12 @@ ChatwootConversation conversation({int id = 7, ChatwootContact? forContact}) =>
     );
 
 /// [createdAt] must be lexicographically sortable (the model stores a string).
-ChatwootMessage message(
+ZukkoChatMessage message(
   int id, {
   String? createdAt,
   String content = 'hello',
   int messageType = 0,
-}) => ChatwootMessage(
+}) => ZukkoChatMessage(
   id: id,
   content: content,
   messageType: messageType,
@@ -43,5 +43,5 @@ ChatwootMessage message(
   sender: null,
 );
 
-ChatwootUser user({String? identifier = 'user-1', String? name = 'User'}) =>
-    ChatwootUser(identifier: identifier, name: name);
+ZukkoChatUser user({String? identifier = 'user-1', String? name = 'User'}) =>
+    ZukkoChatUser(identifier: identifier, name: name);

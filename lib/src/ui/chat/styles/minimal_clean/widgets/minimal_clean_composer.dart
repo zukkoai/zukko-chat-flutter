@@ -11,7 +11,7 @@ import '../minimal_clean_tokens.dart';
 /// right).
 class MinimalCleanComposer extends StatelessWidget {
   final ChatComposerData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final MinimalCleanTokens tokens;
   final double horizontalPadding;
 

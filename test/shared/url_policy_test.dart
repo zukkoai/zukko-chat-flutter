@@ -1,4 +1,4 @@
-import 'package:chatwoot_sdk/src/shared/url_policy.dart';
+import 'package:zukko_chat_flutter/src/shared/url_policy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

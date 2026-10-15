@@ -10,7 +10,7 @@ import '../smooth_silk_tokens.dart';
 /// status, menu.
 class SmoothSilkHeader extends StatelessWidget {
   final ChatHeaderData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final SmoothSilkTokens tokens;
 
   const SmoothSilkHeader({

@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class FakeClient extends Fake implements ChatwootClient {
+class FakeClient extends Fake implements ZukkoChatClient {
   bool disposed = false;
   int loads = 0;
   Object? sendError;
   final sent =
-      <({String content, String echoId, List<ChatwootUpload> attachments})>[];
+      <({String content, String echoId, List<ZukkoChatUpload> attachments})>[];
 
   int seen = 0;
   final typing = <bool>[];
@@ -32,7 +32,7 @@ class FakeClient extends Fake implements ChatwootClient {
   Future<void> sendMessage({
     required String content,
     required String echoId,
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
     int? replyTo,
   }) async {
     if (sendError != null) throw sendError!;
@@ -47,18 +47,18 @@ class FakeClient extends Fake implements ChatwootClient {
 class FakeFactory {
   // late: created inside the test body, i.e. in the test's zone (a Completer
   // made in setUp does not deliver errors to listeners of the fake-async zone)
-  late Completer<ChatwootClient> completer = Completer<ChatwootClient>();
-  ChatwootCallbacks? callbacks;
+  late Completer<ZukkoChatClient> completer = Completer<ZukkoChatClient>();
+  ZukkoChatCallbacks? callbacks;
   bool? allowInsecure;
   int calls = 0;
 
-  Future<ChatwootClient> call({
+  Future<ZukkoChatClient> call({
     required String baseUrl,
     required String websiteToken,
-    ChatwootUser? user,
+    ZukkoChatUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,
-    ChatwootCallbacks? callbacks,
+    ZukkoChatCallbacks? callbacks,
   }) {
     calls++;
     this.allowInsecure = allowInsecure;
@@ -88,14 +88,14 @@ class SpyChat extends InMemoryChatController {
   }
 }
 
-ChatwootMessage msg(
+ZukkoChatMessage msg(
   int id, {
   String? content = 'hello',
   int? type = 1,
   String? createdAt,
   List<dynamic>? attachments,
-  ChatwootEventMessageUser? sender,
-}) => ChatwootMessage(
+  ZukkoChatEventMessageUser? sender,
+}) => ZukkoChatMessage(
   id: id,
   content: content,
   messageType: type,

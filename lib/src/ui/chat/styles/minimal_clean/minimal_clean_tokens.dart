@@ -58,14 +58,14 @@ class MinimalCleanTokens {
     required this.hint,
   });
 
-  factory MinimalCleanTokens.from(ChatwootChatTheme base) {
+  factory MinimalCleanTokens.from(ZukkoChatTheme base) {
     final dark = base.isDark;
     Color pick(int light, int darkValue) => Color(dark ? darkValue : light);
 
     final accent = base.accentColor ?? pick(0xFF1A1A19, 0xFFECECEA);
     final onAccent = base.accentColor == null
         ? pick(0xFFFFFFFF, 0xFF121212)
-        : ChatwootChatTheme.foregroundOn(accent);
+        : ZukkoChatTheme.foregroundOn(accent);
     final text = pick(0xFF1A1A19, 0xFFECECEA);
     final muted = pick(0xFF6B6B67, 0xFF9A9A95);
 
@@ -113,10 +113,10 @@ class MinimalCleanTokens {
 }
 
 /// Geist (the design font), unless the app forces one via
-/// `ChatwootChatTheme.fontFamily`.
-TextStyle _font(ChatwootChatTheme base, TextStyle style) {
+/// `ZukkoChatTheme.fontFamily`.
+TextStyle _font(ZukkoChatTheme base, TextStyle style) {
   final family = base.fontFamily;
   return family != null
       ? style.copyWith(fontFamily: family)
-      : style.copyWith(fontFamily: 'packages/chatwoot_sdk/Geist');
+      : style.copyWith(fontFamily: 'packages/zukko_chat_flutter/Geist');
 }

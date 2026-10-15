@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:chatwoot_sdk/src/data/local/key_store.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/local/key_store.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';

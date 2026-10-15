@@ -1,7 +1,6 @@
-name: chatwoot_sdk
-description: A flutter client sdk for chatwoot. Integrate Chatwoot flutter client into your flutter app and talk to your visitors/users in real time.
+name: zukko_chat_flutter
+description: "Native Flutter chat SDK for Zukko Chat: real-time messaging, file and voice attachments, three customizable UI styles, light/dark themes and secure HMAC user identity."
 version: 0.1.0
-homepage: https://github.com/chatwoot/chatwoot-flutter-sdk
 
 environment:
   sdk: "^3.13.0"
@@ -46,7 +45,7 @@ dev_dependencies:
 # The following section is specific to Flutter.
 flutter:
   # Bundled style fonts (SIL OFL 1.1, license next to each family). Used by the
-  # chat styles as 'packages/chatwoot_sdk/<Family>'.
+  # chat styles as 'packages/zukko_chat_flutter/<Family>'.
   fonts:
     - family: Manrope
       fonts:

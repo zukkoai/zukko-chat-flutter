@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 /// recording. Either a [path] on disk (mobile, desktop) or the [bytes]
 /// (web, recordings). The [name]'s extension decides the content type.
 @immutable
-class ChatwootUpload {
+class ZukkoChatUpload {
   /// Server limit per attachment.
   static const maxSize = 40 * 1024 * 1024;
 
@@ -14,13 +14,13 @@ class ChatwootUpload {
   final Uint8List? bytes;
   final int? _size;
 
-  const ChatwootUpload.file({
+  const ZukkoChatUpload.file({
     required this.name,
     required String this.path,
     this._size,
   }) : bytes = null;
 
-  const ChatwootUpload.bytes({
+  const ZukkoChatUpload.bytes({
     required this.name,
     required Uint8List this.bytes,
   }) : path = null,

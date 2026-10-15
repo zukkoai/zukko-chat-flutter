@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,21 +44,21 @@ void main() {
   }
 
   /// A connected client with the callbacks recorded into the lists.
-  Future<ChatwootClient> connect({
-    required List<ChatwootClientException> errors,
-    List<ChatwootMessage>? retrieved,
+  Future<ZukkoChatClient> connect({
+    required List<ZukkoChatException> errors,
+    List<ZukkoChatMessage>? retrieved,
     List<int>? subscribed,
     List<int>? sent,
-    ChatwootUser? user,
+    ZukkoChatUser? user,
     Duration? subscribeTimeout,
   }) async {
-    final client = await ChatwootClient.create(
+    final client = await ZukkoChatClient.create(
       baseUrl: server.baseUrl,
       websiteToken: FakeChatServer.websiteToken,
       user: user,
       enablePersistence: false,
       socketSubscribeTimeout: subscribeTimeout,
-      callbacks: ChatwootCallbacks(
+      callbacks: ZukkoChatCallbacks(
         onError: errors.add,
         onConfirmedSubscription: () => subscribed?.add((subscribed.length) + 1),
         onMessageSent: (m, _) => sent?.add(m.id),
@@ -74,17 +74,17 @@ void main() {
     server
       ..createdJoinsList = true
       ..createdId = 3;
-    final errors = <ChatwootClientException>[];
+    final errors = <ZukkoChatException>[];
     final subscribed = <int>[];
     final sent = <int>[];
-    final retrieved = <ChatwootMessage>[];
+    final retrieved = <ZukkoChatMessage>[];
 
     final client = await connect(
       errors: errors,
       subscribed: subscribed,
       sent: sent,
       retrieved: retrieved,
-      user: ChatwootUser(
+      user: ZukkoChatUser(
         identifier: 'u1',
         identifierHash: FakeChatServer.hashFor('u1'),
         name: 'Ali',
@@ -109,7 +109,7 @@ void main() {
       content: '',
       echoId: 'e2',
       attachments: [
-        ChatwootUpload.bytes(
+        ZukkoChatUpload.bytes(
           name: 'note.txt',
           bytes: Uint8List.fromList('FILE-BYTES'.codeUnits),
         ),
@@ -151,9 +151,9 @@ void main() {
     server
       ..hasConversation = true
       ..messageIds = [1, 2];
-    final errors = <ChatwootClientException>[];
+    final errors = <ZukkoChatException>[];
     final subscribed = <int>[];
-    final retrieved = <ChatwootMessage>[];
+    final retrieved = <ZukkoChatMessage>[];
     await connect(errors: errors, subscribed: subscribed, retrieved: retrieved);
     await until(() => subscribed.isNotEmpty);
     await until(() => retrieved.isNotEmpty); // the cursor is now 2
@@ -185,8 +185,8 @@ void main() {
       ..messageIds = [1, 2, 3, 4]
       ..privateIds.add(2)
       ..activityIds.add(3);
-    final errors = <ChatwootClientException>[];
-    final retrieved = <ChatwootMessage>[];
+    final errors = <ZukkoChatException>[];
+    final retrieved = <ZukkoChatMessage>[];
     await connect(errors: errors, retrieved: retrieved);
     await until(() => retrieved.isNotEmpty);
 
@@ -268,34 +268,34 @@ void main() {
 
   group('identifier hash', () {
     test('a wrong hash fails closed with a typed error', () async {
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       await connect(
         errors: errors,
-        user: ChatwootUser(identifier: 'u1', identifierHash: 'bad'),
+        user: ZukkoChatUser(identifier: 'u1', identifierHash: 'bad'),
       );
       expect(errors.map((e) => e.type), [
-        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
       ]);
     });
 
     test('inbox with hmac_mandatory: no hash is rejected, the right one '
         'passes', () async {
       server.hmacMandatory = true;
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       await connect(
         errors: errors,
-        user: ChatwootUser(identifier: 'u1'),
+        user: ZukkoChatUser(identifier: 'u1'),
       );
       // the SDK also warns up front that the identity is unverified
       expect(
         errors.map((e) => e.type),
-        contains(ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH),
+        contains(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
       );
 
-      final ok = <ChatwootClientException>[];
+      final ok = <ZukkoChatException>[];
       await connect(
         errors: ok,
-        user: ChatwootUser(
+        user: ZukkoChatUser(
           identifier: 'u2',
           identifierHash: FakeChatServer.hashFor('u2'),
         ),
@@ -308,7 +308,7 @@ void main() {
     test('ping frames keep an otherwise silent socket alive past the stale '
         'watchdog', () async {
       server.pingEvery = const Duration(seconds: 1);
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       final subscribed = <int>[];
       await connect(errors: errors, subscribed: subscribed);
       await until(() => subscribed.isNotEmpty);
@@ -325,7 +325,7 @@ void main() {
     test('an unknown pubsub token is never confirmed: the SDK gives up '
         'with SOCKET_SUBSCRIPTION_REJECTED', () async {
       server.cableToken = 'someone-elses';
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       final subscribed = <int>[];
       await connect(
         errors: errors,
@@ -337,7 +337,7 @@ void main() {
         () => errors.any(
           (e) =>
               e.type ==
-              ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+              ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         ),
         seconds: 10,
       );

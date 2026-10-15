@@ -29,11 +29,11 @@ abstract class ChatwootRepository {
   @protected
   final LocalStorage localStorage;
   @protected
-  ChatwootCallbacks callbacks;
+  ZukkoChatCallbacks callbacks;
 
   ChatwootRepository(this.clientService, this.localStorage, this.callbacks);
 
-  Future<void> initialize(ChatwootUser? user);
+  Future<void> initialize(ZukkoChatUser? user);
 
   void getPersistedMessages();
 
@@ -45,11 +45,11 @@ abstract class ChatwootRepository {
 
   Future<void> sendMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
   });
 
   /// Returns whether the action was sent (`false` while not subscribed).
-  bool sendAction(ChatwootActionType action);
+  bool sendAction(ZukkoChatActionType action);
 
   /// Tells agents the contact started / stopped typing. Never throws.
   Future<void> setTyping(bool on);
@@ -75,7 +75,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   ChatwootRepositoryImpl({
     required ChatwootClientService clientService,
     required LocalStorage localStorage,
-    required ChatwootCallbacks streamCallbacks,
+    required ZukkoChatCallbacks streamCallbacks,
     required this._socket,
     this._session,
   }) : super(clientService, localStorage, streamCallbacks);
@@ -99,10 +99,10 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   int? _cursor;
 
   /// The last rejected subscription, while realtime waits for a slow retry.
-  ChatwootClientException? _lastRejected;
+  ZukkoChatException? _lastRejected;
   Timer? _rejectedRetry;
   int _rejectedAttempts = 0;
-  ChatwootClientExceptionType? _reportedRejection;
+  ZukkoChatExceptionType? _reportedRejection;
 
   Timer? _seenCooldown;
   bool _seenPending = false;
@@ -110,7 +110,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   /// Messages seen in this process, by id. Persisting is not awaited on the
   /// live path, so storage can lag behind: duplicate detection and the
   /// author check on updates go through this map first.
-  final _known = <int, ChatwootMessage>{};
+  final _known = <int, ZukkoChatMessage>{};
 
   /// Upper bound of [_known]; the oldest entries go first (storage still
   /// answers for them).
@@ -119,7 +119,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   /// Pages fetched at most by one `after` catch-up (100 messages each).
   static const _maxAfterPages = 20;
 
-  void _remember(ChatwootMessage m) {
+  void _remember(ZukkoChatMessage m) {
     _known[m.id] = m;
     while (_known.length > _knownCap) {
       _known.remove(_known.keys.first);
@@ -127,7 +127,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   }
 
   /// A message that came from the server (fetch or event): moves the cursor.
-  void _noteServer(ChatwootMessage m) {
+  void _noteServer(ZukkoChatMessage m) {
     _remember(m);
     if (m.id > (_cursor ?? 0)) _cursor = m.id;
   }
@@ -135,12 +135,12 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   /// Fetches the latest messages, or with [after] everything newer than that
   /// message id (pages of up to 100 until the server has no more).
   ///
-  /// Calls [ChatwootCallbacks.onMessagesRetrieved] when the fetch is successful
-  /// Calls [ChatwootCallbacks.onError] for every failure; never throws.
+  /// Calls [ZukkoChatCallbacks.onMessagesRetrieved] when the fetch is successful
+  /// Calls [ZukkoChatCallbacks.onError] for every failure; never throws.
   @override
   Future<void> getMessages({int? after}) async {
     try {
-      final messages = <ChatwootMessage>[];
+      final messages = <ZukkoChatMessage>[];
       if (after == null) {
         messages.addAll(await clientService.getMessages());
       } else {
@@ -158,7 +158,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
       await _persist(localStorage.messages.saveAllMessages(messages));
       callbacks.onMessagesRetrieved?.call(messages);
     } catch (e) {
-      _emitError(e, ChatwootClientExceptionType.GET_MESSAGES_FAILED);
+      _emitError(e, ZukkoChatExceptionType.GET_MESSAGES_FAILED);
     }
   }
 
@@ -166,7 +166,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
 
   /// Fetches persisted messages.
   ///
-  /// Calls [ChatwootCallbacks.onPersistedMessagesRetrieved] if persisted messages are found
+  /// Calls [ZukkoChatCallbacks.onPersistedMessagesRetrieved] if persisted messages are found
   @override
   void getPersistedMessages() {
     final persistedMessages = localStorage.messages.getMessages();
@@ -179,9 +179,9 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   /// refreshes the conversation, then starts listening for events. A rejected
   /// identifier hash fails closed: no conversation fetch and no realtime.
   ///
-  /// Never throws: every failure is reported through [ChatwootCallbacks.onError].
+  /// Never throws: every failure is reported through [ZukkoChatCallbacks.onError].
   @override
-  Future<void> initialize(ChatwootUser? user) async {
+  Future<void> initialize(ZukkoChatUser? user) async {
     _initializing = true;
     try {
       if (user != null) {
@@ -190,7 +190,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
       await _session?.start();
       await _syncConversation();
     } catch (e) {
-      _emitError(e, ChatwootClientExceptionType.CREATE_CLIENT_FAILED);
+      _emitError(e, ZukkoChatExceptionType.CREATE_CLIENT_FAILED);
     }
     _initializing = false;
 
@@ -212,7 +212,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
     try {
       await _syncConversation();
     } catch (e) {
-      _emitError(e, ChatwootClientExceptionType.GET_CONVERSATION_FAILED);
+      _emitError(e, ZukkoChatExceptionType.GET_CONVERSATION_FAILED);
     }
     if (!_disposed) listenForEvents();
   }
@@ -231,21 +231,21 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   }
 
   /// Reports [error] through `onError`, typed [fallback] unless it already is a
-  /// [ChatwootClientException]. A throwing host callback is swallowed.
+  /// [ZukkoChatException]. A throwing host callback is swallowed.
   void _emitError(
     Object error,
-    ChatwootClientExceptionType fallback, {
+    ZukkoChatExceptionType fallback, {
     Object? data,
   }) {
     sdkLog('$fallback: $error');
-    final typed = error is ChatwootClientException
+    final typed = error is ZukkoChatException
         ? error
-        : ChatwootClientException(error.toString(), fallback);
+        : ZukkoChatException(error.toString(), fallback);
     try {
       callbacks.onError?.call(
         data == null
             ? typed
-            : ChatwootClientException(typed.cause, typed.type, data: data),
+            : ZukkoChatException(typed.cause, typed.type, data: data),
       );
     } catch (e) {
       sdkLog('onError callback threw: $e');
@@ -253,7 +253,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   }
 
   /// Reports a problem the session found on its own (`IDENTIFY_FAILED`).
-  void reportError(ChatwootClientException error) {
+  void reportError(ZukkoChatException error) {
     if (!_disposed) _emitError(error, error.type);
   }
 
@@ -274,7 +274,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
     try {
       await _syncConversation();
     } catch (e) {
-      _emitError(e, ChatwootClientExceptionType.GET_CONVERSATION_FAILED);
+      _emitError(e, ZukkoChatExceptionType.GET_CONVERSATION_FAILED);
     }
     if (!_disposed) await getMessages();
   }
@@ -286,9 +286,9 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   @override
   Future<void> sendMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
   }) async {
-    final ChatwootMessage createdMessage;
+    final ZukkoChatMessage createdMessage;
     try {
       createdMessage = await clientService.createMessage(
         request,
@@ -298,7 +298,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
       // anything may fail here; the UI bubble waits for this echoId
       _emitError(
         e,
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
         data: request.echoId,
       );
       return;
@@ -317,7 +317,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
     if (current?.id == id) return;
     await _persist(
       localStorage.conversation.save(
-        ChatwootConversation(id: id, inboxId: current?.inboxId ?? 0),
+        ZukkoChatConversation(id: id, inboxId: current?.inboxId ?? 0),
       ),
     );
   }
@@ -344,10 +344,10 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
           callbacks.onPing?.call();
         case SocketFailure(:final error):
           if (error.type ==
-              ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED) {
+              ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED) {
             unawaited(_onSubscriptionRejected(error));
           } else {
-            _emitError(error, ChatwootClientExceptionType.SOCKET_DISCONNECTED);
+            _emitError(error, ZukkoChatExceptionType.SOCKET_DISCONNECTED);
           }
         case SocketMessage(:final message):
           _onMessage(message);
@@ -361,7 +361,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   /// The pubsub token was refused: read it again. A new token reconnects; the
   /// same one (or an exhausted refresh budget) leaves the socket closed, reports
   /// the failure once and tries again later (see [_scheduleRejectedRetry]).
-  Future<void> _onSubscriptionRejected(ChatwootClientException error) async {
+  Future<void> _onSubscriptionRejected(ZukkoChatException error) async {
     final session = _session;
     _lastRejected = error;
     var failure = error;
@@ -369,20 +369,20 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
       if (session != null &&
           await session.refresh(SessionRefreshReason.socketRejected)) {
         // the reset already reconnects; this covers a reset without a change
-        if (!_disposed && _socket.state == ChatwootConnectionState.closed) {
+        if (!_disposed && _socket.state == ZukkoChatConnectionState.closed) {
           _socket.connect();
         }
         return;
       }
     } catch (e) {
-      failure = e is ChatwootClientException ? e : error;
+      failure = e is ZukkoChatException ? e : error;
     }
     if (_disposed) return;
     if (_reportedRejection != failure.type) {
       _reportedRejection = failure.type; // once per kind until subscribed
       _emitError(
         failure,
-        ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+        ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
       );
     }
     _scheduleRejectedRetry();
@@ -400,7 +400,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
       _rejectedRetry = null;
       final last = _lastRejected;
       if (_disposed || last == null) return;
-      if (_socket.state != ChatwootConnectionState.closed) return;
+      if (_socket.state != ZukkoChatConnectionState.closed) return;
       unawaited(_onSubscriptionRejected(last));
     });
   }
@@ -408,7 +408,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   @override
   void resume() {
     if (_disposed || _initializing) return;
-    if (_socket.state != ChatwootConnectionState.closed) return;
+    if (_socket.state != ZukkoChatConnectionState.closed) return;
     if (_session?.isReady == false || _session?.failure != null) return;
     _rejectedRetry?.cancel();
     _rejectedRetry = null;
@@ -423,9 +423,9 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   void _onState(SocketStateChanged event) {
     callbacks.onConnectionStateChanged?.call(event.state);
     switch (event.state) {
-      case ChatwootConnectionState.connected:
+      case ZukkoChatConnectionState.connected:
         callbacks.onWelcome?.call();
-      case ChatwootConnectionState.subscribed:
+      case ZukkoChatConnectionState.subscribed:
         callbacks.onConfirmedSubscription?.call();
         _lastRejected = null;
         _rejectedAttempts = 0;
@@ -533,7 +533,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
             type == ChatwootEventMessageType.conversation_created);
     if (!adopt && stored.id != id) return;
     final status = data.status ?? (stored?.id == id ? stored?.status : null);
-    final conversation = ChatwootConversation(
+    final conversation = ZukkoChatConversation(
       id: id,
       inboxId: inboxId,
       status: status,
@@ -549,7 +549,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   }
 
   /// Events of other conversations (or with a bogus id) are not ours.
-  bool _isOwnConversation(ChatwootMessage message) =>
+  bool _isOwnConversation(ZukkoChatMessage message) =>
       message.id > 0 &&
       message.conversationId != null &&
       message.conversationId == localStorage.conversation.get()?.id;
@@ -557,7 +557,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
   bool _isKnown(int id) =>
       _known.containsKey(id) || localStorage.messages.getMessage(id) != null;
 
-  static bool _changesAuthor(ChatwootMessage known, ChatwootMessage updated) {
+  static bool _changesAuthor(ZukkoChatMessage known, ZukkoChatMessage updated) {
     final knownSender = known.sender?.id;
     return (known.messageType != null &&
             known.messageType != updated.messageType) ||
@@ -593,7 +593,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
     if (_disposed) return;
     _disposed = true;
     // responses still in flight must not reach the app
-    callbacks = ChatwootCallbacks();
+    callbacks = ZukkoChatCallbacks();
     _typingTimer?.cancel();
     _presenceResetTimer?.cancel();
     _rejectedRetry?.cancel();
@@ -606,7 +606,7 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
 
   ///Send actions like user started typing
   @override
-  bool sendAction(ChatwootActionType action) => _socket.send(action);
+  bool sendAction(ZukkoChatActionType action) => _socket.send(action);
 
   @override
   Future<void> setTyping(bool on) =>

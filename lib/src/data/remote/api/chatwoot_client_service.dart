@@ -19,16 +19,16 @@ abstract class ChatwootClientService {
 
   /// One page of messages, oldest first: the latest 20 without a cursor, 20
   /// older than id [before], or up to 100 newer than id [after].
-  Future<List<ChatwootMessage>> getMessages({int? before, int? after});
+  Future<List<ZukkoChatMessage>> getMessages({int? before, int? after});
 
   /// The contact's current conversation, or null when it has none yet.
-  Future<ChatwootConversation?> getConversation();
+  Future<ZukkoChatConversation?> getConversation();
 
   /// Sends [request], as multipart when [attachments] is not empty. Creates
   /// the conversation if the contact has none.
-  Future<ChatwootMessage> createMessage(
+  Future<ZukkoChatMessage> createMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
   });
 
   /// Tells agents the contact started or stopped typing.
@@ -48,9 +48,9 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
   );
 
   @override
-  Future<List<ChatwootMessage>> getMessages({int? before, int? after}) =>
+  Future<List<ZukkoChatMessage>> getMessages({int? before, int? after}) =>
       apiCall(
-        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        ZukkoChatExceptionType.GET_MESSAGES_FAILED,
         () => _dio.get(
           ChatwootPaths.messages,
           queryParameters: {'before': ?before, 'after': ?after},
@@ -59,11 +59,11 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
       );
 
   @override
-  Future<ChatwootConversation?> getConversation() => apiCall(
-    ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+  Future<ZukkoChatConversation?> getConversation() => apiCall(
+    ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
     () => _dio.get(ChatwootPaths.conversations),
     (data) {
-      final conversation = ChatwootConversation.fromJson(
+      final conversation = ZukkoChatConversation.fromJson(
         data as Map<String, dynamic>,
       );
       return conversation.id > 0 ? conversation : null; // `{}`: none yet
@@ -71,10 +71,10 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
   );
 
   @override
-  Future<ChatwootMessage> createMessage(
+  Future<ZukkoChatMessage> createMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
-  }) => apiCall(ChatwootClientExceptionType.SEND_MESSAGE_FAILED, () async {
+    List<ZukkoChatUpload> attachments = const [],
+  }) => apiCall(ZukkoChatExceptionType.SEND_MESSAGE_FAILED, () async {
     for (final file in attachments) {
       await validateUploadFile(file);
     }
@@ -91,11 +91,11 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
             replyTo: request.replyTo,
           );
     return _dio.post(ChatwootPaths.messages, data: body);
-  }, (data) => ChatwootMessage.fromJson(data as Map<String, dynamic>));
+  }, (data) => ZukkoChatMessage.fromJson(data as Map<String, dynamic>));
 
   @override
   Future<void> toggleTyping(bool on) => apiCall(
-    ChatwootClientExceptionType.UPDATE_CONTACT_FAILED,
+    ZukkoChatExceptionType.UPDATE_CONTACT_FAILED,
     () => _dio.post(
       ChatwootPaths.toggleTyping,
       queryParameters: {'typing_status': on ? 'on' : 'off'},
@@ -106,7 +106,7 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
 
   @override
   Future<void> updateLastSeen() => apiCall(
-    ChatwootClientExceptionType.UPDATE_CONTACT_FAILED,
+    ZukkoChatExceptionType.UPDATE_CONTACT_FAILED,
     () => _dio.post(ChatwootPaths.updateLastSeen, options: _noRecover),
     (_) {},
   );

@@ -1,5 +1,5 @@
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'utils/fixtures.dart';
@@ -9,13 +9,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final env = HiveTestEnv();
   const base = 'https://x.test';
-  final user = ChatwootUser(identifier: 'u', identifierHash: 'h');
+  final user = ZukkoChatUser(identifier: 'u', identifierHash: 'h');
 
   setUpAll(env.setUpAll);
   tearDown(env.tearDown);
   tearDownAll(env.tearDownAll);
 
-  String keyFor(ChatwootUser u) => ChatwootClient.getClientInstanceKey(
+  String keyFor(ZukkoChatUser u) => ZukkoChatClient.getClientInstanceKey(
     baseUrl: base,
     websiteToken: 'inbox',
     userIdentifier: u.identifier,
@@ -24,11 +24,11 @@ void main() {
 
   test('clears the persisted data of that user only', () async {
     await env.open();
-    final other = ChatwootUser(identifier: 'other');
+    final other = ZukkoChatUser(identifier: 'other');
     await LocalStorage.persisted(keyFor(user)).contact.save(contact());
     await LocalStorage.persisted(keyFor(other)).contact.save(contact());
 
-    await chatwootSignOut(baseUrl: base, websiteToken: 'inbox', user: user);
+    await zukkoChatSignOut(baseUrl: base, websiteToken: 'inbox', user: user);
 
     expect(LocalStorage.persisted(keyFor(user)).contact.get(), isNull);
     expect(LocalStorage.persisted(keyFor(other)).contact.get(), isNotNull);

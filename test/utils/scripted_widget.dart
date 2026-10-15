@@ -1,10 +1,10 @@
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_auth_interceptor.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_auth_interceptor.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
 import 'package:dio/dio.dart';
 
 import 'fake_http.dart';
@@ -88,11 +88,11 @@ class ScriptedWidget {
 class WidgetRig {
   WidgetRig(
     this.server, {
-    ChatwootUser? user,
+    ZukkoChatUser? user,
     LocalStorage? storage,
     void Function()? onReset,
     void Function()? onReady,
-    void Function(ChatwootClientException)? onError,
+    void Function(ZukkoChatException)? onError,
     DateTime Function()? now,
   }) : storage = storage ?? LocalStorage.inMemory() {
     session = WidgetSession(
@@ -125,7 +125,7 @@ class WidgetRig {
   late final ChatwootClientService service;
   DateTime clock = DateTime(2026);
   int resets = 0;
-  final reported = <ChatwootClientException>[];
+  final reported = <ZukkoChatException>[];
 
   final sendRequest = ChatwootNewMessageRequest(content: 'hi', echoId: 'e1');
 

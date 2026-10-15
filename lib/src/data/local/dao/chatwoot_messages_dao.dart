@@ -6,10 +6,10 @@ import '../../models/chatwoot_message.dart';
 /// Messages of one client instance. [getMessages] always returns the messages
 /// oldest first, for both implementations.
 abstract class ChatwootMessagesDao {
-  Future<void> saveMessage(ChatwootMessage message);
-  Future<void> saveAllMessages(List<ChatwootMessage> messages);
-  ChatwootMessage? getMessage(int messageId);
-  List<ChatwootMessage> getMessages();
+  Future<void> saveMessage(ZukkoChatMessage message);
+  Future<void> saveAllMessages(List<ZukkoChatMessage> messages);
+  ZukkoChatMessage? getMessage(int messageId);
+  List<ZukkoChatMessage> getMessages();
 
   /// Deletes this instance's messages.
   Future<void> clear();
@@ -21,7 +21,7 @@ class PersistedChatwootMessagesDao implements ChatwootMessagesDao {
   PersistedChatwootMessagesDao(this._box, String instanceKey)
     : _prefix = '$instanceKey|m|';
 
-  final Box<ChatwootMessage> _box;
+  final Box<ZukkoChatMessage> _box;
   final String _prefix;
 
   String _key(int id) => '$_prefix$id';
@@ -30,19 +30,19 @@ class PersistedChatwootMessagesDao implements ChatwootMessagesDao {
       _box.keys.whereType<String>().where((k) => k.startsWith(_prefix));
 
   @override
-  Future<void> saveMessage(ChatwootMessage message) =>
+  Future<void> saveMessage(ZukkoChatMessage message) =>
       _box.put(_key(message.id), message);
 
   @override
-  Future<void> saveAllMessages(List<ChatwootMessage> messages) =>
+  Future<void> saveAllMessages(List<ZukkoChatMessage> messages) =>
       _box.putAll({for (final m in messages) _key(m.id): m});
 
   @override
-  ChatwootMessage? getMessage(int messageId) => _box.get(_key(messageId));
+  ZukkoChatMessage? getMessage(int messageId) => _box.get(_key(messageId));
 
   @override
-  List<ChatwootMessage> getMessages() => sortMessagesOldestFirst(
-    _ownKeys.map(_box.get).whereType<ChatwootMessage>(),
+  List<ZukkoChatMessage> getMessages() => sortMessagesOldestFirst(
+    _ownKeys.map(_box.get).whereType<ZukkoChatMessage>(),
   );
 
   @override
@@ -50,24 +50,24 @@ class PersistedChatwootMessagesDao implements ChatwootMessagesDao {
 }
 
 class InMemoryChatwootMessagesDao implements ChatwootMessagesDao {
-  final Map<int, ChatwootMessage> _messages = {};
+  final Map<int, ZukkoChatMessage> _messages = {};
 
   @override
-  Future<void> saveMessage(ChatwootMessage message) async =>
+  Future<void> saveMessage(ZukkoChatMessage message) async =>
       _messages[message.id] = message;
 
   @override
-  Future<void> saveAllMessages(List<ChatwootMessage> messages) async {
+  Future<void> saveAllMessages(List<ZukkoChatMessage> messages) async {
     for (final m in messages) {
       _messages[m.id] = m;
     }
   }
 
   @override
-  ChatwootMessage? getMessage(int messageId) => _messages[messageId];
+  ZukkoChatMessage? getMessage(int messageId) => _messages[messageId];
 
   @override
-  List<ChatwootMessage> getMessages() =>
+  List<ZukkoChatMessage> getMessages() =>
       sortMessagesOldestFirst(_messages.values);
 
   @override

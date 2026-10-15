@@ -19,11 +19,11 @@ import 'chatwoot_callbacks.dart';
 import 'chatwoot_client_exception.dart';
 import 'chatwoot_upload.dart';
 
-/// Represents a chat client instance on the Zukko/Chatwoot Widget API. All chat
+/// Represents a chat client instance on the Zukko Chat Widget API. All chat
 /// operations (Example: sendMessage) are passed through the client.
 ///
 /// {@category FlutterClientSdk}
-class ChatwootClient {
+class ZukkoChatClient {
   final ChatwootRepository _repository;
   final List<Dio> _dios;
   final WidgetSession? _session;
@@ -31,10 +31,10 @@ class ChatwootClient {
 
   final String baseUrl;
   final String websiteToken;
-  final ChatwootCallbacks? callbacks;
-  final ChatwootUser? user;
+  final ZukkoChatCallbacks? callbacks;
+  final ZukkoChatUser? user;
 
-  ChatwootClient._(
+  ZukkoChatClient._(
     this._repository,
     this._dios,
     this._session, {
@@ -46,7 +46,7 @@ class ChatwootClient {
 
   /// Builds a client around an existing [repository]. Tests only.
   @visibleForTesting
-  ChatwootClient.withRepository(
+  ZukkoChatClient.withRepository(
     ChatwootRepository repository, {
     required this.baseUrl,
     required this.websiteToken,
@@ -60,27 +60,27 @@ class ChatwootClient {
   /// ...); null until the session was established.
   WidgetConfig? get config => _session?.config;
 
-  /// Retrieves chatwoot client's messages. If persistence is enabled
-  /// [ChatwootCallbacks.onPersistedMessagesRetrieved] will be triggered with
+  /// Retrieves Zukko Chat client's messages. If persistence is enabled
+  /// [ZukkoChatCallbacks.onPersistedMessagesRetrieved] will be triggered with
   /// persisted messages. On successfully fetch from remote server
-  /// [ChatwootCallbacks.onMessagesRetrieved] will be triggered. Completes once
+  /// [ZukkoChatCallbacks.onMessagesRetrieved] will be triggered. Completes once
   /// the remote fetch finished.
   Future<void> loadMessages() async {
     _repository.getPersistedMessages();
     await _repository.getMessages();
   }
 
-  /// Sends chatwoot message. The echoId is your temporary message id. When message sends successfully
-  /// [ChatwootMessage] will be returned with the [echoId] on [ChatwootCallbacks.onMessageSent]. If
-  /// message fails to send [ChatwootCallbacks.onError] will be triggered [echoId] as data.
+  /// Sends Zukko Chat message. The echoId is your temporary message id. When message sends successfully
+  /// [ZukkoChatMessage] will be returned with the [echoId] on [ZukkoChatCallbacks.onMessageSent]. If
+  /// message fails to send [ZukkoChatCallbacks.onError] will be triggered [echoId] as data.
   ///
-  /// [attachments] (images, files, voice; at most [ChatwootUpload.maxSize]
+  /// [attachments] (images, files, voice; at most [ZukkoChatUpload.maxSize]
   /// each) go with the message; [content] may then be empty. [replyTo] is the
   /// id of the message this one answers.
   Future<void> sendMessage({
     required String content,
     required String echoId,
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
     int? replyTo,
   }) async {
     final request = ChatwootNewMessageRequest(
@@ -106,10 +106,10 @@ class ChatwootClient {
   ///
   /// Completes with `false` when the action could not be sent (the realtime
   /// connection is not subscribed).
-  Future<bool> sendAction(ChatwootActionType action) async =>
+  Future<bool> sendAction(ZukkoChatActionType action) async =>
       _repository.sendAction(action);
 
-  /// Disposes chatwoot client: cancels stream subscriptions and timers and
+  /// Disposes Zukko Chat client: cancels stream subscriptions and timers and
   /// closes the HTTP clients. Safe to call more than once.
   Future<void> dispose() async {
     if (_disposed) return;
@@ -124,9 +124,9 @@ class ChatwootClient {
   Future<void> clearClientData() =>
       _repository.clear(clearChatwootUserStorage: false);
 
-  /// Creates an instance of [ChatwootClient] with the [baseUrl] of your chatwoot installation,
+  /// Creates an instance of [ZukkoChatClient] with the [baseUrl] of your Zukko Chat installation,
   /// [websiteToken] of the web widget inbox. Specify custom user details using [user] and [callbacks] for
-  /// handling chatwoot events. By default persistence is enabled, to disable persistence set [enablePersistence] as false.
+  /// handling Zukko Chat events. By default persistence is enabled, to disable persistence set [enablePersistence] as false.
   ///
   /// [baseUrl] must be https; plain http is only accepted for localhost /
   /// 10.0.2.2, or for any host when [allowInsecure] is true (development only).
@@ -135,7 +135,7 @@ class ChatwootClient {
   /// Completes once the session (`/config`, `set_user`) and the conversation
   /// refresh finished. A rejected `identifierHash` fails closed: the client
   /// reports `INVALID_IDENTIFIER_HASH` and neither fetches nor connects.
-  /// Failures during that refresh are reported through [ChatwootCallbacks.onError]
+  /// Failures during that refresh are reported through [ZukkoChatCallbacks.onError]
   /// instead of being thrown. If local storage cannot be opened the client
   /// still works, without persistence, and reports `STORAGE_FAILED`.
   ///
@@ -143,13 +143,13 @@ class ChatwootClient {
   /// persisted clients with the same [getClientInstanceKey] share the persisted
   /// contact, conversation and messages. Persisted data is encrypted at rest;
   /// the user's `identifierHash` and `customAttributes` are never written to disk.
-  static Future<ChatwootClient> create({
+  static Future<ZukkoChatClient> create({
     required String baseUrl,
     required String websiteToken,
-    ChatwootUser? user,
+    ZukkoChatUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,
-    ChatwootCallbacks? callbacks,
+    ZukkoChatCallbacks? callbacks,
     @visibleForTesting Duration? socketSubscribeTimeout,
   }) async {
     validateBaseUrl(baseUrl, allowInsecure: allowInsecure);
@@ -170,11 +170,11 @@ class ChatwootClient {
       } catch (e) {
         sdkLog('persistence unavailable: $e');
         callbacks?.onError?.call(
-          e is ChatwootClientException
+          e is ZukkoChatException
               ? e
-              : ChatwootClientException(
+              : ZukkoChatException(
                   'local storage unavailable, continuing without persistence: $e',
-                  ChatwootClientExceptionType.STORAGE_FAILED,
+                  ZukkoChatExceptionType.STORAGE_FAILED,
                 ),
         );
       }
@@ -209,11 +209,11 @@ class ChatwootClient {
             socketSubscribeTimeout ?? const Duration(seconds: 10),
       ),
       localStorage: storage,
-      streamCallbacks: callbacks ?? ChatwootCallbacks(),
+      streamCallbacks: callbacks ?? ZukkoChatCallbacks(),
       session: session,
     );
 
-    final client = ChatwootClient._(
+    final client = ZukkoChatClient._(
       repository,
       [bareDio, dio],
       session,
@@ -227,11 +227,11 @@ class ChatwootClient {
     return client;
   }
 
-  /// Creates a chatwoot client instance key using the chatwoot client instance baseurl, websiteToken
+  /// Creates a Zukko Chat client instance key using the Zukko Chat client instance baseurl, websiteToken
   /// and userIdentifier. Client instance keys are used to differentiate between client instances and their data
   /// (contact, conversation and messages).
   ///
-  /// Separate persisted [ChatwootClient] instances with same baseUrl, websiteToken and userIdentifier
+  /// Separate persisted [ZukkoChatClient] instances with same baseUrl, websiteToken and userIdentifier
   /// are regarded as the same and therefore use the same contact and conversation.
   /// The same identifier with a different [identifierHash] is a different instance.
   static String getClientInstanceKey({
@@ -246,8 +246,8 @@ class ChatwootClient {
     identifierHash: identifierHash,
   );
 
-  /// Clears all persisted chatwoot data on device for a particular chatwoot client instance.
-  /// See [getClientInstanceKey] on how chatwoot client instances are differentiated.
+  /// Clears all persisted Zukko Chat data on device for a particular Zukko Chat client instance.
+  /// See [getClientInstanceKey] on how Zukko Chat client instances are differentiated.
   /// Records stored under the same [baseUrl], [websiteToken] and [userIdentifier]
   /// with ANY identifier hash are removed too (a rotated hash leaves no orphan);
   /// [identifierHash] is not needed. Other users and other inboxes are untouched.
@@ -269,6 +269,6 @@ class ChatwootClient {
     );
   }
 
-  /// Clears all persisted chatwoot data on device.
+  /// Clears all persisted Zukko Chat data on device.
   static Future<void> clearAllData() => LocalStorage.clearAllPersisted();
 }

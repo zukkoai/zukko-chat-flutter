@@ -13,14 +13,14 @@ Object chatImageHeroTag(String messageId, int index) =>
 /// full-screen viewer at [index] on tap.
 ///
 /// A tap is handled here and does NOT reach the chat's message tap
-/// (`ChatwootChatInteractions.onMessageTap`): opening the picture is the
+/// (`ZukkoChatInteractions.onMessageTap`): opening the picture is the
 /// action. Styles pass `enabled: false` for a failed message so its tap still
 /// resends, and for images with nothing to show yet.
 class ChatImageTap extends StatelessWidget {
   final List<String> urls;
   final int index;
   final String messageId;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final bool enabled;
   final Widget child;
 
@@ -65,7 +65,7 @@ Future<void> openImageViewer(
   required List<String> urls,
   required int initialIndex,
   required List<Object> heroTags,
-  required ChatwootL10n l10n,
+  required ZukkoChatL10n l10n,
 }) {
   assert(urls.length == heroTags.length);
   return Navigator.of(context).push<void>(
@@ -97,7 +97,7 @@ class ImageViewer extends StatefulWidget {
   final List<ImageProvider?> images;
   final int initialIndex;
   final List<Object> heroTags;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
 
   const ImageViewer({
     super.key,

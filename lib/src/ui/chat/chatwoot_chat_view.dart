@@ -20,7 +20,7 @@ import 'components/voice_recorder.dart';
 /// Header the view draws itself (none when the host passes an app bar).
 @immutable
 class ChatViewHeader {
-  /// Null falls back to [ChatwootL10n.headerTitle].
+  /// Null falls back to [ZukkoChatL10n.headerTitle].
   final String? title;
 
   /// Show a back button that pops the route.
@@ -30,47 +30,47 @@ class ChatViewHeader {
 }
 
 /// Header + message list + composer + footer, drawn by the selected
-/// [ChatwootChatStyle]. `ChatwootChat` is a thin wrapper around this
+/// [ZukkoChatStyle]. `ZukkoChat` is a thin wrapper around this
 /// (internal, not exported).
 ///
-/// The theme is resolved once here (app theme -> [ChatwootChatTheme] ->
+/// The theme is resolved once here (app theme -> [ZukkoChatTheme] ->
 /// style tokens) and passed down.
-class ChatwootChatView extends StatefulWidget {
-  final ChatwootChatOptions options;
+class ZukkoChatView extends StatefulWidget {
+  final ZukkoChatOptions options;
 
   /// Consumer callbacks, called after the view has handled the event.
-  final ChatwootCallbacks? callbacks;
+  final ZukkoChatCallbacks? callbacks;
 
   final ChatViewHeader? header;
 
-  final ChatwootChatInteractions interactions;
+  final ZukkoChatInteractions interactions;
 
   @visibleForTesting
-  final ChatwootClientFactory? clientFactory;
+  final ZukkoChatClientFactory? clientFactory;
 
-  const ChatwootChatView({
+  const ZukkoChatView({
     super.key,
     required this.options,
     this.callbacks,
     this.header,
-    this.interactions = const ChatwootChatInteractions(),
+    this.interactions = const ZukkoChatInteractions(),
     this.clientFactory,
   });
 
   @override
-  State<ChatwootChatView> createState() => _ChatwootChatViewState();
+  State<ZukkoChatView> createState() => _ZukkoChatViewState();
 }
 
-class _ChatwootChatViewState extends State<ChatwootChatView>
+class _ZukkoChatViewState extends State<ZukkoChatView>
     with WidgetsBindingObserver {
-  late ChatwootChatController _controller = _createController();
+  late ZukkoChatController _controller = _createController();
   final _audio = AudioPlaybackController();
-  ChatwootL10n _l10n = const ChatwootL10n();
+  ZukkoChatL10n _l10n = const ZukkoChatL10n();
 
-  ChatwootChatController _createController() => ChatwootChatController(
+  ZukkoChatController _createController() => ZukkoChatController(
     widget.options,
     callbacks: widget.callbacks,
-    clientFactory: widget.clientFactory ?? ChatwootClient.create,
+    clientFactory: widget.clientFactory ?? ZukkoChatClient.create,
   );
 
   @override
@@ -91,7 +91,7 @@ class _ChatwootChatViewState extends State<ChatwootChatView>
   }
 
   @override
-  void didUpdateWidget(ChatwootChatView old) {
+  void didUpdateWidget(ZukkoChatView old) {
     super.didUpdateWidget(old);
     if (!widget.options.sameConnection(old.options)) {
       _controller.dispose();
@@ -106,7 +106,7 @@ class _ChatwootChatViewState extends State<ChatwootChatView>
   void _syncL10n() {
     _l10n =
         widget.options.l10n ??
-        ChatwootL10n.forLocale(Localizations.maybeLocaleOf(context));
+        ZukkoChatL10n.forLocale(Localizations.maybeLocaleOf(context));
     _controller.l10n = _l10n;
   }
 
@@ -173,11 +173,11 @@ class _ChatwootChatViewState extends State<ChatwootChatView>
     return ChatHeaderData(
       title: header.title ?? _l10n.headerTitle,
       status: switch (status) {
-        ChatwootChatStatus.offline => _l10n.offlineText,
-        ChatwootChatStatus.online => _l10n.onlineText,
-        ChatwootChatStatus.typing => _l10n.typingText,
+        ZukkoChatStatus.offline => _l10n.offlineText,
+        ZukkoChatStatus.online => _l10n.onlineText,
+        ZukkoChatStatus.typing => _l10n.typingText,
       },
-      isOnline: status != ChatwootChatStatus.offline,
+      isOnline: status != ZukkoChatStatus.offline,
       onBack: header.showBack ? () => Navigator.maybePop(context) : null,
       onMore: widget.interactions.onMorePressed,
     );
@@ -188,7 +188,7 @@ class _ChatwootChatViewState extends State<ChatwootChatView>
     final o = widget.options;
     final i = widget.interactions;
     final l10n = _l10n;
-    final theme = ChatwootChatTheme.resolve(context, o.theme);
+    final theme = ZukkoChatTheme.resolve(context, o.theme);
     final style = o.style.resolve(theme);
     final header = widget.header;
 
@@ -257,9 +257,9 @@ class _ChatwootChatViewState extends State<ChatwootChatView>
 /// flutter_chat_ui list with the style's message builders. The composer is
 /// drawn by the view below the list, so the list's own one is empty.
 class _MessageList extends StatelessWidget {
-  final ChatwootChatController controller;
+  final ZukkoChatController controller;
   final ChatStyle style;
-  final ChatwootChatInteractions interactions;
+  final ZukkoChatInteractions interactions;
   final ChatMessageEnv env;
   final OnMessageTapCallback onTap;
 
@@ -288,7 +288,7 @@ class _MessageList extends StatelessWidget {
               child: ListenableBuilder(
                 listenable: controller,
                 builder: (context, _) =>
-                    controller.status == ChatwootChatStatus.typing
+                    controller.status == ZukkoChatStatus.typing
                     ? style.buildTypingIndicator(context, env.l10n)
                     : const SizedBox.shrink(),
               ),
@@ -335,8 +335,8 @@ class _MessageList extends StatelessWidget {
 
 /// Shown while the chat could not be started, with a retry button.
 class _ErrorBanner extends StatelessWidget {
-  final ChatwootChatController controller;
-  final ChatwootL10n l10n;
+  final ZukkoChatController controller;
+  final ZukkoChatL10n l10n;
   final Color color;
   final double horizontalPadding;
 
@@ -354,7 +354,7 @@ class _ErrorBanner extends StatelessWidget {
       final error = controller.error;
       if (error == null) return const SizedBox.shrink();
       final rejected =
-          error.type == ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH;
+          error.type == ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH;
       return Semantics(
         liveRegion: true,
         child: Padding(
@@ -366,9 +366,9 @@ class _ErrorBanner extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(switch (error.type) {
-                  ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH =>
+                  ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH =>
                     l10n.identityRejectedText,
-                  ChatwootClientExceptionType.SESSION_EXPIRED =>
+                  ZukkoChatExceptionType.SESSION_EXPIRED =>
                     l10n.sessionExpiredText,
                   _ => l10n.connectionErrorText,
                 }, style: TextStyle(color: color)),

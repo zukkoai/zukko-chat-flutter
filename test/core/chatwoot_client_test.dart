@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
-import 'package:chatwoot_sdk/src/data/local/key_store.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/data/chatwoot_repository.dart';
+import 'package:zukko_chat_flutter/src/data/local/key_store.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -33,14 +33,14 @@ class _RecordingRepository extends Fake implements ChatwootRepository {
   @override
   Future<void> sendMessage(
     ChatwootNewMessageRequest request, {
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
   }) async => log.add(
     'sendMessage ${request.content} ${request.echoId} '
     '${attachments.length}',
   );
 
   @override
-  bool sendAction(ChatwootActionType action) {
+  bool sendAction(ZukkoChatActionType action) {
     log.add('sendAction $action');
     return true;
   }
@@ -69,11 +69,11 @@ void main() {
 
   group('delegation to the repository', () {
     late _RecordingRepository repo;
-    late ChatwootClient client;
+    late ZukkoChatClient client;
 
     setUp(() {
       repo = _RecordingRepository();
-      client = ChatwootClient.withRepository(
+      client = ZukkoChatClient.withRepository(
         repo,
         baseUrl: 'https://x',
         websiteToken: 'in',
@@ -93,7 +93,7 @@ void main() {
       await client.sendMessage(content: 'hi', echoId: 'e', replyTo: 5);
       await client.setTyping(true);
       await client.markSeen();
-      await client.sendAction(ChatwootActionType.update_presence);
+      await client.sendAction(ZukkoChatActionType.update_presence);
       await client.clearClientData();
 
       expect(client.config, isNull);
@@ -101,7 +101,7 @@ void main() {
         'sendMessage hi e 0',
         'setTyping true',
         'markSeen',
-        'sendAction ChatwootActionType.update_presence',
+        'sendAction ZukkoChatActionType.update_presence',
         'clear keepUser=true',
       ]);
     });
@@ -116,8 +116,8 @@ void main() {
   });
 
   group('create() wiring against a real HTTP server (no persistence)', () {
-    late List<ChatwootClientException> errors;
-    late List<ChatwootMessage> messages;
+    late List<ZukkoChatException> errors;
+    late List<ZukkoChatMessage> messages;
 
     setUp(() {
       errors = [];
@@ -128,13 +128,13 @@ void main() {
       server.contacts.clear();
     });
 
-    Future<ChatwootClient> create({bool persist = false, ChatwootUser? user}) =>
-        ChatwootClient.create(
+    Future<ZukkoChatClient> create({bool persist = false, ZukkoChatUser? user}) =>
+        ZukkoChatClient.create(
           baseUrl: server.baseUrl,
           websiteToken: FakeChatServer.websiteToken,
           user: user,
           enablePersistence: persist,
-          callbacks: ChatwootCallbacks(
+          callbacks: ZukkoChatCallbacks(
             onError: errors.add,
             onMessagesRetrieved: messages.addAll,
           ),
@@ -190,7 +190,7 @@ void main() {
         'with no uncaught error', () async {
       server.forceStatus = 500;
       final uncaught = <Object>[];
-      late ChatwootClient client;
+      late ZukkoChatClient client;
 
       await runZonedGuarded(() async {
         client = await create();
@@ -199,7 +199,7 @@ void main() {
 
       expect(uncaught, isEmpty);
       expect(errors, isNotEmpty);
-      expect(errors.first.type, isA<ChatwootClientExceptionType>());
+      expect(errors.first.type, isA<ZukkoChatExceptionType>());
       await client.dispose();
     });
 
@@ -211,11 +211,11 @@ void main() {
       });
 
       final client = await create(
-        user: ChatwootUser(identifier: 'u', identifierHash: 'bad'),
+        user: ZukkoChatUser(identifier: 'u', identifierHash: 'bad'),
       );
 
       expect(errors.map((e) => e.type), [
-        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
       ]);
       expect(server.requests, [
         'POST /api/v1/widget/config',
@@ -224,18 +224,18 @@ void main() {
       await client.loadMessages();
       expect(
         errors.last.type,
-        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
       );
       expect(server.to('/messages'), isEmpty);
       await client.dispose();
     });
 
     test('unreachable server: onError, no throw', () async {
-      final client = await ChatwootClient.create(
+      final client = await ZukkoChatClient.create(
         baseUrl: 'http://127.0.0.1:1',
         websiteToken: FakeChatServer.websiteToken,
         enablePersistence: false,
-        callbacks: ChatwootCallbacks(onError: errors.add),
+        callbacks: ZukkoChatCallbacks(onError: errors.add),
       );
 
       expect(errors, isNotEmpty);
@@ -248,7 +248,7 @@ void main() {
     test('plain http to a public host throws ArgumentError, nothing is '
         'opened', () async {
       await expectLater(
-        ChatwootClient.create(
+        ZukkoChatClient.create(
           baseUrl: 'http://chat.example.com',
           websiteToken: 'in',
           enablePersistence: false,
@@ -260,7 +260,7 @@ void main() {
     for (final url in ['ftp://chat.example.com', 'chat.example.com', '']) {
       test('"$url" is refused', () async {
         await expectLater(
-          ChatwootClient.create(
+          ZukkoChatClient.create(
             baseUrl: url,
             websiteToken: 'in',
             enablePersistence: false,
@@ -273,14 +273,14 @@ void main() {
 
     test('allowInsecure lets http to a non-loopback host through to the '
         'network layer', () async {
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
 
-      final client = await ChatwootClient.create(
+      final client = await ZukkoChatClient.create(
         baseUrl: 'http://nonexistent.invalid',
         websiteToken: 'in',
         enablePersistence: false,
         allowInsecure: true,
-        callbacks: ChatwootCallbacks(onError: errors.add),
+        callbacks: ZukkoChatCallbacks(onError: errors.add),
       );
 
       expect(errors, isNotEmpty); // unreachable, but it was attempted
@@ -290,14 +290,14 @@ void main() {
 
   // F14
   test('sendAction completes with false while not subscribed', () async {
-    final client = await ChatwootClient.create(
+    final client = await ZukkoChatClient.create(
       baseUrl: server.baseUrl,
       websiteToken: FakeChatServer.websiteToken,
       enablePersistence: false,
     );
 
     expect(
-      await client.sendAction(ChatwootActionType.update_presence),
+      await client.sendAction(ZukkoChatActionType.update_presence),
       isFalse,
     );
     await client.dispose();
@@ -310,17 +310,17 @@ void main() {
       final saved = LocalStorage.keyStore;
       LocalStorage.keyStore = _BrokenKeyStore();
       addTearDown(() => LocalStorage.keyStore = saved);
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       server.calls.clear();
 
-      final client = await ChatwootClient.create(
+      final client = await ZukkoChatClient.create(
         baseUrl: server.baseUrl,
         websiteToken: FakeChatServer.websiteToken,
-        callbacks: ChatwootCallbacks(onError: errors.add),
+        callbacks: ZukkoChatCallbacks(onError: errors.add),
       );
 
       expect(errors.map((e) => e.type), [
-        ChatwootClientExceptionType.STORAGE_FAILED,
+        ZukkoChatExceptionType.STORAGE_FAILED,
       ]);
       expect(server.to('/config'), hasLength(1)); // still talks to the server
       await client.dispose();
@@ -330,10 +330,10 @@ void main() {
   // SEC5 + SEC3 through create()
   group('identifier hash', () {
     final good = FakeChatServer.hashFor('u');
-    Future<ChatwootClient> create(String? hash) => ChatwootClient.create(
+    Future<ZukkoChatClient> create(String? hash) => ZukkoChatClient.create(
       baseUrl: server.baseUrl,
       websiteToken: FakeChatServer.websiteToken,
-      user: ChatwootUser(identifier: 'u', identifierHash: hash),
+      user: ZukkoChatUser(identifier: 'u', identifierHash: hash),
     );
 
     test('same identifier with another hash does not reuse the stored '
@@ -352,7 +352,7 @@ void main() {
 
     test('the hash is never written to disk', () async {
       final client = await create(good);
-      final key = ChatwootClient.getClientInstanceKey(
+      final key = ZukkoChatClient.getClientInstanceKey(
         baseUrl: server.baseUrl,
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
@@ -360,7 +360,7 @@ void main() {
       );
 
       // what a new process reads from disk
-      final onDisk = Hive.box<ChatwootUser>(ChatwootBoxNames.users).get(key)!;
+      final onDisk = Hive.box<ZukkoChatUser>(ChatwootBoxNames.users).get(key)!;
       expect(onDisk.identifier, 'u');
       expect(onDisk.identifierHash, isNull);
       await client.dispose();
@@ -368,14 +368,14 @@ void main() {
 
     test('clearData needs the same hash to find the instance', () async {
       await (await create(good)).dispose();
-      final key = ChatwootClient.getClientInstanceKey(
+      final key = ZukkoChatClient.getClientInstanceKey(
         baseUrl: server.baseUrl,
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
         identifierHash: good,
       );
 
-      await ChatwootClient.clearData(
+      await ZukkoChatClient.clearData(
         baseUrl: server.baseUrl,
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u',
@@ -390,7 +390,7 @@ void main() {
     late String key;
 
     setUp(() {
-      key = ChatwootClient.getClientInstanceKey(
+      key = ZukkoChatClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u1',
@@ -416,7 +416,7 @@ void main() {
     // P1: used to build the key "" and so delete nothing
     test('clearData clears the target instance and only that one', () async {
       await env.open();
-      final other = ChatwootClient.getClientInstanceKey(
+      final other = ZukkoChatClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u2',
@@ -424,7 +424,7 @@ void main() {
       await seed(key);
       await seed(other);
 
-      await ChatwootClient.clearData(
+      await ZukkoChatClient.clearData(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
         userIdentifier: 'u1',
@@ -440,14 +440,14 @@ void main() {
 
     // P2: used to throw "Box not found" because nothing opened the boxes
     test('clearData works before any box is open (fresh process)', () async {
-      await ChatwootClient.clearData(
+      await ZukkoChatClient.clearData(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
       );
     });
 
     test('clearAllData works before any box is open (fresh process)', () async {
-      await ChatwootClient.clearAllData();
+      await ZukkoChatClient.clearAllData();
     });
 
     test('clearAllData removes every instance', () async {
@@ -455,7 +455,7 @@ void main() {
       await seed(key);
       await seed('another');
 
-      await ChatwootClient.clearAllData();
+      await ZukkoChatClient.clearAllData();
 
       expectEmpty(key);
       expectEmpty('another');
@@ -463,20 +463,20 @@ void main() {
 
     // P3: second call used to hit a disposed container
     test('clearAllData can be called twice', () async {
-      await ChatwootClient.clearAllData();
-      await ChatwootClient.clearAllData();
+      await ZukkoChatClient.clearAllData();
+      await ZukkoChatClient.clearAllData();
     });
 
     test('clearData for a user-less instance (P10)', () async {
       await env.open();
-      final anonymous = ChatwootClient.getClientInstanceKey(
+      final anonymous = ZukkoChatClient.getClientInstanceKey(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
       );
       await seed(anonymous);
       await seed(key);
 
-      await ChatwootClient.clearData(
+      await ZukkoChatClient.clearData(
         baseUrl: 'https://a.example',
         websiteToken: FakeChatServer.websiteToken,
       );
@@ -491,7 +491,7 @@ void main() {
       () async {
         server.calls.clear();
         server.contacts.clear();
-        Future<ChatwootClient> create() => ChatwootClient.create(
+        Future<ZukkoChatClient> create() => ZukkoChatClient.create(
           baseUrl: server.baseUrl,
           websiteToken: FakeChatServer.websiteToken,
         );

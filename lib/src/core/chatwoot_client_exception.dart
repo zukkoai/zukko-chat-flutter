@@ -1,17 +1,17 @@
 /// {@category FlutterClientSdk}
-class ChatwootClientException implements Exception {
+class ZukkoChatException implements Exception {
   final String cause;
   final dynamic data;
-  final ChatwootClientExceptionType type;
+  final ZukkoChatExceptionType type;
 
-  ChatwootClientException(this.cause, this.type, {this.data});
+  ZukkoChatException(this.cause, this.type, {this.data});
 
   @override
-  String toString() => 'ChatwootClientException(${type.name}): $cause';
+  String toString() => 'ZukkoChatException(${type.name}): $cause';
 }
 
 /// {@category FlutterClientSdk}
-enum ChatwootClientExceptionType {
+enum ZukkoChatExceptionType {
   CREATE_CLIENT_FAILED,
   SEND_MESSAGE_FAILED,
   GET_MESSAGES_FAILED,

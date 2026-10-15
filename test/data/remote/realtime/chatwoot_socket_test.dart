@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_action_data.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_event.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_action_data.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_event.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -33,7 +33,7 @@ class _Rig {
   late final ChatwootSocket socket;
   late final StreamSubscription<SocketEvent> sub;
 
-  List<ChatwootConnectionState> get states => [
+  List<ZukkoChatConnectionState> get states => [
     for (final e in events)
       if (e is SocketStateChanged) e.state,
   ];
@@ -68,7 +68,7 @@ void main() {
       run((r) {
         r.socket.connect();
         expect(r.hub.urls.single.toString(), 'wss://h/cable');
-        expect(r.socket.state, ChatwootConnectionState.connecting);
+        expect(r.socket.state, ZukkoChatConnectionState.connecting);
 
         r.hub.last.welcome();
         r.async.flushMicrotasks();
@@ -78,16 +78,16 @@ void main() {
           'channel': 'RoomChannel',
           'pubsub_token': 'tok',
         });
-        expect(r.socket.state, ChatwootConnectionState.connected);
+        expect(r.socket.state, ZukkoChatConnectionState.connected);
 
         r.hub.last.confirm();
         r.async.flushMicrotasks();
-        expect(r.socket.state, ChatwootConnectionState.subscribed);
+        expect(r.socket.state, ZukkoChatConnectionState.subscribed);
         expect(r.hub.last.presenceFrames, 1);
         expect(r.states, [
-          ChatwootConnectionState.connecting,
-          ChatwootConnectionState.connected,
-          ChatwootConnectionState.subscribed,
+          ZukkoChatConnectionState.connecting,
+          ZukkoChatConnectionState.connected,
+          ZukkoChatConnectionState.subscribed,
         ]);
       });
     });
@@ -229,7 +229,7 @@ void main() {
 
           final subscribed = r.events
               .whereType<SocketStateChanged>()
-              .where((e) => e.state == ChatwootConnectionState.subscribed)
+              .where((e) => e.state == ZukkoChatConnectionState.subscribed)
               .map((e) => e.isReconnect);
           expect(subscribed, [false, true]);
         });
@@ -252,13 +252,13 @@ void main() {
       run((r) {
         r.hub.failWith = StateError('no network');
         r.socket.connect();
-        expect(r.socket.state, ChatwootConnectionState.backoff);
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
 
         r.hub.failWith = null;
         r.elapse(_s);
 
         expect(r.hub.channels, hasLength(1));
-        expect(r.socket.state, ChatwootConnectionState.connecting);
+        expect(r.socket.state, ZukkoChatConnectionState.connecting);
       });
     });
 
@@ -279,10 +279,10 @@ void main() {
         r.elapse(const Duration(minutes: 5));
 
         expect(r.hub.channels, hasLength(2));
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(
           r.failures.single.error.type,
-          ChatwootClientExceptionType.SOCKET_DISCONNECTED,
+          ZukkoChatExceptionType.SOCKET_DISCONNECTED,
         );
       });
     });
@@ -315,7 +315,7 @@ void main() {
         r.elapse(const Duration(milliseconds: 1));
 
         expect(first.isClosedByClient, isTrue);
-        expect(r.socket.state, ChatwootConnectionState.backoff);
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
         r.elapse(_s);
         expect(r.hub.channels, hasLength(2));
       });
@@ -330,7 +330,7 @@ void main() {
         }
 
         expect(r.hub.channels, hasLength(1));
-        expect(r.socket.state, ChatwootConnectionState.subscribed);
+        expect(r.socket.state, ZukkoChatConnectionState.subscribed);
       });
     });
 
@@ -392,7 +392,7 @@ void main() {
         r.socket.connect();
 
         expect(r.hub.channels, isEmpty);
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
       });
     });
   });
@@ -439,13 +439,13 @@ void main() {
         r.socket.connect();
         r.hub.last.emit({'type': 'reject_subscription'});
         r.async.flushMicrotasks();
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
 
         r.token = 'fresh';
         r.socket.connect();
 
         expect(r.hub.channels, hasLength(2));
-        expect(r.socket.state, ChatwootConnectionState.connecting);
+        expect(r.socket.state, ZukkoChatConnectionState.connecting);
       });
     });
   });
@@ -462,9 +462,9 @@ void main() {
 
         expect(
           r.failures.single.error.type,
-          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         );
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(channel.presenceFrames, 0);
         expect(channel.closeCodeByClient, 1000);
         expect(r.hub.channels, hasLength(1)); // no blind retry
@@ -487,7 +487,7 @@ void main() {
         r.hub.last.welcome();
         r.async.flushMicrotasks();
         silence(r, const Duration(seconds: 10)); // 1st timeout at 10 s
-        expect(r.socket.state, ChatwootConnectionState.backoff);
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
         r.elapse(_s); // retry
         expect(r.hub.channels, hasLength(2));
         r.hub.last.welcome();
@@ -497,9 +497,9 @@ void main() {
 
         expect(
           r.failures.single.error.type,
-          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         );
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(r.hub.channels, hasLength(2));
       });
     });
@@ -514,7 +514,7 @@ void main() {
         r.hub.last.welcome();
         r.hub.last.confirm();
         r.async.flushMicrotasks();
-        expect(r.socket.state, ChatwootConnectionState.subscribed);
+        expect(r.socket.state, ZukkoChatConnectionState.subscribed);
 
         // lose the connection; the next attempt may time out once again
         r.hub.last.serverClose();
@@ -524,7 +524,7 @@ void main() {
         r.async.flushMicrotasks();
         silence(r, const Duration(seconds: 10));
         expect(r.failures, isEmpty);
-        expect(r.socket.state, ChatwootConnectionState.backoff);
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
       });
     });
 
@@ -546,7 +546,7 @@ void main() {
         r.hub.last.welcome();
         r.async.flushMicrotasks();
         silence(r, const Duration(seconds: 10));
-        expect(r.socket.state, ChatwootConnectionState.closed);
+        expect(r.socket.state, ZukkoChatConnectionState.closed);
 
         r.token = 'fresh';
         r.socket.connect();
@@ -559,7 +559,7 @@ void main() {
         );
         r.hub.last.confirm();
         r.async.flushMicrotasks();
-        expect(r.socket.state, ChatwootConnectionState.subscribed);
+        expect(r.socket.state, ZukkoChatConnectionState.subscribed);
       });
     });
   });
@@ -615,7 +615,7 @@ void main() {
         expect((first.attachments as List).single['file_type'], 'image');
         // the malformed 2nd one is dropped as an unknown frame, the 3rd parses
         expect(r.messages.last.message.data!.attachments, 'nope');
-        expect(r.socket.state, ChatwootConnectionState.subscribed);
+        expect(r.socket.state, ZukkoChatConnectionState.subscribed);
       });
     });
   });
@@ -643,7 +643,7 @@ void main() {
           r.hub.last.event('message.created', {'id': 7});
           r.async.flushMicrotasks();
 
-          expect(r.socket.state, ChatwootConnectionState.subscribed);
+          expect(r.socket.state, ZukkoChatConnectionState.subscribed);
           expect(r.hub.channels, hasLength(1));
           // the valid frame arrives (undecodable-data ones may arrive typed, but
           // as events the app can ignore - nothing may throw)
@@ -658,14 +658,14 @@ void main() {
   group('send (S17)', () {
     test('returns false before connect, while connecting and in backoff', () {
       run((r) {
-        expect(r.socket.send(ChatwootActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
         r.socket.connect();
-        expect(r.socket.send(ChatwootActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
         r.hub.last.serverClose();
         r.async.flushMicrotasks();
 
-        expect(r.socket.state, ChatwootConnectionState.backoff);
-        expect(r.socket.send(ChatwootActionType.update_presence), isFalse);
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
+        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
       });
     });
 
@@ -674,7 +674,7 @@ void main() {
         r.subscribe();
         final before = r.hub.last.sent.length;
 
-        expect(r.socket.send(ChatwootActionType.update_presence), isTrue);
+        expect(r.socket.send(ZukkoChatActionType.update_presence), isTrue);
         expect(r.hub.last.sent.length, before + 1);
       });
     });
@@ -684,7 +684,7 @@ void main() {
         r.subscribe();
         r.hub.last.failOnAdd = true;
 
-        expect(r.socket.send(ChatwootActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
       });
     });
   });
@@ -708,7 +708,7 @@ void main() {
           expect(r.events.length, seen);
           expect(channel.presenceFrames, 1); // no heartbeat after dispose
           expect(r.hub.channels, hasLength(1)); // no reconnect
-          expect(r.socket.state, ChatwootConnectionState.closed);
+          expect(r.socket.state, ZukkoChatConnectionState.closed);
         });
       },
     );
@@ -740,7 +740,7 @@ void main() {
       socket.connect();
 
       expect(hub.channels, isEmpty);
-      expect(socket.send(ChatwootActionType.update_presence), isFalse);
+      expect(socket.send(ZukkoChatActionType.update_presence), isFalse);
     });
 
     test('the event stream completes', () async {

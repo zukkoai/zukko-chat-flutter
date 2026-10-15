@@ -1,4 +1,4 @@
-import 'package:chatwoot_sdk/src/shared/message_order.dart';
+import 'package:zukko_chat_flutter/src/shared/message_order.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../utils/fixtures.dart';

@@ -76,7 +76,7 @@ class ThreadFeedTokens {
     required this.hint,
   });
 
-  factory ThreadFeedTokens.from(ChatwootChatTheme base) {
+  factory ThreadFeedTokens.from(ZukkoChatTheme base) {
     final dark = base.isDark;
     Color pick(int light, int darkValue) => Color(dark ? darkValue : light);
 
@@ -84,7 +84,7 @@ class ThreadFeedTokens {
     final accent = override ?? pick(0xFF0F766E, 0xFF4FB7A9);
     final onAccent = override == null
         ? pick(0xFFFFFFFF, 0xFF0E1211)
-        : ChatwootChatTheme.foregroundOn(accent);
+        : ZukkoChatTheme.foregroundOn(accent);
     final text = pick(0xFF1B1D1C, 0xFFE7E9E8);
     final muted = pick(0xFF6A6F6C, 0xFF8E9591);
 
@@ -115,7 +115,7 @@ class ThreadFeedTokens {
       agentAvatarFill: override ?? pick(0xFF0F766E, 0xFF1E4A45),
       agentAvatarText: override == null
           ? pick(0xFFFFFFFF, 0xFFA8E2D9)
-          : ChatwootChatTheme.foregroundOn(override),
+          : ZukkoChatTheme.foregroundOn(override),
       userAvatarFill: pick(0xFFE7EAE8, 0xFF2A2E2C),
       userAvatarText: pick(0xFF3D433F, 0xFFC9CFCB),
       cardFill: pick(0xFFFFFFFF, 0xFF161918),
@@ -143,10 +143,10 @@ class ThreadFeedTokens {
 }
 
 /// Onest (the design font), unless the app forces one via
-/// `ChatwootChatTheme.fontFamily`.
-TextStyle _font(ChatwootChatTheme base, TextStyle style) {
+/// `ZukkoChatTheme.fontFamily`.
+TextStyle _font(ZukkoChatTheme base, TextStyle style) {
   final family = base.fontFamily;
   return family != null
       ? style.copyWith(fontFamily: family)
-      : style.copyWith(fontFamily: 'packages/chatwoot_sdk/Onest');
+      : style.copyWith(fontFamily: 'packages/zukko_chat_flutter/Onest');
 }

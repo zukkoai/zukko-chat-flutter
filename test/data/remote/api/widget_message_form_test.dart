@@ -1,15 +1,15 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_message_form.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_message_form.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final now = DateTime.utc(2026, 1, 2, 3, 4, 5);
-  final png = ChatwootUpload.bytes(name: 'a.png', bytes: Uint8List(3));
+  final png = ZukkoChatUpload.bytes(name: 'a.png', bytes: Uint8List(3));
 
   Map<String, String> fields(FormData form) => {
     for (final e in form.fields) e.key: e.value,
@@ -79,7 +79,7 @@ void main() {
         final dir = Directory.systemTemp.createTempSync();
         addTearDown(() => dir.deleteSync(recursive: true));
         final p = File('${dir.path}/blob')..writeAsBytesSync([1, 2]);
-        final up = ChatwootUpload.file(name: 'doc.pdf', path: p.path);
+        final up = ZukkoChatUpload.file(name: 'doc.pdf', path: p.path);
         final f = await buildMessageForm(content: '', echoId: 'e', files: [up]);
         expect(f.files.single.value.filename, 'doc.pdf');
         expect(f.files.single.value.contentType?.mimeType, 'application/pdf');
@@ -106,17 +106,17 @@ void main() {
   group('validateUpload', () {
     void ok(String name) => expect(
       () =>
-          validateUpload(ChatwootUpload.bytes(name: name, bytes: Uint8List(1))),
+          validateUpload(ZukkoChatUpload.bytes(name: name, bytes: Uint8List(1))),
       returnsNormally,
     );
     void bad(String name) => expect(
       () =>
-          validateUpload(ChatwootUpload.bytes(name: name, bytes: Uint8List(1))),
+          validateUpload(ZukkoChatUpload.bytes(name: name, bytes: Uint8List(1))),
       throwsA(
-        isA<ChatwootClientException>().having(
+        isA<ZukkoChatException>().having(
           (e) => e.type,
           'type',
-          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
         ),
       ),
     );
@@ -150,23 +150,23 @@ void main() {
       ok('a.png');
       expect(
         () => validateUpload(
-          ChatwootUpload.file(
+          ZukkoChatUpload.file(
             name: 'a.png',
             path: '/x',
-            size: ChatwootUpload.maxSize,
+            size: ZukkoChatUpload.maxSize,
           ),
         ),
         returnsNormally,
       );
       expect(
         () => validateUpload(
-          ChatwootUpload.file(
+          ZukkoChatUpload.file(
             name: 'a.png',
             path: '/x',
-            size: ChatwootUpload.maxSize + 1,
+            size: ZukkoChatUpload.maxSize + 1,
           ),
         ),
-        throwsA(isA<ChatwootClientException>()),
+        throwsA(isA<ZukkoChatException>()),
       );
     });
   });

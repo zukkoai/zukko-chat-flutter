@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_view.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/chatwoot_chat_view.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/cupertino.dart'
     show CupertinoLocalizations, DefaultCupertinoLocalizations;
@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'chat_fakes.dart';
 
-const _o = ChatwootChatOptions(baseUrl: 'https://x.test', websiteToken: 'in');
+const _o = ZukkoChatOptions(baseUrl: 'https://x.test', websiteToken: 'in');
 
 Widget _app(
   Widget home, {
@@ -28,7 +28,7 @@ Color _background(WidgetTester tester) => tester
     .widget<ColoredBox>(
       find
           .descendant(
-            of: find.byType(ChatwootChatView),
+            of: find.byType(ZukkoChatView),
             matching: find.byType(ColoredBox),
           )
           .first,
@@ -64,7 +64,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
@@ -87,7 +87,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
       await _settle(tester);
 
@@ -96,14 +96,14 @@ void main() {
       expect(client.typing, [true]);
 
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+          ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
         ),
       );
       await tester.pump();
-      expect(find.text(const ChatwootL10n().identityRejectedText), findsOne);
-      expect(find.text(const ChatwootL10n().retryLabel), findsNothing);
+      expect(find.text(const ZukkoChatL10n().identityRejectedText), findsOne);
+      expect(find.text(const ZukkoChatL10n().retryLabel), findsNothing);
 
       await _pump(tester, _app(const SizedBox())); // leaves typing switched off
       await _settle(tester);
@@ -113,13 +113,13 @@ void main() {
     testWidgets('leaving the page before the client exists disposes it (U3)', (
       tester,
     ) async {
-      final errors = <ChatwootClientException>[];
+      final errors = <ZukkoChatException>[];
       await _pump(
         tester,
         _app(
-          ChatwootChat(
+          ZukkoChat(
             options: _o,
-            callbacks: ChatwootCallbacks(onError: errors.add),
+            callbacks: ZukkoChatCallbacks(onError: errors.add),
             clientFactory: factory.call,
           ),
         ),
@@ -141,7 +141,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
       await tester.pump();
 
@@ -159,7 +159,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
       await _settle(tester);
       await tester.enterText(find.byType(TextField), 'retry me');
@@ -167,9 +167,9 @@ void main() {
       await tester.tap(find.byTooltip('Send'));
       await _settle(tester);
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
           data: client.sent.single.echoId,
         ),
       );
@@ -185,29 +185,29 @@ void main() {
       'changing the server restarts the client; l10n alone does not',
       (tester) async {
         var created = 0;
-        Future<ChatwootClient> f({
+        Future<ZukkoChatClient> f({
           required String baseUrl,
           required String websiteToken,
-          ChatwootUser? user,
+          ZukkoChatUser? user,
           bool enablePersistence = true,
           bool allowInsecure = false,
-          ChatwootCallbacks? callbacks,
+          ZukkoChatCallbacks? callbacks,
         }) async {
           created++;
           return FakeClient();
         }
 
-        ChatwootChat page(ChatwootChatOptions o) =>
-            ChatwootChat(options: o, clientFactory: f);
+        ZukkoChat page(ZukkoChatOptions o) =>
+            ZukkoChat(options: o, clientFactory: f);
         await _pump(tester, _app(page(_o)));
         await _pump(
           tester,
           _app(
             page(
-              const ChatwootChatOptions(
+              const ZukkoChatOptions(
                 baseUrl: 'https://x.test',
                 websiteToken: 'in',
-                l10n: ChatwootL10n(inputPlaceholder: 'new'),
+                l10n: ZukkoChatL10n(inputPlaceholder: 'new'),
               ),
             ),
           ),
@@ -219,7 +219,7 @@ void main() {
           tester,
           _app(
             page(
-              const ChatwootChatOptions(
+              const ZukkoChatOptions(
                 baseUrl: 'https://y.test',
                 websiteToken: 'in',
               ),
@@ -237,19 +237,19 @@ void main() {
     ) async {
       final log = <String>[];
       Widget page(String name) => _app(
-        ChatwootChat(
+        ZukkoChat(
           options: _o,
           clientFactory: factory.call,
-          callbacks: ChatwootCallbacks(onError: (_) => log.add(name)),
+          callbacks: ZukkoChatCallbacks(onError: (_) => log.add(name)),
         ),
       );
       await _pump(tester, page('A'));
       await _pump(tester, page('B'));
 
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         ),
       );
 
@@ -261,7 +261,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
       await tester.enterText(find.byType(TextField), 'hi');
       await tester.pump();
@@ -273,7 +273,7 @@ void main() {
       expect(find.text('Could not connect to the chat'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
 
-      factory.completer = Completer<ChatwootClient>();
+      factory.completer = Completer<ZukkoChatClient>();
       await tester.tap(find.text('Retry'));
       await tester.pump();
       factory.completer.complete(client);
@@ -287,11 +287,11 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
-            options: const ChatwootChatOptions(
+          ZukkoChat(
+            options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
-              l10n: ChatwootL10n(
+              l10n: ZukkoChatL10n(
                 connectionErrorText: 'Ulanmadi',
                 retryLabel: 'Qayta',
               ),
@@ -315,13 +315,13 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
+          ZukkoChat(
             title: 'Support',
             clientFactory: factory.call,
-            options: const ChatwootChatOptions(
+            options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
-              l10n: ChatwootL10n(
+              l10n: ZukkoChatL10n(
                 inputPlaceholder: 'ZZZ',
                 offlineText: 'OFFLINE!',
               ),
@@ -341,18 +341,18 @@ void main() {
       final handle = tester.ensureSemantics();
       await _pump(
         tester,
-        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
       );
 
       factory.callbacks!.onConversationIsOnline!();
       await tester.pump();
-      expect(find.text(const ChatwootL10n().onlineText), findsOneWidget);
+      expect(find.text(const ZukkoChatL10n().onlineText), findsOneWidget);
       factory.callbacks!.onConversationStartedTyping!();
       await tester.pump();
 
-      expect(find.text(const ChatwootL10n().typingText), findsOneWidget);
+      expect(find.text(const ZukkoChatL10n().typingText), findsOneWidget);
       expect(
-        tester.getSemantics(find.text(const ChatwootL10n().typingText)),
+        tester.getSemantics(find.text(const ZukkoChatL10n().typingText)),
         isSemantics(isLiveRegion: true),
       );
       handle.dispose();
@@ -371,7 +371,7 @@ void main() {
                 context,
                 MaterialPageRoute<void>(
                   builder: (_) =>
-                      ChatwootChat(options: _o, clientFactory: factory.call),
+                      ZukkoChat(options: _o, clientFactory: factory.call),
                 ),
               ),
               child: const Text('open'),
@@ -397,7 +397,7 @@ void main() {
 
       await tester.tap(back);
       await _settle(tester);
-      expect(find.byType(ChatwootChat), findsNothing);
+      expect(find.byType(ZukkoChat), findsNothing);
       handle.dispose();
     });
 
@@ -406,7 +406,7 @@ void main() {
         await _pump(
           tester,
           _app(
-            ChatwootChat(
+            ZukkoChat(
               title: 'Title',
               options: _o,
               clientFactory: factory.call,
@@ -414,7 +414,7 @@ void main() {
             dir: dir,
           ),
         );
-        final center = tester.getCenter(find.byType(ChatwootChat)).dx;
+        final center = tester.getCenter(find.byType(ZukkoChat)).dx;
         return tester.getCenter(find.text('Title')).dx - center;
       }
 
@@ -430,11 +430,11 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
-            options: const ChatwootChatOptions(
+          ZukkoChat(
+            options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
-              l10n: ChatwootL10n(poweredByText: 'Quvvat: X'),
+              l10n: ZukkoChatL10n(poweredByText: 'Quvvat: X'),
             ),
             clientFactory: factory.call,
           ),
@@ -449,8 +449,8 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
-            options: const ChatwootChatOptions(
+          ZukkoChat(
+            options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
               showBranding: false,
@@ -470,7 +470,7 @@ void main() {
         await _pump(
           tester,
           _app(
-            ChatwootChat(options: _o, clientFactory: factory.call),
+            ZukkoChat(options: _o, clientFactory: factory.call),
             theme: t,
           ),
         );
@@ -487,13 +487,13 @@ void main() {
     testWidgets('a theme registered in ThemeData.extensions is used (U11)', (
       tester,
     ) async {
-      final custom = ChatwootChatTheme.fromColorScheme(
+      final custom = ZukkoChatTheme.fromColorScheme(
         const ColorScheme.light(),
       ).copyWith(backgroundColor: const Color(0xff123456));
       await _pump(
         tester,
         _app(
-          ChatwootChat(options: _o, clientFactory: factory.call),
+          ZukkoChat(options: _o, clientFactory: factory.call),
           theme: ThemeData(extensions: [custom]),
         ),
       );
@@ -502,14 +502,14 @@ void main() {
     });
 
     testWidgets('options.theme beats the extension', (tester) async {
-      final explicit = ChatwootChatTheme.fromColorScheme(
+      final explicit = ZukkoChatTheme.fromColorScheme(
         const ColorScheme.light(),
       ).copyWith(backgroundColor: const Color(0xff654321));
       await _pump(
         tester,
         _app(
-          ChatwootChat(
-            options: ChatwootChatOptions(
+          ZukkoChat(
+            options: ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
               theme: explicit,
@@ -518,7 +518,7 @@ void main() {
           ),
           theme: ThemeData(
             extensions: [
-              ChatwootChatTheme.fromColorScheme(const ColorScheme.dark()),
+              ZukkoChatTheme.fromColorScheme(const ColorScheme.dark()),
             ],
           ),
         ),
@@ -529,11 +529,11 @@ void main() {
   });
 
   group('theme value semantics (U11)', () {
-    const a = ChatwootChatTheme(
+    const a = ZukkoChatTheme(
       brightness: Brightness.light,
       accentColor: Color(0xff112233),
     );
-    const b = ChatwootChatTheme(
+    const b = ZukkoChatTheme(
       brightness: Brightness.dark,
       accentColor: Color(0xff445566),
       backgroundColor: Color(0xff000000),
@@ -542,14 +542,14 @@ void main() {
     test('equality, hashCode and copyWith', () {
       expect(
         a,
-        const ChatwootChatTheme(
+        const ZukkoChatTheme(
           brightness: Brightness.light,
           accentColor: Color(0xff112233),
         ),
       );
       expect(
-        ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
-        ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
+        ZukkoChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
+        ZukkoChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
       );
       expect(a, isNot(b));
       expect(a.copyWith(), a);
@@ -570,18 +570,18 @@ void main() {
 
   group('l10n defaults (U13)', () {
     test('online text is not the away-time copy and keys are distinct', () {
-      const l = ChatwootL10n();
+      const l = ZukkoChatL10n();
 
       expect(l.onlineText, isNot(contains('Typically')));
       expect(l.onlineText, isNot(l.offlineText));
       expect(l.conversationResolvedMessage, isNot(l.messageFailedHint));
-      expect(const ChatwootL10n(), const ChatwootL10n());
-      expect(const ChatwootL10n(botName: 'x'), isNot(const ChatwootL10n()));
+      expect(const ZukkoChatL10n(), const ZukkoChatL10n());
+      expect(const ZukkoChatL10n(botName: 'x'), isNot(const ZukkoChatL10n()));
     });
   });
 
   group('styles', () {
-    for (final style in ChatwootChatStyle.values) {
+    for (final style in ZukkoChatStyle.values) {
       for (final brightness in Brightness.values) {
         testWidgets('${style.name} / ${brightness.name} renders a chat', (
           tester,
@@ -591,15 +591,15 @@ void main() {
           await _pump(
             tester,
             _app(
-              ChatwootChat(
+              ZukkoChat(
                 title: 'Helper',
-                options: ChatwootChatOptions(
+                options: ZukkoChatOptions(
                   baseUrl: 'b',
                   websiteToken: 'i',
                   style: style,
                 ),
                 clientFactory: factory.call,
-                interactions: ChatwootChatInteractions(onMorePressed: () {}),
+                interactions: ZukkoChatInteractions(onMorePressed: () {}),
               ),
               theme: ThemeData(brightness: brightness),
             ),
@@ -634,8 +634,8 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
-            options: const ChatwootChatOptions(
+          ZukkoChat(
+            options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
               enableAttachments: false,
@@ -655,7 +655,7 @@ void main() {
       await _pump(
         tester,
         _app(
-          ChatwootChat(
+          ZukkoChat(
             options: _o,
             title: 'Header title',
             appBar: AppBar(title: const Text('App bar')),
@@ -681,39 +681,39 @@ void main() {
             DefaultWidgetsLocalizations.delegate,
             _FallbackCupertinoDelegate(),
           ],
-          home: ChatwootChat(options: _o, clientFactory: factory.call),
+          home: ZukkoChat(options: _o, clientFactory: factory.call),
         ),
       );
 
-      expect(find.text(ChatwootL10n.uzLatn.inputPlaceholder), findsOneWidget);
-      expect(find.text(ChatwootL10n.uzLatn.headerTitle), findsOneWidget);
+      expect(find.text(ZukkoChatL10n.uzLatn.inputPlaceholder), findsOneWidget);
+      expect(find.text(ZukkoChatL10n.uzLatn.headerTitle), findsOneWidget);
     });
   });
 
   group('l10n translations', () {
     test('forLocale picks the built-in translation', () {
-      expect(ChatwootL10n.forLocale(const Locale('ru')), ChatwootL10n.ru);
-      expect(ChatwootL10n.forLocale(const Locale('tr')), ChatwootL10n.tr);
-      expect(ChatwootL10n.forLocale(const Locale('kaa')), ChatwootL10n.kaa);
-      expect(ChatwootL10n.forLocale(const Locale('uz')), ChatwootL10n.uzLatn);
+      expect(ZukkoChatL10n.forLocale(const Locale('ru')), ZukkoChatL10n.ru);
+      expect(ZukkoChatL10n.forLocale(const Locale('tr')), ZukkoChatL10n.tr);
+      expect(ZukkoChatL10n.forLocale(const Locale('kaa')), ZukkoChatL10n.kaa);
+      expect(ZukkoChatL10n.forLocale(const Locale('uz')), ZukkoChatL10n.uzLatn);
       expect(
-        ChatwootL10n.forLocale(
+        ZukkoChatL10n.forLocale(
           const Locale.fromSubtags(languageCode: 'uz', scriptCode: 'Cyrl'),
         ),
-        ChatwootL10n.uzCyrl,
+        ZukkoChatL10n.uzCyrl,
       );
-      expect(ChatwootL10n.forLocale(const Locale('de')), const ChatwootL10n());
-      expect(ChatwootL10n.forLocale(null), const ChatwootL10n());
+      expect(ZukkoChatL10n.forLocale(const Locale('de')), const ZukkoChatL10n());
+      expect(ZukkoChatL10n.forLocale(null), const ZukkoChatL10n());
     });
 
     test('translations differ from English and from each other', () {
       const all = [
-        ChatwootL10n(),
-        ChatwootL10n.ru,
-        ChatwootL10n.uzLatn,
-        ChatwootL10n.uzCyrl,
-        ChatwootL10n.tr,
-        ChatwootL10n.kaa,
+        ZukkoChatL10n(),
+        ZukkoChatL10n.ru,
+        ZukkoChatL10n.uzLatn,
+        ZukkoChatL10n.uzCyrl,
+        ZukkoChatL10n.tr,
+        ZukkoChatL10n.kaa,
       ];
       expect(all.map((l) => l.inputPlaceholder).toSet(), hasLength(all.length));
       expect(all.toSet(), hasLength(all.length));

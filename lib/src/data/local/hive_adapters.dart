@@ -12,7 +12,7 @@ final _registered = <int>{};
 
 /// Registers every Hive adapter the SDK needs. Safe to call repeatedly.
 ///
-/// Throws a [ChatwootClientException] of type `STORAGE_FAILED` when the host
+/// Throws a [ZukkoChatException] of type `STORAGE_FAILED` when the host
 /// app already registered a different adapter on one of the SDK's type ids:
 /// skipping ours would make Hive read the SDK's records with a foreign adapter.
 void registerChatwootAdapters() {
@@ -21,18 +21,18 @@ void registerChatwootAdapters() {
     try {
       Hive.registerAdapter(adapter());
     } on HiveError catch (e) {
-      throw ChatwootClientException(
+      throw ZukkoChatException(
         'Hive typeId $typeId is already used by another adapter of the host '
         'app; the SDK needs ids 0-4 (${e.message})',
-        ChatwootClientExceptionType.STORAGE_FAILED,
+        ZukkoChatExceptionType.STORAGE_FAILED,
       );
     }
     _registered.add(typeId);
   }
 
-  register(chatwootContactHiveTypeId, ChatwootContactAdapter.new);
-  register(chatwootConversationHiveTypeId, ChatwootConversationAdapter.new);
-  register(chatwootMessageHiveTypeId, ChatwootMessageAdapter.new);
-  register(chatwootUserHiveTypeId, ChatwootUserAdapter.new);
-  register(chatwootEventUserHiveTypeId, ChatwootEventMessageUserAdapter.new);
+  register(chatwootContactHiveTypeId, ZukkoChatContactAdapter.new);
+  register(chatwootConversationHiveTypeId, ZukkoChatConversationAdapter.new);
+  register(chatwootMessageHiveTypeId, ZukkoChatMessageAdapter.new);
+  register(chatwootUserHiveTypeId, ZukkoChatUserAdapter.new);
+  register(chatwootEventUserHiveTypeId, ZukkoChatEventMessageUserAdapter.new);
 }

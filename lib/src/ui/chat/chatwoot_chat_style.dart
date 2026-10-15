@@ -10,8 +10,8 @@ import 'styles/smooth_silk/smooth_silk_style.dart';
 import 'styles/thread_feed/thread_feed_style.dart';
 
 /// Selectable looks of the native chat. Each has a light and a dark variant,
-/// picked by `ChatwootChatTheme.brightness`.
-enum ChatwootChatStyle {
+/// picked by `ZukkoChatTheme.brightness`.
+enum ZukkoChatStyle {
   /// Tonal bubbles that blend into the background, floating composer.
   smoothSilk,
 
@@ -22,10 +22,10 @@ enum ChatwootChatStyle {
   threadFeed;
 
   /// The style resolved against [theme]; the view does this once per build.
-  ChatStyle resolve(ChatwootChatTheme theme) => switch (this) {
-    ChatwootChatStyle.smoothSilk => SmoothSilkStyle(theme),
-    ChatwootChatStyle.minimalClean => MinimalCleanStyle(theme),
-    ChatwootChatStyle.threadFeed => ThreadFeedStyle(theme),
+  ChatStyle resolve(ZukkoChatTheme theme) => switch (this) {
+    ZukkoChatStyle.smoothSilk => SmoothSilkStyle(theme),
+    ZukkoChatStyle.minimalClean => MinimalCleanStyle(theme),
+    ZukkoChatStyle.threadFeed => ThreadFeedStyle(theme),
   };
 }
 
@@ -51,20 +51,20 @@ abstract class ChatStyle {
   Widget buildHeader(
     BuildContext context,
     ChatHeaderData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   );
 
   Widget buildComposer(
     BuildContext context,
     ChatComposerData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   );
 
   /// Shown below the last message while the agent is typing.
-  Widget buildTypingIndicator(BuildContext context, ChatwootL10n l10n);
+  Widget buildTypingIndicator(BuildContext context, ZukkoChatL10n l10n);
 
   /// "Powered by zukko.ai" under the composer.
-  Widget buildFooter(BuildContext context, ChatwootL10n l10n);
+  Widget buildFooter(BuildContext context, ZukkoChatL10n l10n);
 
   /// Message builders (text, image, gallery, file, audio) and the row wrapper.
   Builders messageBuilders(ChatMessageEnv env);
@@ -124,7 +124,7 @@ class ChatComposerData {
 /// Read-only context of the message builders.
 @immutable
 class ChatMessageEnv {
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final DateFormat timeFormat;
 
   /// Name / avatar of an author, synchronously (null when unknown).

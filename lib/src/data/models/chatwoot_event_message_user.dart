@@ -12,7 +12,7 @@ part 'chatwoot_event_message_user.g.dart';
 /// {@category FlutterClientSdk}
 @HiveType(typeId: chatwootEventUserHiveTypeId)
 @JsonSerializable(explicitToJson: true)
-class ChatwootEventMessageUser extends Equatable {
+class ZukkoChatEventMessageUser extends Equatable {
   @JsonKey(name: "avatar_url")
   @HiveField(0)
   final String? avatarUrl;
@@ -29,17 +29,17 @@ class ChatwootEventMessageUser extends Equatable {
   @HiveField(3)
   final String? thumbnail;
 
-  const ChatwootEventMessageUser({
+  const ZukkoChatEventMessageUser({
     this.id,
     this.avatarUrl,
     this.name,
     this.thumbnail,
   });
 
-  factory ChatwootEventMessageUser.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootEventMessageUserFromJson(json);
+  factory ZukkoChatEventMessageUser.fromJson(Map<String, dynamic> json) =>
+      _$ZukkoChatEventMessageUserFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ChatwootEventMessageUserToJson(this);
+  Map<String, dynamic> toJson() => _$ZukkoChatEventMessageUserToJson(this);
 
   @override
   List<Object?> get props => [id, avatarUrl, name, thumbnail];

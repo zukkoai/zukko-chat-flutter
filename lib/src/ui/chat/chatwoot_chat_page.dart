@@ -5,34 +5,34 @@ import 'chatwoot_chat_controller.dart';
 import 'chatwoot_chat_options.dart';
 import 'chatwoot_chat_view.dart';
 
-/// Full-screen chatwoot chat.
+/// Full-screen Zukko Chat chat.
 /// {@category FlutterClientSdk}
-class ChatwootChat extends StatelessWidget {
-  final ChatwootChatOptions options;
+class ZukkoChat extends StatelessWidget {
+  final ZukkoChatOptions options;
 
   /// Replaces the style's own header with a custom app bar.
   final PreferredSizeWidget? appBar;
 
-  /// Title of the style's header; defaults to `ChatwootL10n.headerTitle`.
+  /// Title of the style's header; defaults to `ZukkoChatL10n.headerTitle`.
   final String? title;
 
-  /// Client events, see [ChatwootCallbacks]
-  final ChatwootCallbacks? callbacks;
+  /// Client events, see [ZukkoChatCallbacks]
+  final ZukkoChatCallbacks? callbacks;
 
-  /// UI events (scroll end, taps, send), see [ChatwootChatInteractions]
-  final ChatwootChatInteractions interactions;
+  /// UI events (scroll end, taps, send), see [ZukkoChatInteractions]
+  final ZukkoChatInteractions interactions;
 
-  /// Replaces `ChatwootClient.create` (tests).
+  /// Replaces `ZukkoChatClient.create` (tests).
   @visibleForTesting
-  final ChatwootClientFactory? clientFactory;
+  final ZukkoChatClientFactory? clientFactory;
 
-  const ChatwootChat({
+  const ZukkoChat({
     super.key,
     required this.options,
     this.appBar,
     this.title,
     this.callbacks,
-    this.interactions = const ChatwootChatInteractions(),
+    this.interactions = const ZukkoChatInteractions(),
     this.clientFactory,
   });
 
@@ -40,7 +40,7 @@ class ChatwootChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: appBar,
-    body: ChatwootChatView(
+    body: ZukkoChatView(
       options: options,
       callbacks: callbacks,
       interactions: interactions,

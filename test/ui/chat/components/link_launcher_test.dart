@@ -1,4 +1,4 @@
-import 'package:chatwoot_sdk/src/ui/chat/components/link_launcher.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/link_launcher.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

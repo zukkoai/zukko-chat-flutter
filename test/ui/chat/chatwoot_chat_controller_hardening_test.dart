@@ -1,11 +1,11 @@
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_controller.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/chatwoot_chat_controller.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'chat_fakes.dart';
 
-const _options = ChatwootChatOptions(
+const _options = ZukkoChatOptions(
   baseUrl: 'https://x.test',
   websiteToken: 'in',
 );
@@ -13,14 +13,14 @@ const _options = ChatwootChatOptions(
 void main() {
   late FakeFactory factory;
   late FakeClient client;
-  late ChatwootChatController controller;
+  late ZukkoChatController controller;
   late SpyChat chat;
 
   setUp(() {
     factory = FakeFactory();
     client = FakeClient();
     chat = SpyChat();
-    controller = ChatwootChatController(
+    controller = ZukkoChatController(
       _options,
       clientFactory: factory.call,
       chat: chat,
@@ -41,18 +41,18 @@ void main() {
 
   group('a failed send marks its bubble whatever the error type (1)', () {
     for (final type in [
-      ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
-      ChatwootClientExceptionType.SESSION_EXPIRED,
-      ChatwootClientExceptionType.IDENTIFY_FAILED,
-      ChatwootClientExceptionType.GET_CONFIG_FAILED,
-      ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+      ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
+      ZukkoChatExceptionType.SESSION_EXPIRED,
+      ZukkoChatExceptionType.IDENTIFY_FAILED,
+      ZukkoChatExceptionType.GET_CONFIG_FAILED,
+      ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
     ]) {
       test(type.name, () async {
         final echoId = await sendOne();
         expect(status(), isNot(MessageStatus.error));
 
         factory.callbacks!.onError!(
-          ChatwootClientException('x', type, data: echoId),
+          ZukkoChatException('x', type, data: echoId),
         );
 
         expect(status(), MessageStatus.error);
@@ -63,9 +63,9 @@ void main() {
       await sendOne();
 
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.SESSION_EXPIRED,
+          ZukkoChatExceptionType.SESSION_EXPIRED,
           data: 'not-an-echo-id',
         ),
       );
@@ -80,15 +80,15 @@ void main() {
       await pumpEventQueue();
 
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.IDENTIFY_FAILED,
+          ZukkoChatExceptionType.IDENTIFY_FAILED,
         ),
       );
 
       expect(
         controller.error?.type,
-        ChatwootClientExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.IDENTIFY_FAILED,
       );
     });
 
@@ -97,9 +97,9 @@ void main() {
       await pumpEventQueue();
 
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.IDENTITY_NOT_VERIFIED,
+          ZukkoChatExceptionType.IDENTITY_NOT_VERIFIED,
         ),
       );
 

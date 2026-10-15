@@ -1,13 +1,13 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_callbacks.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_callbacks.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/data/chatwoot_repository.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,13 +15,13 @@ import '../utils/fakes.dart';
 import '../utils/fixtures.dart';
 import '../utils/scripted_widget.dart';
 
-typedef T = ChatwootClientExceptionType;
+typedef T = ZukkoChatExceptionType;
 
 final _t0 = DateTime(2026);
 
 /// A repository on a scripted service (no session) with a fake websocket.
 class _Plain {
-  _Plain({void Function(ChatwootMessage)? onReceived}) {
+  _Plain({void Function(ZukkoChatMessage)? onReceived}) {
     storage = LocalStorage.inMemory();
     repo = ChatwootRepositoryImpl(
       clientService: service,
@@ -31,7 +31,7 @@ class _Plain {
         tokenProvider: () => storage.contact.get()?.pubsubToken,
         connect: hub.connect,
       ),
-      streamCallbacks: ChatwootCallbacks(
+      streamCallbacks: ZukkoChatCallbacks(
         onError: errors.add,
         onMessageReceived: onReceived,
       ),
@@ -40,7 +40,7 @@ class _Plain {
 
   final service = FakeClientService();
   final hub = FakeSocketHub();
-  final errors = <ChatwootClientException>[];
+  final errors = <ZukkoChatException>[];
   late final LocalStorage storage;
   late final ChatwootRepositoryImpl repo;
 
@@ -71,7 +71,7 @@ void plain(void Function(_Plain h, FakeAsync async) body) => fakeAsync((async) {
 
 /// Repository + real session over a scripted server.
 class _Live {
-  _Live(this.async, {ChatwootUser? user}) {
+  _Live(this.async, {ZukkoChatUser? user}) {
     rig = WidgetRig(
       server,
       user: user,
@@ -88,7 +88,7 @@ class _Live {
         tokenProvider: () => rig.storage.contact.get()?.pubsubToken,
         connect: hub.connect,
       ),
-      streamCallbacks: ChatwootCallbacks(
+      streamCallbacks: ZukkoChatCallbacks(
         onError: errors.add,
         onSessionReset: () => resets++,
       ),
@@ -99,7 +99,7 @@ class _Live {
   final FakeAsync async;
   final server = ScriptedWidget();
   final hub = FakeSocketHub();
-  final errors = <ChatwootClientException>[];
+  final errors = <ZukkoChatException>[];
   int resets = 0;
   late final WidgetRig rig;
   late final ChatwootRepositoryImpl repo;
@@ -120,7 +120,7 @@ class _Live {
 }
 
 // ignore: library_private_types_in_public_api (test-local helper type)
-void live(void Function(_Live h, FakeAsync async) body, {ChatwootUser? user}) =>
+void live(void Function(_Live h, FakeAsync async) body, {ZukkoChatUser? user}) =>
     fakeAsync((async) {
       final h = _Live(async, user: user);
       body(h, async);
@@ -197,7 +197,7 @@ void main() {
   });
 
   group('after paging (12)', () {
-    List<ChatwootMessage> page(int from, int n) => [
+    List<ZukkoChatMessage> page(int from, int n) => [
       for (var i = 0; i < n; i++) message(from + i),
     ];
 
@@ -310,7 +310,7 @@ void main() {
     });
 
     test('a failed set_user keeps the socket closed until a retry works', () {
-      live(user: ChatwootUser(identifier: 'u', identifierHash: 'h'), (
+      live(user: ZukkoChatUser(identifier: 'u', identifierHash: 'h'), (
         h,
         async,
       ) {
@@ -425,7 +425,7 @@ void main() {
     });
 
     test('fail-closed (hash rejected) stops the retries', () {
-      live(user: ChatwootUser(identifier: 'u', identifierHash: 'h'), (
+      live(user: ZukkoChatUser(identifier: 'u', identifierHash: 'h'), (
         h,
         async,
       ) {

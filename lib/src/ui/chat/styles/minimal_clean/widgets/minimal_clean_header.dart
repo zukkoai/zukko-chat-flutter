@@ -9,7 +9,7 @@ import '../minimal_clean_tokens.dart';
 /// hairline underneath.
 class MinimalCleanHeader extends StatelessWidget {
   final ChatHeaderData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final MinimalCleanTokens tokens;
 
   const MinimalCleanHeader({

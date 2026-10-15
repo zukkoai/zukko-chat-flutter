@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_callbacks.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
-import 'package:chatwoot_sdk/src/data/local/dao/chatwoot_messages_dao.dart';
-import 'package:chatwoot_sdk/src/data/local/dao/single_store.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_session.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_action_data.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_callbacks.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/data/chatwoot_repository.dart';
+import 'package:zukko_chat_flutter/src/data/local/dao/chatwoot_messages_dao.dart';
+import 'package:zukko_chat_flutter/src/data/local/dao/single_store.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_action_data.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -42,7 +42,7 @@ class _Harness {
       clientService: service,
       localStorage: storage,
       socket: socket,
-      streamCallbacks: ChatwootCallbacks(
+      streamCallbacks: ZukkoChatCallbacks(
         onError: errors.add,
         onMessagesRetrieved: (m) => log.add('retrieved ${m.map((e) => e.id)}'),
         onMessageDelivered: (m, echo) => delivered.add((m, echo)),
@@ -81,17 +81,17 @@ class _Harness {
     ),
   );
   late final WidgetSession session;
-  final conversations = <ChatwootConversation>[];
+  final conversations = <ZukkoChatConversation>[];
   late final ChatwootSocket socket;
   late final ChatwootRepositoryImpl repo;
 
-  final errors = <ChatwootClientException>[];
-  final received = <ChatwootMessage>[];
-  final updated = <ChatwootMessage>[];
-  final delivered = <(ChatwootMessage, String)>[];
+  final errors = <ZukkoChatException>[];
+  final received = <ZukkoChatMessage>[];
+  final updated = <ZukkoChatMessage>[];
+  final delivered = <(ZukkoChatMessage, String)>[];
   final log = <String>[];
   var pings = 0;
-  final states = <ChatwootConnectionState>[];
+  final states = <ZukkoChatConnectionState>[];
 
   FakeChannel get channel => hub.last;
 
@@ -156,9 +156,9 @@ void main() {
         expect(h.log, ['welcome', 'confirmed', 'retrieved ()']);
         expect(h.pings, 1);
         expect(h.states, [
-          ChatwootConnectionState.connecting,
-          ChatwootConnectionState.connected,
-          ChatwootConnectionState.subscribed,
+          ZukkoChatConnectionState.connecting,
+          ZukkoChatConnectionState.connected,
+          ZukkoChatConnectionState.subscribed,
         ]);
         expect(h.channel.presenceFrames, 1);
       });
@@ -323,7 +323,7 @@ void main() {
           clientService: h.service,
           localStorage: h.storage,
           socket: h.socket,
-          streamCallbacks: ChatwootCallbacks(
+          streamCallbacks: ZukkoChatCallbacks(
             onMessageReceived: (m) {
               seen.add(m.id);
               if (m.id == 1) throw StateError('app bug');
@@ -360,11 +360,11 @@ void main() {
 
         expect(
           h.errors.single.type,
-          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         );
         expect(h.channel.presenceFrames, 0);
         expect(h.hub.channels, hasLength(1));
-        expect(h.states.last, ChatwootConnectionState.closed);
+        expect(h.states.last, ZukkoChatConnectionState.closed);
       });
     });
   });
@@ -395,7 +395,7 @@ void main() {
     test('a refetch failure is reported, not thrown', () {
       run((h) {
         h.service.messagesResult = failure(
-          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
         );
         h.subscribe();
 
@@ -407,7 +407,7 @@ void main() {
         h.flush();
 
         expect(h.errors.map((e) => e.type).toSet(), {
-          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
         });
       });
     });
@@ -425,10 +425,10 @@ void main() {
         h.flush();
 
         expect(h.states, [
-          ChatwootConnectionState.backoff,
-          ChatwootConnectionState.connecting,
-          ChatwootConnectionState.connected,
-          ChatwootConnectionState.subscribed,
+          ZukkoChatConnectionState.backoff,
+          ZukkoChatConnectionState.connecting,
+          ZukkoChatConnectionState.connected,
+          ZukkoChatConnectionState.subscribed,
         ]);
       });
     });
@@ -726,9 +726,9 @@ void main() {
         expect(h.http.calls, ['POST /api/v1/widget/config']);
         expect(
           h.errors.single.type,
-          ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         );
-        expect(h.socket.state, ChatwootConnectionState.closed);
+        expect(h.socket.state, ZukkoChatConnectionState.closed);
         expect(h.hub.channels, hasLength(1));
       });
     });
@@ -740,7 +740,7 @@ void main() {
 
         expect(h.errors, isEmpty);
         expect(h.hub.channels, hasLength(2));
-        expect(h.socket.state, ChatwootConnectionState.connecting);
+        expect(h.socket.state, ZukkoChatConnectionState.connecting);
       });
     });
 
@@ -756,7 +756,7 @@ void main() {
 
         expect(
           h.errors.map((e) => e.type),
-          contains(ChatwootClientExceptionType.SESSION_EXPIRED),
+          contains(ZukkoChatExceptionType.SESSION_EXPIRED),
         );
         expect(h.http.requests.length, WidgetSession.maxRefreshes);
       });
@@ -787,7 +787,7 @@ void main() {
         h.subscribe();
         final before = h.channel.sent.length;
 
-        h.repo.sendAction(ChatwootActionType.update_presence);
+        h.repo.sendAction(ZukkoChatActionType.update_presence);
 
         expect(h.channel.sent.length, before + 1);
       });
@@ -796,7 +796,7 @@ void main() {
     test('is a silent no-op without a connection', () {
       run((h) {
         expect(
-          () => h.repo.sendAction(ChatwootActionType.update_presence),
+          () => h.repo.sendAction(ZukkoChatActionType.update_presence),
           returnsNormally,
         );
       });
@@ -1103,7 +1103,7 @@ void main() {
 
           expect(
             h.errors.single.type,
-            ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
           );
         });
       }, (e, s) => errors.add(e));
@@ -1118,7 +1118,7 @@ class _SlowDao extends InMemoryChatwootMessagesDao {
   int saved = 0;
 
   @override
-  Future<void> saveMessage(ChatwootMessage message) async {
+  Future<void> saveMessage(ZukkoChatMessage message) async {
     saved++;
     await Future<void>.delayed(const Duration(seconds: 1));
     await super.saveMessage(message);

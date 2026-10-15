@@ -11,7 +11,7 @@ enum AttachmentSource { image, file }
 /// Bottom sheet: photo or file. Null when dismissed.
 Future<AttachmentSource?> showAttachmentSourceSheet(
   BuildContext context, {
-  required ChatwootL10n l10n,
+  required ZukkoChatL10n l10n,
   required Color background,
   required Color foreground,
 }) => showModalBottomSheet<AttachmentSource>(
@@ -47,22 +47,22 @@ Future<AttachmentSource?> showAttachmentSourceSheet(
 );
 
 /// Opens the system picker; empty when cancelled.
-Future<List<ChatwootUpload>> pickAttachments(AttachmentSource source) async {
+Future<List<ZukkoChatUpload>> pickAttachments(AttachmentSource source) async {
   final files = await FilePicker.pickFiles(
     type: source == AttachmentSource.image ? FileType.image : FileType.any,
   );
   return [for (final file in files) ?await _toUpload(file)];
 }
 
-Future<ChatwootUpload?> _toUpload(PlatformFile file) async {
+Future<ZukkoChatUpload?> _toUpload(PlatformFile file) async {
   if (kIsWeb) {
     // The web has no file paths, only bytes. Check the reported size before
     // reading: an oversized placeholder (never sent) lets the view say so.
     final size = await file.length();
-    if ((size ?? 0) > ChatwootUpload.maxSize) {
-      return ChatwootUpload.file(name: file.name, path: '', size: size);
+    if ((size ?? 0) > ZukkoChatUpload.maxSize) {
+      return ZukkoChatUpload.file(name: file.name, path: '', size: size);
     }
-    return ChatwootUpload.bytes(
+    return ZukkoChatUpload.bytes(
       name: file.name,
       bytes: await file.readAsBytes(),
     );
@@ -70,7 +70,7 @@ Future<ChatwootUpload?> _toUpload(PlatformFile file) async {
   final path = file.path;
   return path == null
       ? null
-      : ChatwootUpload.file(
+      : ZukkoChatUpload.file(
           name: file.name,
           path: path,
           size: await file.length(),

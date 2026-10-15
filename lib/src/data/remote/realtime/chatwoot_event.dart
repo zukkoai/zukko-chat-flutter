@@ -24,7 +24,7 @@ class ChatwootEventMessage {
 @JsonSerializable(explicitToJson: true)
 /// The subset of a `message.*` / typing / presence / conversation event payload
 /// the SDK reads; [getMessage] re-parses the message fields into a
-/// [ChatwootMessage].
+/// [ZukkoChatMessage].
 class ChatwootEventMessageData {
   @JsonKey()
   final String? content;
@@ -58,7 +58,7 @@ class ChatwootEventMessageData {
   final bool? isPrivate;
 
   @JsonKey()
-  final ChatwootEventMessageUser? sender;
+  final ZukkoChatEventMessageUser? sender;
 
   @JsonKey()
   final String? status;
@@ -103,12 +103,12 @@ class ChatwootEventMessageData {
 
   Map<String, dynamic> toJson() => _$ChatwootEventMessageDataToJson(this);
 
-  /// The message fields as a [ChatwootMessage]; a malformed `attachments`
+  /// The message fields as a [ZukkoChatMessage]; a malformed `attachments`
   /// value is dropped instead of losing the whole message.
-  ChatwootMessage getMessage() {
+  ZukkoChatMessage getMessage() {
     final json = toJson();
     if (json['attachments'] is! List) json.remove('attachments');
-    return ChatwootMessage.fromJson(json);
+    return ZukkoChatMessage.fromJson(json);
   }
 }
 

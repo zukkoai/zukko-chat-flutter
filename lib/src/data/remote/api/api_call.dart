@@ -6,9 +6,9 @@ import '../../../core/chatwoot_client_exception.dart';
 ///
 /// Dio already throws a [DioException] for non-2xx responses, so every failure
 /// (transport, status, interceptor, malformed body) is mapped to a single
-/// [ChatwootClientException] of type [failure].
+/// [ZukkoChatException] of type [failure].
 Future<T> apiCall<T>(
-  ChatwootClientExceptionType failure,
+  ZukkoChatExceptionType failure,
   Future<Response<dynamic>> Function() request,
   T Function(dynamic data) parse,
 ) async {
@@ -18,15 +18,15 @@ Future<T> apiCall<T>(
     final inner = e.error;
     // a typed failure raised by the interceptor (session, HMAC, rate limit)
     // keeps its own type
-    if (inner is ChatwootClientException) throw inner;
-    throw ChatwootClientException(e.message ?? '', failure);
-  } on ChatwootClientException {
+    if (inner is ZukkoChatException) throw inner;
+    throw ZukkoChatException(e.message ?? '', failure);
+  } on ZukkoChatException {
     rethrow;
   } on FormatException catch (e) {
-    throw ChatwootClientException('invalid response: ${e.message}', failure);
+    throw ZukkoChatException('invalid response: ${e.message}', failure);
   } catch (e) {
     // untrusted input can fail in ways nobody listed (RangeError, ...); the
     // caller only ever sees the typed exception
-    throw ChatwootClientException('invalid response: $e', failure);
+    throw ZukkoChatException('invalid response: $e', failure);
   }
 }

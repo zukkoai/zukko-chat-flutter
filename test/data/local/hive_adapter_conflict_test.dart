@@ -1,6 +1,6 @@
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/data/local/hive_type_ids.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_type_ids.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -34,11 +34,11 @@ void main() {
     await expectLater(
       LocalStorage.openDB(),
       throwsA(
-        isA<ChatwootClientException>()
+        isA<ZukkoChatException>()
             .having(
               (e) => e.type,
               'type',
-              ChatwootClientExceptionType.STORAGE_FAILED,
+              ZukkoChatExceptionType.STORAGE_FAILED,
             )
             .having((e) => e.cause, 'cause', contains('typeId 0')),
       ),

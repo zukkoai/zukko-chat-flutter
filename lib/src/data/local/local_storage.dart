@@ -69,19 +69,19 @@ class LocalStorage {
   /// Hive-backed storage for [instanceKey]. [openDB] must have completed.
   factory LocalStorage.persisted(String instanceKey) => LocalStorage(
     contact: HiveSingleStore(
-      Hive.box<ChatwootContact>(ChatwootBoxNames.contacts),
+      Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts),
       instanceKey,
     ),
     conversation: HiveSingleStore(
-      Hive.box<ChatwootConversation>(ChatwootBoxNames.conversations),
+      Hive.box<ZukkoChatConversation>(ChatwootBoxNames.conversations),
       instanceKey,
     ),
     user: HiveUserStore(
-      Hive.box<ChatwootUser>(ChatwootBoxNames.users),
+      Hive.box<ZukkoChatUser>(ChatwootBoxNames.users),
       instanceKey,
     ),
     messages: PersistedChatwootMessagesDao(
-      Hive.box<ChatwootMessage>(ChatwootBoxNames.messages),
+      Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages),
       instanceKey,
     ),
   );
@@ -94,9 +94,9 @@ class LocalStorage {
     messages: InMemoryChatwootMessagesDao(),
   );
 
-  final SingleStore<ChatwootContact> contact;
-  final SingleStore<ChatwootConversation> conversation;
-  final SingleStore<ChatwootUser> user;
+  final SingleStore<ZukkoChatContact> contact;
+  final SingleStore<ZukkoChatConversation> conversation;
+  final SingleStore<ZukkoChatUser> user;
   final ChatwootMessagesDao messages;
 
   /// Where the boxes' encryption key is kept. Tests replace it with a fake.
@@ -109,26 +109,26 @@ class LocalStorage {
   /// moves records of earlier plaintext layouts into them. Idempotent and
   /// serialised: concurrent calls run one after the other.
   ///
-  /// Throws a [ChatwootClientException] (`STORAGE_FAILED`) when a foreign Hive
+  /// Throws a [ZukkoChatException] (`STORAGE_FAILED`) when a foreign Hive
   /// adapter occupies one of the SDK's type ids.
   static Future<void> openDB() => _openLock.synchronized(() async {
     await Hive.initFlutter();
     registerChatwootAdapters();
     final cipher = HiveAesCipher(await _encryptionKey());
 
-    final contacts = await _openEncrypted<ChatwootContact>(
+    final contacts = await _openEncrypted<ZukkoChatContact>(
       ChatwootBoxNames.contacts,
       cipher,
     );
-    final conversations = await _openEncrypted<ChatwootConversation>(
+    final conversations = await _openEncrypted<ZukkoChatConversation>(
       ChatwootBoxNames.conversations,
       cipher,
     );
-    final messages = await _openEncrypted<ChatwootMessage>(
+    final messages = await _openEncrypted<ZukkoChatMessage>(
       ChatwootBoxNames.messages,
       cipher,
     );
-    final users = await _openEncrypted<ChatwootUser>(
+    final users = await _openEncrypted<ZukkoChatUser>(
       ChatwootBoxNames.users,
       cipher,
     );
@@ -165,11 +165,11 @@ class LocalStorage {
   /// leftovers of earlier plaintext layouts.
   static Future<void> clearAllPersisted() async {
     await openDB();
-    await Hive.box<ChatwootContact>(ChatwootBoxNames.contacts).clear();
-    await Hive.box<ChatwootConversation>(ChatwootBoxNames.conversations)
+    await Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts).clear();
+    await Hive.box<ZukkoChatConversation>(ChatwootBoxNames.conversations)
         .clear();
-    await Hive.box<ChatwootMessage>(ChatwootBoxNames.messages).clear();
-    await Hive.box<ChatwootUser>(ChatwootBoxNames.users).clear();
+    await Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages).clear();
+    await Hive.box<ZukkoChatUser>(ChatwootBoxNames.users).clear();
     for (final legacy in ChatwootBoxNames._allLegacy) {
       await Hive.deleteBoxFromDisk(legacy);
     }
@@ -192,10 +192,10 @@ class LocalStorage {
       await box.deleteAll(box.keys.where(mine).toList());
     }
 
-    await sweep<ChatwootContact>(ChatwootBoxNames.contacts);
-    await sweep<ChatwootConversation>(ChatwootBoxNames.conversations);
-    await sweep<ChatwootMessage>(ChatwootBoxNames.messages);
-    await sweep<ChatwootUser>(ChatwootBoxNames.users);
+    await sweep<ZukkoChatContact>(ChatwootBoxNames.contacts);
+    await sweep<ZukkoChatConversation>(ChatwootBoxNames.conversations);
+    await sweep<ZukkoChatMessage>(ChatwootBoxNames.messages);
+    await sweep<ZukkoChatUser>(ChatwootBoxNames.users);
   }
 
   /// Deletes this instance's data. Contact and user are kept unless
@@ -227,12 +227,12 @@ class LocalStorage {
   // boxes holding it.
 
   static Future<void> _migrateLegacy(
-    Box<ChatwootContact> contacts,
-    Box<ChatwootConversation> conversations,
-    Box<ChatwootMessage> messages,
-    Box<ChatwootUser> users,
+    Box<ZukkoChatContact> contacts,
+    Box<ZukkoChatConversation> conversations,
+    Box<ZukkoChatMessage> messages,
+    Box<ZukkoChatUser> users,
   ) async {
-    await _migrate<ChatwootContact>(
+    await _migrate<ZukkoChatContact>(
       ChatwootBoxNames.legacyContacts,
       ChatwootBoxNames.legacyContactIndex,
       contacts,
@@ -241,7 +241,7 @@ class LocalStorage {
           (indexKey: e.key, oldKey: e.value, newKey: _newKey(e.key)),
       ],
     );
-    await _migrate<ChatwootConversation>(
+    await _migrate<ZukkoChatConversation>(
       ChatwootBoxNames.legacyConversations,
       ChatwootBoxNames.legacyConversationIndex,
       conversations,
@@ -254,7 +254,7 @@ class LocalStorage {
           ),
       ],
     );
-    await _migrate<ChatwootUser>(
+    await _migrate<ZukkoChatUser>(
       ChatwootBoxNames.legacyUsers,
       ChatwootBoxNames.legacyUserIndex,
       users,
@@ -264,7 +264,7 @@ class LocalStorage {
       ],
       sanitize: (u) => u.toPersistable(),
     );
-    await _migrate<ChatwootMessage>(
+    await _migrate<ZukkoChatMessage>(
       ChatwootBoxNames.legacyMessages,
       ChatwootBoxNames.legacyMessageIndex,
       messages,

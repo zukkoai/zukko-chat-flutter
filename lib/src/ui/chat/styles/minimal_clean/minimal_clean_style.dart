@@ -22,11 +22,11 @@ import 'widgets/minimal_clean_message.dart';
 
 /// Entry of the Minimal Clean style.
 class MinimalCleanStyle extends ChatStyle {
-  MinimalCleanStyle(ChatwootChatTheme theme)
+  MinimalCleanStyle(ZukkoChatTheme theme)
     : _theme = theme,
       tokens = MinimalCleanTokens.from(theme);
 
-  final ChatwootChatTheme _theme;
+  final ZukkoChatTheme _theme;
   final MinimalCleanTokens tokens;
 
   static const _mediaWidth = 220.0;
@@ -65,14 +65,14 @@ class MinimalCleanStyle extends ChatStyle {
   Widget buildHeader(
     BuildContext context,
     ChatHeaderData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   ) => MinimalCleanHeader(data: data, l10n: l10n, tokens: tokens);
 
   @override
   Widget buildComposer(
     BuildContext context,
     ChatComposerData data,
-    ChatwootL10n l10n,
+    ZukkoChatL10n l10n,
   ) => MinimalCleanComposer(
     data: data,
     l10n: l10n,
@@ -81,7 +81,7 @@ class MinimalCleanStyle extends ChatStyle {
   );
 
   @override
-  Widget buildTypingIndicator(BuildContext context, ChatwootL10n l10n) =>
+  Widget buildTypingIndicator(BuildContext context, ZukkoChatL10n l10n) =>
       Padding(
         padding: EdgeInsetsDirectional.only(
           start: _theme.horizontalPadding + 2,
@@ -98,7 +98,7 @@ class MinimalCleanStyle extends ChatStyle {
       );
 
   @override
-  Widget buildFooter(BuildContext context, ChatwootL10n l10n) => PoweredBy(
+  Widget buildFooter(BuildContext context, ZukkoChatL10n l10n) => PoweredBy(
     prefix: l10n.poweredByText,
     style: tokens.caption.copyWith(fontSize: 11),
     linkColor: tokens.accent,

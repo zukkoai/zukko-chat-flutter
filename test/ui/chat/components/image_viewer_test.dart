@@ -1,5 +1,5 @@
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/ui/chat/components/image_viewer.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/image_viewer.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapMinTime;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,15 +28,15 @@ void main() {
 
   Future<void> open(
     WidgetTester tester,
-    ChatwootChatStyle style,
+    ZukkoChatStyle style,
     List<Map<String, dynamic>> files, {
-    ChatwootChatInteractions interactions = const ChatwootChatInteractions(),
+    ZukkoChatInteractions interactions = const ZukkoChatInteractions(),
   }) async {
     factory.completer.complete(FakeClient());
     await tester.pumpWidget(
       MaterialApp(
-        home: ChatwootChat(
-          options: ChatwootChatOptions(
+        home: ZukkoChat(
+          options: ZukkoChatOptions(
             baseUrl: 'https://x.test',
             websiteToken: 'in',
             style: style,
@@ -53,7 +53,7 @@ void main() {
     await _settle(tester);
   }
 
-  for (final style in ChatwootChatStyle.values) {
+  for (final style in ZukkoChatStyle.values) {
     group(style.name, () {
       testWidgets(
         'tapping a single image opens the viewer with Hero on both sides',
@@ -63,7 +63,7 @@ void main() {
             tester,
             style,
             [_img('a.jpg')],
-            interactions: ChatwootChatInteractions(
+            interactions: ZukkoChatInteractions(
               onMessageTap: (_) => messageTaps++,
             ),
           );
@@ -102,7 +102,7 @@ void main() {
 
   group('viewer', () {
     Future<void> openGallery(WidgetTester tester) async {
-      await open(tester, ChatwootChatStyle.values.first, [
+      await open(tester, ZukkoChatStyle.values.first, [
         _img('a.jpg'),
         _img('b.jpg'),
         _img('c.jpg'),

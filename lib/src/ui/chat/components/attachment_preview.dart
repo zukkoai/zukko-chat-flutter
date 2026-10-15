@@ -103,7 +103,7 @@ class ImageGrid extends StatelessWidget {
   /// Id of the message these images belong to (Hero tags) and the strings of
   /// the full-screen viewer a tap opens.
   final String messageId;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
 
   /// False while the message failed to send: a tap then falls through to the
   /// chat's tap-to-resend.

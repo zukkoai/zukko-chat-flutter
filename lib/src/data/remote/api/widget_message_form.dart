@@ -49,7 +49,7 @@ Map<String, dynamic> buildMessageJson({
 Future<FormData> buildMessageForm({
   required String content,
   required String echoId,
-  required List<ChatwootUpload> files,
+  required List<ZukkoChatUpload> files,
   int? replyTo,
   DateTime? now,
 }) async {
@@ -80,14 +80,14 @@ Future<FormData> buildMessageForm({
 
 /// [validateUpload] for a file whose size is unknown (a path upload): asks the
 /// file system for the length first, so an oversized file is never read.
-Future<void> validateUploadFile(ChatwootUpload f) async {
+Future<void> validateUploadFile(ZukkoChatUpload f) async {
   final path = f.path;
   if (f.size == null && path != null) {
     final size = (await MultipartFile.fromFile(path)).length;
-    if (size > ChatwootUpload.maxSize) {
-      throw ChatwootClientException(
+    if (size > ZukkoChatUpload.maxSize) {
+      throw ZukkoChatException(
         'File is larger than 40 MB: ${f.name}',
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
       );
     }
   }
@@ -96,7 +96,7 @@ Future<void> validateUploadFile(ChatwootUpload f) async {
 
 /// Throws SEND_MESSAGE_FAILED when the server would reject [f] (size or type).
 /// A file of unknown size passes here; see [validateUploadFile].
-void validateUpload(ChatwootUpload f) {
+void validateUpload(ZukkoChatUpload f) {
   final mime = f.mimeType;
   final typeOk =
       mime != null &&
@@ -105,15 +105,15 @@ void validateUpload(ChatwootUpload f) {
           mime.startsWith('audio/') ||
           _allowedMimeTypes.contains(mime));
   if (!typeOk) {
-    throw ChatwootClientException(
+    throw ZukkoChatException(
       'File type not supported: ${f.name}',
-      ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+      ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
     );
   }
   if (f.isTooLarge) {
-    throw ChatwootClientException(
+    throw ZukkoChatException(
       'File is larger than 40 MB: ${f.name}',
-      ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+      ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
     );
   }
 }

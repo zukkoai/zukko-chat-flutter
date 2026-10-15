@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -72,7 +72,7 @@ void main() {
         final created = await service.createMessage(
           ChatwootNewMessageRequest(content: '', echoId: 'e2'),
           attachments: [
-            ChatwootUpload.bytes(
+            ZukkoChatUpload.bytes(
               name: 'photo.png',
               bytes: Uint8List.fromList([1, 2, 3]),
             ),
@@ -99,14 +99,14 @@ void main() {
         service.createMessage(
           ChatwootNewMessageRequest(content: '', echoId: 'e'),
           attachments: [
-            ChatwootUpload.bytes(name: 'a.exe', bytes: Uint8List(1)),
+            ZukkoChatUpload.bytes(name: 'a.exe', bytes: Uint8List(1)),
           ],
         ),
         throwsA(
-          isA<ChatwootClientException>().having(
+          isA<ZukkoChatException>().having(
             (e) => e.type,
             'type',
-            ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+            ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
           ),
         ),
       );
@@ -217,22 +217,22 @@ void main() {
         <
           String,
           (
-            ChatwootClientExceptionType,
+            ZukkoChatExceptionType,
             Future<void> Function(ChatwootClientService),
           )
         >{
           'createMessage': (
-            ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+            ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
             (s) => s.createMessage(
               ChatwootNewMessageRequest(content: 'a', echoId: 'b'),
             ),
           ),
           'getMessages': (
-            ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
             (s) => s.getMessages(),
           ),
           'getConversation': (
-            ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+            ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
             (s) => s.getConversation(),
           ),
         };
@@ -246,7 +246,7 @@ void main() {
         await expectLater(
           call(service),
           throwsA(
-            isA<ChatwootClientException>().having((e) => e.type, 'type', type),
+            isA<ZukkoChatException>().having((e) => e.type, 'type', type),
           ),
         );
       });
@@ -257,7 +257,7 @@ void main() {
         await expectLater(
           call(service),
           throwsA(
-            isA<ChatwootClientException>().having((e) => e.type, 'type', type),
+            isA<ZukkoChatException>().having((e) => e.type, 'type', type),
           ),
         );
       });

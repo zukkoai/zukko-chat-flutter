@@ -36,7 +36,7 @@ class WidgetAuthInterceptor extends Interceptor {
   ) async {
     try {
       await session.ensureReady();
-    } on ChatwootClientException catch (e) {
+    } on ZukkoChatException catch (e) {
       return handler.reject(
         DioException(requestOptions: options, error: e, message: e.cause),
       );
@@ -58,9 +58,9 @@ class WidgetAuthInterceptor extends Interceptor {
 
     if (status == 401 || status == 410) {
       // the widget (account or inbox) is unavailable; nothing to recover
-      final e = ChatwootClientException(
+      final e = ZukkoChatException(
         'the chat widget is unavailable (HTTP $status)',
-        ChatwootClientExceptionType.SESSION_EXPIRED,
+        ZukkoChatExceptionType.SESSION_EXPIRED,
       );
       return handler.reject(
         DioException(
@@ -91,7 +91,7 @@ class WidgetAuthInterceptor extends Interceptor {
         extra: {...options.extra, _retried: true},
       );
       handler.resolve(await dio.fetch<dynamic>(retry));
-    } on ChatwootClientException catch (e) {
+    } on ZukkoChatException catch (e) {
       handler.reject(
         DioException(requestOptions: options, error: e, message: e.cause),
       );

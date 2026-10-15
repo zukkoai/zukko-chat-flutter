@@ -9,7 +9,7 @@ import '../thread_feed_tokens.dart';
 /// Back/close, square avatar, title with an online dot, menu.
 class ThreadFeedHeader extends StatelessWidget {
   final ChatHeaderData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final ThreadFeedTokens tokens;
 
   const ThreadFeedHeader({

@@ -8,10 +8,10 @@ import '../l10n/chatwoot_l10n.dart';
 import '../theme/chatwoot_chat_theme.dart';
 import 'chatwoot_chat_style.dart';
 
-/// Everything needed to configure the native chat (`ChatwootChat`).
+/// Everything needed to configure the native chat (`ZukkoChat`).
 @immutable
-class ChatwootChatOptions {
-  /// Installation url for chatwoot
+class ZukkoChatOptions {
+  /// Installation url for Zukko Chat
   final String baseUrl;
 
   /// Website token of the target web widget inbox.
@@ -24,20 +24,20 @@ class ChatwootChatOptions {
   /// Allow a plain `http://` [baseUrl] that is not loopback. Development only.
   final bool allowInsecure;
 
-  /// Custom user details to be attached to the chatwoot contact
-  final ChatwootUser? user;
+  /// Custom user details to be attached to the Zukko Chat contact
+  final ZukkoChatUser? user;
 
-  /// Look of the chat, see [ChatwootChatStyle].
-  final ChatwootChatStyle style;
+  /// Look of the chat, see [ZukkoChatStyle].
+  final ZukkoChatStyle style;
 
   /// Base theme of the style (brightness, font, accent override); defaults
-  /// to a `ChatwootChatTheme` in `ThemeData.extensions`, else one derived
+  /// to a `ZukkoChatTheme` in `ThemeData.extensions`, else one derived
   /// from the ambient theme.
-  final ChatwootChatTheme? theme;
+  final ZukkoChatTheme? theme;
 
   /// Strings; null picks the built-in translation of the ambient locale
-  /// ([ChatwootL10n.forLocale]).
-  final ChatwootL10n? l10n;
+  /// ([ZukkoChatL10n.forLocale]).
+  final ZukkoChatL10n? l10n;
 
   /// Message time format, defaults to `DateFormat.Hm()`
   final DateFormat? timeFormat;
@@ -52,13 +52,13 @@ class ChatwootChatOptions {
   /// The app needs the microphone permission entries (see README).
   final bool enableVoiceMessages;
 
-  const ChatwootChatOptions({
+  const ZukkoChatOptions({
     required this.baseUrl,
     required this.websiteToken,
     this.enablePersistence = true,
     this.allowInsecure = false,
     this.user,
-    this.style = ChatwootChatStyle.smoothSilk,
+    this.style = ZukkoChatStyle.smoothSilk,
     this.theme,
     this.l10n,
     this.timeFormat,
@@ -69,7 +69,7 @@ class ChatwootChatOptions {
 
   /// True when [other] talks to the same server, inbox and user, i.e. the
   /// client can be kept alive across a rebuild.
-  bool sameConnection(ChatwootChatOptions other) =>
+  bool sameConnection(ZukkoChatOptions other) =>
       baseUrl == other.baseUrl &&
       websiteToken == other.websiteToken &&
       enablePersistence == other.enablePersistence &&
@@ -78,7 +78,7 @@ class ChatwootChatOptions {
 
   @override
   bool operator ==(Object other) =>
-      other is ChatwootChatOptions &&
+      other is ZukkoChatOptions &&
       sameConnection(other) &&
       style == other.style &&
       theme == other.theme &&
@@ -105,9 +105,9 @@ class ChatwootChatOptions {
   );
 }
 
-/// What the host reacts to in the chat UI (`ChatwootChat`). Client events
-/// are `ChatwootCallbacks`.
-class ChatwootChatInteractions {
+/// What the host reacts to in the chat UI (`ZukkoChat`). Client events
+/// are `ZukkoChatCallbacks`.
+class ZukkoChatInteractions {
   /// Called when the top of the list (oldest message) is reached.
   final Future<void> Function()? onEndReached;
 
@@ -124,7 +124,7 @@ class ChatwootChatInteractions {
   /// Menu button of the chat header; hidden when null.
   final VoidCallback? onMorePressed;
 
-  const ChatwootChatInteractions({
+  const ZukkoChatInteractions({
     this.onEndReached,
     this.onEndReachedThreshold,
     this.onMessageLongPress,

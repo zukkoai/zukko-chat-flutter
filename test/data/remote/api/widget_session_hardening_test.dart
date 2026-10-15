@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_message_form.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_session.dart';
-import 'package:chatwoot_sdk/src/shared/http_client.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_message_form.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/shared/http_client.dart';
 import 'package:dio/dio.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,10 +15,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../utils/fixtures.dart';
 import '../../../utils/scripted_widget.dart';
 
-typedef T = ChatwootClientExceptionType;
+typedef T = ZukkoChatExceptionType;
 
 Matcher typed(T type) =>
-    throwsA(isA<ChatwootClientException>().having((e) => e.type, 'type', type));
+    throwsA(isA<ZukkoChatException>().having((e) => e.type, 'type', type));
 
 /// Never answers: a server that accepts the connection and goes silent.
 class _HangingAdapter implements HttpClientAdapter {
@@ -40,7 +40,7 @@ class _HangingAdapter implements HttpClientAdapter {
 
 void main() {
   late ScriptedWidget server;
-  final identified = ChatwootUser(identifier: 'u1', identifierHash: 'h');
+  final identified = ZukkoChatUser(identifier: 'u1', identifierHash: 'h');
 
   setUp(() => server = ScriptedWidget());
 
@@ -99,7 +99,7 @@ void main() {
 
     test('a user without identifier still carries on anonymously', () async {
       server.setUserStatus = 500;
-      final rig = WidgetRig(server, user: ChatwootUser(name: 'Jane'));
+      final rig = WidgetRig(server, user: ZukkoChatUser(name: 'Jane'));
 
       await rig.session.start();
 
@@ -164,7 +164,7 @@ void main() {
         async.elapse(WidgetSession.stepTimeout + const Duration(seconds: 1));
         expect(
           first,
-          isA<ChatwootClientException>().having(
+          isA<ZukkoChatException>().having(
             (e) => e.type,
             'type',
             T.GET_CONFIG_FAILED,
@@ -178,7 +178,7 @@ void main() {
         async.elapse(const Duration(seconds: 1));
         expect(hang.calls, 2);
         async.elapse(WidgetSession.stepTimeout);
-        expect(second, isA<ChatwootClientException>());
+        expect(second, isA<ZukkoChatException>());
       });
     });
   });
@@ -252,7 +252,7 @@ void main() {
         for (var i = 0; i < 8; i++) {
           await expectLater(
             rig.service.getMessages(),
-            throwsA(isA<ChatwootClientException>()),
+            throwsA(isA<ZukkoChatException>()),
           );
         }
 
@@ -274,7 +274,7 @@ void main() {
         await expectLater(
           rig.service.getMessages(),
           throwsA(
-            isA<ChatwootClientException>().having(
+            isA<ZukkoChatException>().having(
               (e) => e.type,
               'type',
               anyOf(T.GET_CONFIG_FAILED, T.SESSION_EXPIRED),
@@ -292,7 +292,7 @@ void main() {
     test(
       'identifier without hash: IDENTITY_NOT_VERIFIED once, not fatal',
       () async {
-        final rig = WidgetRig(server, user: ChatwootUser(identifier: 'u1'));
+        final rig = WidgetRig(server, user: ZukkoChatUser(identifier: 'u1'));
 
         await rig.session.start();
         await rig.session.refresh(SessionRefreshReason.manual);
@@ -396,28 +396,28 @@ void main() {
     setUp(() => dir = Directory.systemTemp.createTempSync('upload_'));
     tearDown(() => dir.deleteSync(recursive: true));
 
-    Future<ChatwootUpload> sparse(int bytes) async {
+    Future<ZukkoChatUpload> sparse(int bytes) async {
       final f = File('${dir.path}/big.png');
       final raf = await f.open(mode: FileMode.write);
       await raf.truncate(bytes); // sparse: no real 40 MB written
       await raf.close();
-      return ChatwootUpload.file(name: 'big.png', path: f.path); // size unknown
+      return ZukkoChatUpload.file(name: 'big.png', path: f.path); // size unknown
     }
 
     test('a path upload of unknown size over 40 MB is rejected', () async {
-      final big = await sparse(ChatwootUpload.maxSize + 1);
+      final big = await sparse(ZukkoChatUpload.maxSize + 1);
 
       await expectLater(validateUploadFile(big), typed(T.SEND_MESSAGE_FAILED));
     });
 
     test('exactly 40 MB passes', () async {
-      final ok = await sparse(ChatwootUpload.maxSize);
+      final ok = await sparse(ZukkoChatUpload.maxSize);
 
       await validateUploadFile(ok);
     });
 
     test('the service rejects it before building the form', () async {
-      final big = await sparse(ChatwootUpload.maxSize + 1);
+      final big = await sparse(ZukkoChatUpload.maxSize + 1);
       final rig = WidgetRig(server);
 
       await expectLater(
@@ -428,8 +428,8 @@ void main() {
     });
   });
 
-  test('ChatwootUser.toString carries no identity data (13)', () {
-    final u = ChatwootUser(
+  test('ZukkoChatUser.toString carries no identity data (13)', () {
+    final u = ZukkoChatUser(
       identifier: 'id-secret',
       identifierHash: 'hash-secret',
       email: 'a@b.c',

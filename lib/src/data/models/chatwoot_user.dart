@@ -9,8 +9,8 @@ part 'chatwoot_user.g.dart';
 ///
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
 @HiveType(typeId: chatwootUserHiveTypeId)
-class ChatwootUser extends Equatable {
-  ///custom chatwoot user identifier
+class ZukkoChatUser extends Equatable {
+  ///custom Zukko Chat user identifier
   @JsonKey()
   @HiveField(0)
   final String? identifier;
@@ -20,12 +20,12 @@ class ChatwootUser extends Equatable {
   @HiveField(1)
   final String? identifierHash;
 
-  ///name of chatwoot user
+  ///name of Zukko Chat user
   @JsonKey()
   @HiveField(2)
   final String? name;
 
-  ///email of chatwoot user
+  ///email of Zukko Chat user
   @JsonKey()
   @HiveField(3)
   final String? email;
@@ -45,7 +45,7 @@ class ChatwootUser extends Equatable {
   @HiveField(6)
   final String? phoneNumber;
 
-  const ChatwootUser({
+  const ZukkoChatUser({
     this.identifier,
     this.identifierHash,
     this.name,
@@ -57,7 +57,7 @@ class ChatwootUser extends Equatable {
 
   /// The copy that is written to disk: without the identity hash (a bearer
   /// proof of the user) and the free-form custom attributes.
-  ChatwootUser toPersistable() => ChatwootUser(
+  ZukkoChatUser toPersistable() => ZukkoChatUser(
     identifier: identifier,
     name: name,
     email: email,
@@ -68,7 +68,7 @@ class ChatwootUser extends Equatable {
   /// No identity data: this ends up in logs and crash reports.
   @override
   String toString() =>
-      'ChatwootUser(${identifier == null ? 'anonymous' : 'identified'})';
+      'ZukkoChatUser(${identifier == null ? 'anonymous' : 'identified'})';
 
   @override
   List<Object?> get props => [
@@ -81,8 +81,8 @@ class ChatwootUser extends Equatable {
     phoneNumber,
   ];
 
-  factory ChatwootUser.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootUserFromJson(json);
+  factory ZukkoChatUser.fromJson(Map<String, dynamic> json) =>
+      _$ZukkoChatUserFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ChatwootUserToJson(this);
+  Map<String, dynamic> toJson() => _$ZukkoChatUserToJson(this);
 }

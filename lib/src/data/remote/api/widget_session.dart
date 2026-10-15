@@ -53,7 +53,7 @@ class WidgetSession {
   static const maxStartBackoff = Duration(seconds: 60);
 
   final String websiteToken;
-  final ChatwootUser? user;
+  final ZukkoChatUser? user;
 
   /// Called after a rebuild changed the contact or the pubsub token (also by
   /// a first start that found another contact than the stored one).
@@ -64,7 +64,7 @@ class WidgetSession {
 
   /// Receives non-fatal problems (`IDENTITY_NOT_VERIFIED`, and `IDENTIFY_FAILED`
   /// for a user without an identifier).
-  final void Function(ChatwootClientException)? onError;
+  final void Function(ZukkoChatException)? onError;
 
   final Dio _dio;
   final LocalStorage _storage;
@@ -74,8 +74,8 @@ class WidgetSession {
 
   bool _ready = false;
   bool _warnedUnverified = false;
-  ChatwootClientException? _failure;
-  ChatwootClientException? _lastStartError;
+  ZukkoChatException? _failure;
+  ZukkoChatException? _lastStartError;
   DateTime? _nextStartAt;
   int _startFailures = 0;
 
@@ -93,7 +93,7 @@ class WidgetSession {
   bool get isReady => _ready;
 
   /// Set once the server rejected the user's identifier hash. Terminal.
-  ChatwootClientException? get failure => _failure;
+  ZukkoChatException? get failure => _failure;
 
   /// Completes when the session is usable; throws the typed failure otherwise.
   Future<void> ensureReady() async {
@@ -102,7 +102,7 @@ class WidgetSession {
     if (!_ready) await start();
   }
 
-  /// Establishes the session. Throws [ChatwootClientException]
+  /// Establishes the session. Throws [ZukkoChatException]
   /// (`GET_CONFIG_FAILED`, `IDENTIFY_FAILED`, `INVALID_IDENTIFIER_HASH`). A
   /// failed start can be retried by calling it again (after a growing pause:
   /// calls inside it rethrow the last error without a request), except an
@@ -124,8 +124,8 @@ class WidgetSession {
         generation++;
         _fire(onSessionReset);
       }
-    } on ChatwootClientException catch (e) {
-      if (e.type != ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH) {
+    } on ZukkoChatException catch (e) {
+      if (e.type != ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH) {
         _lastStartError = e;
         final seconds = 1 << (_startFailures < 6 ? ++_startFailures : 6);
         _nextStartAt = _now().add(
@@ -193,12 +193,12 @@ class WidgetSession {
   Future<T> _guard<T>(Future<T> Function() step) async {
     try {
       return await step().timeout(stepTimeout);
-    } on ChatwootClientException {
+    } on ZukkoChatException {
       rethrow;
     } catch (e) {
-      throw ChatwootClientException(
+      throw ZukkoChatException(
         'session setup failed: ${e.runtimeType}',
-        ChatwootClientExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.GET_CONFIG_FAILED,
       );
     }
   }
@@ -207,9 +207,9 @@ class WidgetSession {
     final now = _now();
     _refreshTimes.removeWhere((t) => now.difference(t) >= refreshWindow);
     if (_refreshTimes.length >= maxRefreshes) {
-      throw ChatwootClientException(
+      throw ZukkoChatException(
         'the session was rebuilt $maxRefreshes times within a minute',
-        ChatwootClientExceptionType.SESSION_EXPIRED,
+        ZukkoChatExceptionType.SESSION_EXPIRED,
       );
     }
   }
@@ -255,7 +255,7 @@ class WidgetSession {
     return before?.id != after?.id || before?.pubsubToken != after?.pubsubToken;
   }
 
-  static bool _isIdentified(ChatwootUser u) =>
+  static bool _isIdentified(ZukkoChatUser u) =>
       u.identifier?.isNotEmpty ?? false;
 
   Future<_ConfigResult> _config({
@@ -275,7 +275,7 @@ class WidgetSession {
       if (token is! String || token.isEmpty) {
         throw const FormatException('no auth_token');
       }
-      final contact = ChatwootContact.fromJson(
+      final contact = ZukkoChatContact.fromJson(
         body['contact'] as Map<String, dynamic>,
       ).copyWith(authToken: token);
       if (contact.id <= 0) throw const FormatException('no contact id');
@@ -290,16 +290,16 @@ class WidgetSession {
       );
     } on DioException catch (e) {
       sdkLog('config failed: ${e.type.name} ${e.response?.statusCode}');
-      throw ChatwootClientException(
+      throw ZukkoChatException(
         'config failed (${e.response?.statusCode ?? e.type.name})',
-        ChatwootClientExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.GET_CONFIG_FAILED,
       );
-    } on ChatwootClientException {
+    } on ZukkoChatException {
       rethrow;
     } catch (e) {
-      throw ChatwootClientException(
+      throw ZukkoChatException(
         'invalid config response: ${e.runtimeType}',
-        ChatwootClientExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.GET_CONFIG_FAILED,
       );
     }
   }
@@ -320,9 +320,9 @@ class WidgetSession {
   /// hash is fatal. Any other failure is fatal-but-retryable (`IDENTIFY_FAILED`)
   /// for a user with an identifier ([strict]: never fall back to an anonymous
   /// session), and only reported for a user without one.
-  Future<(bool, String?)> _identify(ChatwootUser identity, bool strict) async {
+  Future<(bool, String?)> _identify(ZukkoChatUser identity, bool strict) async {
     if (strict && (identity.identifierHash?.isEmpty ?? true)) _warnUnverified();
-    ChatwootClientException error;
+    ZukkoChatException error;
     try {
       final response = await _dio.patch<Object?>(
         ChatwootPaths.setUser,
@@ -337,19 +337,19 @@ class WidgetSession {
       sdkLog('set_user failed: ${e.type.name} ${e.response?.statusCode}');
       if (e.response?.statusCode == 401) {
         // fail closed: never fall back to an anonymous session
-        throw _failure = ChatwootClientException(
+        throw _failure = ZukkoChatException(
           'the server rejected the identifier hash',
-          ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+          ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
         );
       }
-      error = ChatwootClientException(
+      error = ZukkoChatException(
         'set_user failed (${e.response?.statusCode ?? e.type.name})',
-        ChatwootClientExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.IDENTIFY_FAILED,
       );
     } catch (e) {
-      error = ChatwootClientException(
+      error = ZukkoChatException(
         'set_user failed: ${e.runtimeType}',
-        ChatwootClientExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.IDENTIFY_FAILED,
       );
     }
     if (strict) throw error;
@@ -363,9 +363,9 @@ class WidgetSession {
     if (_warnedUnverified) return;
     _warnedUnverified = true;
     _report(
-      ChatwootClientException(
+      ZukkoChatException(
         'user.identifier is set without identifierHash: the identity is not verified',
-        ChatwootClientExceptionType.IDENTITY_NOT_VERIFIED,
+        ZukkoChatExceptionType.IDENTITY_NOT_VERIFIED,
       ),
     );
   }
@@ -386,9 +386,9 @@ class WidgetSession {
     } catch (e) {
       sdkLog('contact check failed: ${e.runtimeType}');
       if (strict) {
-        throw ChatwootClientException(
+        throw ZukkoChatException(
           'could not verify the contact after set_user: ${e.runtimeType}',
-          ChatwootClientExceptionType.IDENTIFY_FAILED,
+          ZukkoChatExceptionType.IDENTIFY_FAILED,
         );
       }
       return true;
@@ -396,7 +396,7 @@ class WidgetSession {
   }
 
   /// Keeps the stored contact in line with what `set_user` just wrote.
-  Future<void> _mirror(ChatwootUser identity) async {
+  Future<void> _mirror(ZukkoChatUser identity) async {
     final stored = _storage.contact.get();
     if (stored == null) return;
     await _storage.contact.save(
@@ -417,7 +417,7 @@ class WidgetSession {
     }
   }
 
-  void _report(ChatwootClientException error) {
+  void _report(ZukkoChatException error) {
     try {
       onError?.call(error);
     } catch (e) {
@@ -428,6 +428,6 @@ class WidgetSession {
 
 class _ConfigResult {
   const _ConfigResult(this.contact, this.config);
-  final ChatwootContact contact;
+  final ZukkoChatContact contact;
   final WidgetConfig config;
 }

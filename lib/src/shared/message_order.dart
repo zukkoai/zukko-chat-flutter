@@ -6,8 +6,8 @@ import '../data/models/chatwoot_message.dart';
 /// strings older SDK versions stored and plain dates compare correctly), and
 /// breaks ties by numeric id. Messages with an unparseable timestamp sort first.
 /// The single ordering used by storage and UI.
-List<ChatwootMessage> sortMessagesOldestFirst(
-  Iterable<ChatwootMessage> messages,
+List<ZukkoChatMessage> sortMessagesOldestFirst(
+  Iterable<ZukkoChatMessage> messages,
 ) {
   final keyed = [
     for (final m in messages)

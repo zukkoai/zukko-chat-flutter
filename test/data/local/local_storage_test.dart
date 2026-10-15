@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:chatwoot_sdk/src/data/local/hive_adapters.dart';
-import 'package:chatwoot_sdk/src/data/local/instance_key.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_adapters.dart';
+import 'package:zukko_chat_flutter/src/data/local/instance_key.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_contact.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -63,7 +63,7 @@ void main() {
       // P10: user without identifier used to be stored under "null"/box.put(null)
       test('a user without identifier can be saved and read back', () async {
         final storage = make('k');
-        final anonymous = ChatwootUser(name: 'only a name');
+        final anonymous = ZukkoChatUser(name: 'only a name');
 
         await storage.user.save(anonymous);
 
@@ -282,20 +282,20 @@ void main() {
     /// Writes the data the way SDK <= 0.0.9 did: plaintext, entity-id keys +
     /// index boxes.
     Future<void> seedLegacy({String indexKey = legacyKey}) async {
-      await (await legacy<ChatwootContact>(ChatwootBoxNames.legacyContacts))
+      await (await legacy<ZukkoChatContact>(ChatwootBoxNames.legacyContacts))
           .put('source-1', contact());
       await (await legacy<String>(ChatwootBoxNames.legacyContactIndex))
           .put(indexKey, 'source-1');
-      await (await legacy<ChatwootConversation>(
+      await (await legacy<ZukkoChatConversation>(
         ChatwootBoxNames.legacyConversations,
       )).put(7, conversation());
       await (await legacy<String>(ChatwootBoxNames.legacyConversationIndex))
           .put(indexKey, '7');
-      await (await legacy<ChatwootUser>(ChatwootBoxNames.legacyUsers))
+      await (await legacy<ZukkoChatUser>(ChatwootBoxNames.legacyUsers))
           .put('user-1', user());
       await (await legacy<String>(ChatwootBoxNames.legacyUserIndex))
           .put(indexKey, 'user-1');
-      await (await legacy<ChatwootMessage>(ChatwootBoxNames.legacyMessages))
+      await (await legacy<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages))
           .put(8, message(8));
       await (await legacy<String>(ChatwootBoxNames.legacyMessageIndex))
           .put(8, indexKey);
@@ -317,10 +317,10 @@ void main() {
       expect(storage.conversation.get()!.id, 7);
       expect(storage.user.get(), user());
       expect(storage.messages.getMessages().map((m) => m.id), [8]);
-      expect(Hive.box<ChatwootContact>(ChatwootBoxNames.contacts).keys, [
+      expect(Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts).keys, [
         newKey,
       ]);
-      expect(Hive.box<ChatwootMessage>(ChatwootBoxNames.messages).keys, [
+      expect(Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages).keys, [
         '$newKey|m|8',
       ]);
       for (final name in [
@@ -342,11 +342,11 @@ void main() {
         'index stay, the resolvable ones still move', () async {
       await seedLegacy();
       // a second contact whose index key cannot be parsed (4 parts)
-      await Hive.box<ChatwootContact>(ChatwootBoxNames.legacyContacts)
+      await Hive.box<ZukkoChatContact>(ChatwootBoxNames.legacyContacts)
           .put('source-2', contact(id: 2, identifier: 'source-2'));
       await Hive.box<String>(ChatwootBoxNames.legacyContactIndex)
           .put('a|||b|||c|||d', 'source-2');
-      await Hive.box<ChatwootMessage>(ChatwootBoxNames.legacyMessages)
+      await Hive.box<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages)
           .put(9, message(9));
       await Hive.box<String>(ChatwootBoxNames.legacyMessageIndex)
           .put(9, 'a|||b|||c|||d');
@@ -358,7 +358,7 @@ void main() {
         LocalStorage.persisted(newKey).messages.getMessages(),
         hasLength(1),
       );
-      final keptContacts = await Hive.openBox<ChatwootContact>(
+      final keptContacts = await Hive.openBox<ZukkoChatContact>(
         ChatwootBoxNames.legacyContacts,
       );
       expect(keptContacts.keys, ['source-2']);
@@ -368,7 +368,7 @@ void main() {
         {'a|||b|||c|||d': 'source-2'},
       );
       expect(
-        (await Hive.openBox<ChatwootMessage>(ChatwootBoxNames.legacyMessages))
+        (await Hive.openBox<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages))
             .keys,
         [9],
       );
@@ -379,7 +379,7 @@ void main() {
     test('running it again does not overwrite newer encrypted data with '
         'stale legacy data', () async {
       await seedLegacy(indexKey: legacyKey);
-      await Hive.box<ChatwootContact>(ChatwootBoxNames.legacyContacts)
+      await Hive.box<ZukkoChatContact>(ChatwootBoxNames.legacyContacts)
           .put('source-2', contact(id: 2));
       await Hive.box<String>(ChatwootBoxNames.legacyContactIndex)
           .put('a|||b|||c|||d', 'source-2'); // keeps the legacy boxes alive
@@ -399,9 +399,9 @@ void main() {
       'a legacy user is migrated without identifierHash and attributes',
       () async {
         await seedLegacy();
-        await Hive.box<ChatwootUser>(ChatwootBoxNames.legacyUsers).put(
+        await Hive.box<ZukkoChatUser>(ChatwootBoxNames.legacyUsers).put(
           'user-1',
-          ChatwootUser(
+          ZukkoChatUser(
             identifier: 'user-1',
             identifierHash: 'secret-hash',
             customAttributes: {'plan': 'gold'},
@@ -410,7 +410,7 @@ void main() {
 
         await LocalStorage.openDB();
 
-        final migrated = Hive.box<ChatwootUser>(ChatwootBoxNames.users)
+        final migrated = Hive.box<ZukkoChatUser>(ChatwootBoxNames.users)
             .get(newKey)!;
         expect(migrated.identifier, 'user-1');
         expect(migrated.identifierHash, isNull);
@@ -421,7 +421,7 @@ void main() {
     test(
       'entries already keyed by instance (unreleased layout) move too',
       () async {
-        await (await legacy<ChatwootContact>(ChatwootBoxNames.legacyContacts))
+        await (await legacy<ZukkoChatContact>(ChatwootBoxNames.legacyContacts))
             .put(newKey, contact());
 
         await LocalStorage.openDB();
@@ -456,10 +456,10 @@ void main() {
       await storage.messages.saveMessage(message(1, content: 'PRIVATE-TEXT'));
 
       final contactBytes = await bytesOf(
-        Hive.box<ChatwootContact>(ChatwootBoxNames.contacts),
+        Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts),
       );
       final messageBytes = await bytesOf(
-        Hive.box<ChatwootMessage>(ChatwootBoxNames.messages),
+        Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages),
       );
 
       expect(contains(contactBytes, 'SOURCE-ID-SECRET'), isFalse);
@@ -469,7 +469,7 @@ void main() {
     });
 
     test('control: the same data IS readable in a plaintext box', () async {
-      final plain = await Hive.openBox<ChatwootContact>('plain_control');
+      final plain = await Hive.openBox<ZukkoChatContact>('plain_control');
       await plain.put(
         'k',
         contact(identifier: 'SOURCE-ID-SECRET', authToken: 'JWT-SECRET'),
@@ -520,7 +520,7 @@ void main() {
     );
 
     test('identifierHash and customAttributes never reach the disk', () async {
-      final full = ChatwootUser(
+      final full = ZukkoChatUser(
         identifier: 'u',
         identifierHash: 'HASH-SECRET',
         customAttributes: {'plan': 'gold'},
@@ -550,7 +550,7 @@ void main() {
       () async {
         registerChatwootAdapters();
         Hive.init(env.dir.path);
-        await (await Hive.openBox<ChatwootContact>(
+        await (await Hive.openBox<ZukkoChatContact>(
           ChatwootBoxNames.legacyContacts,
         )).put('source-1', contact());
         await (await Hive.openBox<String>(ChatwootBoxNames.legacyContactIndex))

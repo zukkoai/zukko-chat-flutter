@@ -1,5 +1,5 @@
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'utils/fixtures.dart';
@@ -15,7 +15,7 @@ void main() {
   tearDownAll(env.tearDownAll);
 
   String key(String? id, {String? hash, String site = 'inbox'}) =>
-      ChatwootClient.getClientInstanceKey(
+      ZukkoChatClient.getClientInstanceKey(
         baseUrl: base,
         websiteToken: site,
         userIdentifier: id,
@@ -27,7 +27,7 @@ void main() {
     await s.contact.save(contact());
     await s.conversation.save(conversation());
     await s.messages.saveMessage(message(1));
-    await s.user.save(ChatwootUser(identifier: 'x'));
+    await s.user.save(ZukkoChatUser(identifier: 'x'));
   }
 
   bool has(String k) {
@@ -58,10 +58,10 @@ void main() {
       }
 
       // signing out with the current hash only
-      await chatwootSignOut(
+      await zukkoChatSignOut(
         baseUrl: base,
         websiteToken: 'inbox',
-        user: ChatwootUser(identifier: 'u', identifierHash: 'rotated-hash'),
+        user: ZukkoChatUser(identifier: 'u', identifierHash: 'rotated-hash'),
       );
 
       for (final k in keys) {
@@ -78,7 +78,7 @@ void main() {
     await fill(key(null));
     await fill(key('u', hash: 'h'));
 
-    await chatwootSignOut(baseUrl: base, websiteToken: 'inbox');
+    await zukkoChatSignOut(baseUrl: base, websiteToken: 'inbox');
 
     expect(has(key(null)), isFalse);
     expect(has(key('u', hash: 'h')), isTrue);
@@ -89,7 +89,7 @@ void main() {
     await fill(key('u', hash: 'h'));
     await fill(key(null));
 
-    await ChatwootClient.clearAllData();
+    await ZukkoChatClient.clearAllData();
 
     expect(has(key('u', hash: 'h')), isFalse);
     expect(has(key(null)), isFalse);

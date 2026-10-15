@@ -1,5 +1,5 @@
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/shared/json_converters.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/shared/json_converters.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -106,8 +106,8 @@ void main() {
     expect(result.map((m) => m.id), [4]);
   });
 
-  test('ChatwootMessage.fromJson normalises created_at at parse time', () {
-    final m = ChatwootMessage.fromJson({'id': 1, 'created_at': 1626155918});
+  test('ZukkoChatMessage.fromJson normalises created_at at parse time', () {
+    final m = ZukkoChatMessage.fromJson({'id': 1, 'created_at': 1626155918});
 
     expect(m.createdAt, '2021-07-13T05:58:38.000Z');
   });

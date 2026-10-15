@@ -11,7 +11,7 @@ import '../smooth_silk_tokens.dart';
 /// all in the chat's own tone.
 class SmoothSilkComposer extends StatelessWidget {
   final ChatComposerData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final SmoothSilkTokens tokens;
   final double horizontalPadding;
 

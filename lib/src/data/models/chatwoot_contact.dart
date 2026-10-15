@@ -8,7 +8,7 @@ part 'chatwoot_contact.g.dart';
 
 @JsonSerializable(explicitToJson: true)
 @HiveType(typeId: chatwootContactHiveTypeId)
-class ChatwootContact extends Equatable {
+class ZukkoChatContact extends Equatable {
   ///unique identifier of contact
   @JsonKey(name: "id")
   @HiveField(0)
@@ -46,7 +46,7 @@ class ChatwootContact extends Equatable {
   @HiveField(5)
   final String? authToken;
 
-  const ChatwootContact({
+  const ZukkoChatContact({
     required this.id,
     required this.contactIdentifier,
     required this.pubsubToken,
@@ -57,13 +57,13 @@ class ChatwootContact extends Equatable {
   });
 
   /// A copy with the given (non-null) fields replaced.
-  ChatwootContact copyWith({
+  ZukkoChatContact copyWith({
     String? authToken,
     String? contactIdentifier,
     String? name,
     String? email,
     String? phoneNumber,
-  }) => ChatwootContact(
+  }) => ZukkoChatContact(
     id: id,
     contactIdentifier: contactIdentifier ?? this.contactIdentifier,
     pubsubToken: pubsubToken,
@@ -73,10 +73,10 @@ class ChatwootContact extends Equatable {
     authToken: authToken ?? this.authToken,
   );
 
-  factory ChatwootContact.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootContactFromJson(json);
+  factory ZukkoChatContact.fromJson(Map<String, dynamic> json) =>
+      _$ZukkoChatContactFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ChatwootContactToJson(this);
+  Map<String, dynamic> toJson() => _$ZukkoChatContactToJson(this);
 
   @override
   List<Object?> get props => [
@@ -90,5 +90,5 @@ class ChatwootContact extends Equatable {
   ];
 
   @override
-  String toString() => 'ChatwootContact(id: $id)';
+  String toString() => 'ZukkoChatContact(id: $id)';
 }

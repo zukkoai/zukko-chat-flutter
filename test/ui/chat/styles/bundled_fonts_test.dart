@@ -1,15 +1,15 @@
 import 'dart:io';
 
-import 'package:chatwoot_sdk/src/ui/chat/styles/minimal_clean/minimal_clean_tokens.dart';
-import 'package:chatwoot_sdk/src/ui/chat/styles/smooth_silk/smooth_silk_tokens.dart';
-import 'package:chatwoot_sdk/src/ui/chat/styles/thread_feed/thread_feed_tokens.dart';
-import 'package:chatwoot_sdk/src/ui/theme/chatwoot_chat_theme.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/styles/minimal_clean/minimal_clean_tokens.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/styles/smooth_silk/smooth_silk_tokens.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/styles/thread_feed/thread_feed_tokens.dart';
+import 'package:zukko_chat_flutter/src/ui/theme/chatwoot_chat_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const light = ChatwootChatTheme(brightness: Brightness.light);
-  const forced = ChatwootChatTheme(
+  const light = ZukkoChatTheme(brightness: Brightness.light);
+  const forced = ZukkoChatTheme(
     brightness: Brightness.light,
     fontFamily: 'Custom',
   );
@@ -17,19 +17,19 @@ void main() {
   test('each style uses its bundled package font', () {
     expect(
       SmoothSilkTokens.from(light).body.fontFamily,
-      'packages/chatwoot_sdk/Manrope',
+      'packages/zukko_chat_flutter/Manrope',
     );
     expect(
       MinimalCleanTokens.from(light).body.fontFamily,
-      'packages/chatwoot_sdk/Geist',
+      'packages/zukko_chat_flutter/Geist',
     );
     expect(
       ThreadFeedTokens.from(light).bodyStrong.fontFamily,
-      'packages/chatwoot_sdk/Onest',
+      'packages/zukko_chat_flutter/Onest',
     );
   });
 
-  test('ChatwootChatTheme.fontFamily still overrides', () {
+  test('ZukkoChatTheme.fontFamily still overrides', () {
     expect(SmoothSilkTokens.from(forced).body.fontFamily, 'Custom');
     expect(MinimalCleanTokens.from(forced).body.fontFamily, 'Custom');
     expect(ThreadFeedTokens.from(forced).body.fontFamily, 'Custom');

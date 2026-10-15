@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/core/chatwoot_callbacks.dart';
-import 'package:chatwoot_sdk/src/data/local/dao/chatwoot_messages_dao.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/src/data/remote/realtime/chatwoot_socket.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_callbacks.dart';
+import 'package:zukko_chat_flutter/src/data/local/dao/chatwoot_messages_dao.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/chatwoot_repository.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/remote/realtime/chatwoot_socket.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../utils/fakes.dart';
@@ -24,13 +24,13 @@ void main() {
   late FakeSocketHub hub;
 
   // recorded callback invocations
-  late List<ChatwootClientException> errors;
-  late List<ChatwootMessage> retrieved;
-  late List<ChatwootMessage> persistedRetrieved;
-  late List<(ChatwootMessage, String)> sent;
-  late List<(ChatwootMessage, String)> delivered;
-  late List<ChatwootMessage> received;
-  late List<ChatwootMessage> updated;
+  late List<ZukkoChatException> errors;
+  late List<ZukkoChatMessage> retrieved;
+  late List<ZukkoChatMessage> persistedRetrieved;
+  late List<(ZukkoChatMessage, String)> sent;
+  late List<(ZukkoChatMessage, String)> delivered;
+  late List<ZukkoChatMessage> received;
+  late List<ZukkoChatMessage> updated;
   late List<String> events;
 
   setUp(() {
@@ -53,7 +53,7 @@ void main() {
         tokenProvider: () => storage.contact.get()?.pubsubToken,
         connect: hub.connect,
       ),
-      streamCallbacks: ChatwootCallbacks(
+      streamCallbacks: ZukkoChatCallbacks(
         onError: errors.add,
         onMessagesRetrieved: retrieved.addAll,
         onPersistedMessagesRetrieved: persistedRetrieved.addAll,
@@ -88,14 +88,14 @@ void main() {
 
     test('a failing fetch reports the error and stores nothing', () async {
       service.messagesResult = failure(
-        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        ZukkoChatExceptionType.GET_MESSAGES_FAILED,
       );
 
       await repo.getMessages();
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        ZukkoChatExceptionType.GET_MESSAGES_FAILED,
       );
       expect(retrieved, isEmpty);
       expect(storage.messages.getMessages(), isEmpty);
@@ -119,7 +119,7 @@ void main() {
           expect(uncaught, isEmpty);
           expect(
             errors.single.type,
-            ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
           );
           expect(retrieved, isEmpty);
         });
@@ -139,7 +139,7 @@ void main() {
             tokenProvider: () => null,
             connect: hub.connect,
           ),
-          streamCallbacks: ChatwootCallbacks(onError: errors.add),
+          streamCallbacks: ZukkoChatCallbacks(onError: errors.add),
         );
         service.messagesResult = [message(1)];
 
@@ -147,7 +147,7 @@ void main() {
 
         expect(
           errors.single.type,
-          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
         );
         await broken.dispose();
       });
@@ -167,7 +167,7 @@ void main() {
             tokenProvider: () => null,
             connect: hub.connect,
           ),
-          streamCallbacks: ChatwootCallbacks(
+          streamCallbacks: ZukkoChatCallbacks(
             onError: errors.add,
             onMessagesRetrieved: retrieved.addAll,
           ),
@@ -191,7 +191,7 @@ void main() {
             tokenProvider: () => null,
             connect: hub.connect,
           ),
-          streamCallbacks: ChatwootCallbacks(
+          streamCallbacks: ZukkoChatCallbacks(
             onError: errors.add,
             onMessagesRetrieved: (_) => throw StateError('app bug'),
           ),
@@ -213,7 +213,7 @@ void main() {
             tokenProvider: () => null,
             connect: hub.connect,
           ),
-          streamCallbacks: ChatwootCallbacks(onError: (_) => throw 'bad'),
+          streamCallbacks: ZukkoChatCallbacks(onError: (_) => throw 'bad'),
         );
         service.messagesResult = StateError('x');
 
@@ -252,7 +252,7 @@ void main() {
 
     test('attachments go through the multipart call', () async {
       service.createMessageResult = message(6);
-      final file = ChatwootUpload.bytes(
+      final file = ZukkoChatUpload.bytes(
         name: 'a.pdf',
         bytes: Uint8List.fromList([1]),
       );
@@ -265,14 +265,14 @@ void main() {
 
     test('a failure is reported with the echo id as data', () async {
       service.createMessageResult = failure(
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
       );
 
       await repo.sendMessage(request);
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
       );
       expect(errors.single.data, 'echo-1');
       expect(storage.messages.getMessages(), isEmpty);
@@ -294,7 +294,7 @@ void main() {
 
         expect(
           errors.single.type,
-          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
         );
         expect(errors.single.data, 'echo-1');
       });
@@ -362,14 +362,14 @@ void main() {
 
     test('a failing service call is reported', () async {
       service.conversationResult = failure(
-        ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+        ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
       );
 
       await repo.initialize(null);
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+        ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
       );
     });
 
@@ -380,7 +380,7 @@ void main() {
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
+        ZukkoChatExceptionType.CREATE_CLIENT_FAILED,
       );
     });
   });
@@ -460,7 +460,7 @@ class _ThrowingDao extends InMemoryChatwootMessagesDao {
   final bool sync;
 
   @override
-  Future<void> saveAllMessages(List<ChatwootMessage> messages) {
+  Future<void> saveAllMessages(List<ZukkoChatMessage> messages) {
     if (sync) throw StateError('disk on fire');
     return Future.error(StateError('disk on fire'));
   }

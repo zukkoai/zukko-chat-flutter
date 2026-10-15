@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 
 /// The style-independent base of the chat look, as a [ThemeExtension].
 ///
-/// Every chat style (`ChatwootChatOptions.style`) derives its own tokens from
+/// Every chat style (`ZukkoChatOptions.style`) derives its own tokens from
 /// this: the style owns its palette and font, this theme decides brightness
 /// and the few values an app may want to force on every style.
 ///
-/// Resolution (see [resolve]): `ChatwootChatOptions.theme`, else one
+/// Resolution (see [resolve]): `ZukkoChatOptions.theme`, else one
 /// registered in `ThemeData.extensions`, else one derived from the ambient
 /// [ThemeData] (so dark mode follows the app).
 @immutable
-class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
+class ZukkoChatTheme extends ThemeExtension<ZukkoChatTheme> {
   /// Light or dark variant of the style.
   final Brightness brightness;
 
@@ -30,7 +30,7 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
   /// Gap between the screen edge and the messages / composer.
   final double horizontalPadding;
 
-  const ChatwootChatTheme({
+  const ZukkoChatTheme({
     required this.brightness,
     this.fontFamily,
     this.accentColor,
@@ -40,24 +40,24 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
 
   /// Base theme with the brightness of [scheme]; the style keeps its own
   /// palette. Set [accentColor] to brand it with e.g. `scheme.primary`.
-  factory ChatwootChatTheme.fromColorScheme(ColorScheme scheme) =>
-      ChatwootChatTheme(brightness: scheme.brightness);
+  factory ZukkoChatTheme.fromColorScheme(ColorScheme scheme) =>
+      ZukkoChatTheme(brightness: scheme.brightness);
 
   /// Base theme with the brightness of [theme]; fonts and colors stay the
   /// style's own.
-  factory ChatwootChatTheme.fromThemeData(ThemeData theme) =>
-      ChatwootChatTheme(brightness: theme.brightness);
+  factory ZukkoChatTheme.fromThemeData(ThemeData theme) =>
+      ZukkoChatTheme(brightness: theme.brightness);
 
   /// [override] if given, else the theme registered in [ThemeData.extensions],
   /// else one derived from the ambient theme.
-  static ChatwootChatTheme resolve(
+  static ZukkoChatTheme resolve(
     BuildContext context, [
-    ChatwootChatTheme? override,
+    ZukkoChatTheme? override,
   ]) {
     final theme = Theme.of(context);
     return override ??
-        theme.extension<ChatwootChatTheme>() ??
-        ChatwootChatTheme.fromThemeData(theme);
+        theme.extension<ZukkoChatTheme>() ??
+        ZukkoChatTheme.fromThemeData(theme);
   }
 
   bool get isDark => brightness == Brightness.dark;
@@ -69,13 +69,13 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
       : const Color(0xFF111111);
 
   @override
-  ChatwootChatTheme copyWith({
+  ZukkoChatTheme copyWith({
     Brightness? brightness,
     String? fontFamily,
     Color? accentColor,
     Color? backgroundColor,
     double? horizontalPadding,
-  }) => ChatwootChatTheme(
+  }) => ZukkoChatTheme(
     brightness: brightness ?? this.brightness,
     fontFamily: fontFamily ?? this.fontFamily,
     accentColor: accentColor ?? this.accentColor,
@@ -84,9 +84,9 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
   );
 
   @override
-  ChatwootChatTheme lerp(ThemeExtension<ChatwootChatTheme>? other, double t) {
-    if (other is! ChatwootChatTheme) return this;
-    return ChatwootChatTheme(
+  ZukkoChatTheme lerp(ThemeExtension<ZukkoChatTheme>? other, double t) {
+    if (other is! ZukkoChatTheme) return this;
+    return ZukkoChatTheme(
       brightness: t < 0.5 ? brightness : other.brightness,
       fontFamily: t < 0.5 ? fontFamily : other.fontFamily,
       accentColor: Color.lerp(accentColor, other.accentColor, t),
@@ -101,7 +101,7 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
 
   @override
   bool operator ==(Object other) =>
-      other is ChatwootChatTheme &&
+      other is ZukkoChatTheme &&
       other.brightness == brightness &&
       other.fontFamily == fontFamily &&
       other.accentColor == accentColor &&

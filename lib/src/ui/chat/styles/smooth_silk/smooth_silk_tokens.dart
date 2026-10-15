@@ -68,14 +68,14 @@ class SmoothSilkTokens {
     required this.hint,
   });
 
-  factory SmoothSilkTokens.from(ChatwootChatTheme base) {
+  factory SmoothSilkTokens.from(ZukkoChatTheme base) {
     final dark = base.isDark;
     Color pick(int light, int darkValue) => Color(dark ? darkValue : light);
 
     final accent = base.accentColor ?? pick(0xFF3A4A60, 0xFF9AADC6);
     final onAccent = base.accentColor == null
         ? pick(0xFFF8FAFC, 0xFF15181D)
-        : ChatwootChatTheme.foregroundOn(accent);
+        : ZukkoChatTheme.foregroundOn(accent);
     final text = pick(0xFF1F2733, 0xFFE6E9EE);
     final muted = pick(0xFF66717F, 0xFF8E98A6);
 
@@ -128,10 +128,10 @@ class SmoothSilkTokens {
 }
 
 /// Manrope (the design font), unless the app forces one via
-/// `ChatwootChatTheme.fontFamily`.
-TextStyle _font(ChatwootChatTheme base, TextStyle style) {
+/// `ZukkoChatTheme.fontFamily`.
+TextStyle _font(ZukkoChatTheme base, TextStyle style) {
   final family = base.fontFamily;
   return family != null
       ? style.copyWith(fontFamily: family)
-      : style.copyWith(fontFamily: 'packages/chatwoot_sdk/Manrope');
+      : style.copyWith(fontFamily: 'packages/zukko_chat_flutter/Manrope');
 }

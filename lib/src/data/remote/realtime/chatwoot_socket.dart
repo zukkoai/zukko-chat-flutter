@@ -13,7 +13,7 @@ import 'socket_frame.dart';
 /// Where the realtime connection currently is.
 ///
 /// {@category FlutterClientSdk}
-enum ChatwootConnectionState {
+enum ZukkoChatConnectionState {
   /// Not started yet.
   idle,
 
@@ -41,7 +41,7 @@ sealed class SocketEvent {
 class SocketStateChanged extends SocketEvent {
   const SocketStateChanged(this.state, {this.isReconnect = false});
 
-  final ChatwootConnectionState state;
+  final ZukkoChatConnectionState state;
 
   /// `true` when [state] is `subscribed` and the socket had been subscribed
   /// before (events may have been missed in between).
@@ -61,7 +61,7 @@ class SocketMessage extends SocketEvent {
 class SocketFailure extends SocketEvent {
   const SocketFailure(this.error);
 
-  final ChatwootClientException error;
+  final ZukkoChatException error;
 }
 
 /// `ws(s)://host[/prefix]/cable` for a REST [baseUrl]. Throws [ArgumentError]
@@ -130,7 +130,7 @@ class ChatwootSocket {
   final Duration Function(int attempt) _backoff;
   final _events = StreamController<SocketEvent>.broadcast();
 
-  ChatwootConnectionState _state = ChatwootConnectionState.idle;
+  ZukkoChatConnectionState _state = ZukkoChatConnectionState.idle;
   String? _token;
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
@@ -145,7 +145,7 @@ class ChatwootSocket {
 
   Stream<SocketEvent> get events => _events.stream;
 
-  ChatwootConnectionState get state => _state;
+  ZukkoChatConnectionState get state => _state;
 
   String get _identifier =>
       jsonEncode({'channel': 'RoomChannel', 'pubsub_token': _token});
@@ -157,9 +157,9 @@ class ChatwootSocket {
     if (_disposed) return;
     if (_channel != null &&
         _token == _tokenProvider() &&
-        (_state == ChatwootConnectionState.subscribed ||
-            _state == ChatwootConnectionState.connecting ||
-            _state == ChatwootConnectionState.connected)) {
+        (_state == ZukkoChatConnectionState.subscribed ||
+            _state == ZukkoChatConnectionState.connecting ||
+            _state == ZukkoChatConnectionState.connected)) {
       return;
     }
     _attempt = 0;
@@ -177,8 +177,8 @@ class ChatwootSocket {
 
   /// Sends [action] to the channel. Returns `false` (and never throws) when
   /// the socket is not subscribed.
-  bool send(ChatwootActionType action) {
-    if (_state != ChatwootConnectionState.subscribed) return false;
+  bool send(ZukkoChatActionType action) {
+    if (_state != ZukkoChatConnectionState.subscribed) return false;
     return _write({
       'command': 'message',
       'identifier': _identifier,
@@ -193,7 +193,7 @@ class ChatwootSocket {
     if (_disposed) return;
     _disposed = true;
     _teardown();
-    _state = ChatwootConnectionState.closed;
+    _state = ZukkoChatConnectionState.closed;
     await _events.close();
   }
 
@@ -203,11 +203,11 @@ class ChatwootSocket {
     if (token == null) {
       // no session (yet): nothing to subscribe to
       _token = null;
-      _setState(ChatwootConnectionState.closed);
+      _setState(ZukkoChatConnectionState.closed);
       return;
     }
     _token = token;
-    _setState(ChatwootConnectionState.connecting);
+    _setState(ZukkoChatConnectionState.connecting);
     final WebSocketChannel channel;
     try {
       channel = _connect(url);
@@ -233,7 +233,7 @@ class ChatwootSocket {
     _armWatchdog(staleAfter);
     switch (Frame.parse(data)) {
       case WelcomeFrame():
-        _setState(ChatwootConnectionState.connected);
+        _setState(ZukkoChatConnectionState.connected);
         _write({'command': 'subscribe', 'identifier': _identifier});
         _subscribeTimer?.cancel();
         _subscribeTimer = Timer(
@@ -248,7 +248,7 @@ class ChatwootSocket {
         _subscribeTimer?.cancel();
         final isReconnect = _wasSubscribed;
         _wasSubscribed = true;
-        _setState(ChatwootConnectionState.subscribed, isReconnect: isReconnect);
+        _setState(ZukkoChatConnectionState.subscribed, isReconnect: isReconnect);
         _startPresence();
       case RejectFrame():
         _rejected();
@@ -257,9 +257,9 @@ class ChatwootSocket {
           _onLost(channel);
         } else {
           _stop(
-            ChatwootClientException(
+            ZukkoChatException(
               'server closed the connection: ${reason ?? 'unknown reason'}',
-              ChatwootClientExceptionType.SOCKET_DISCONNECTED,
+              ZukkoChatExceptionType.SOCKET_DISCONNECTED,
             ),
           );
         }
@@ -271,9 +271,9 @@ class ChatwootSocket {
   }
 
   void _rejected() => _stop(
-    ChatwootClientException(
+    ZukkoChatException(
       'subscription rejected: unknown or expired pubsub token',
-      ChatwootClientExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+      ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
     ),
   );
 
@@ -294,22 +294,22 @@ class ChatwootSocket {
   }
 
   /// Gives up until [connect] is called again.
-  void _stop(ChatwootClientException error) {
+  void _stop(ZukkoChatException error) {
     _teardown();
-    _setState(ChatwootConnectionState.closed);
+    _setState(ZukkoChatConnectionState.closed);
     _emit(SocketFailure(error));
   }
 
   void _scheduleRetry() {
-    _setState(ChatwootConnectionState.backoff);
+    _setState(ZukkoChatConnectionState.backoff);
     _retryTimer = Timer(_backoff(_attempt++), _open);
   }
 
   void _startPresence() {
     _presenceTimer?.cancel();
-    send(ChatwootActionType.update_presence);
+    send(ZukkoChatActionType.update_presence);
     _presenceTimer = Timer.periodic(presenceEvery, (_) {
-      send(ChatwootActionType.update_presence);
+      send(ZukkoChatActionType.update_presence);
     });
   }
 
@@ -349,7 +349,7 @@ class ChatwootSocket {
     } catch (_) {}
   }
 
-  void _setState(ChatwootConnectionState next, {bool isReconnect = false}) {
+  void _setState(ZukkoChatConnectionState next, {bool isReconnect = false}) {
     if (_state == next) return;
     _state = next;
     _emit(SocketStateChanged(next, isReconnect: isReconnect));

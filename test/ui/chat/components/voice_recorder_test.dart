@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/src/ui/chat/components/voice_recorder.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/voice_recorder.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -11,7 +11,7 @@ part 'chatwoot_message.g.dart';
 /// {@category FlutterClientSdk}
 @JsonSerializable(explicitToJson: true)
 @HiveType(typeId: chatwootMessageHiveTypeId)
-class ChatwootMessage extends Equatable {
+class ZukkoChatMessage extends Equatable {
   ///unique identifier of the message
   @JsonKey(fromJson: idFromJson)
   @HiveField(0)
@@ -55,12 +55,12 @@ class ChatwootMessage extends Equatable {
   ///The user this message belongs to
   @JsonKey(name: "sender")
   @HiveField(8)
-  final ChatwootEventMessageUser? sender;
+  final ZukkoChatEventMessageUser? sender;
 
   ///checks if message was sent by the contact making the request
   bool get isMine => messageType == 0;
 
-  const ChatwootMessage({
+  const ZukkoChatMessage({
     required this.id,
     required this.content,
     required this.messageType,
@@ -72,10 +72,10 @@ class ChatwootMessage extends Equatable {
     required this.sender,
   });
 
-  factory ChatwootMessage.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootMessageFromJson(json);
+  factory ZukkoChatMessage.fromJson(Map<String, dynamic> json) =>
+      _$ZukkoChatMessageFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ChatwootMessageToJson(this);
+  Map<String, dynamic> toJson() => _$ZukkoChatMessageToJson(this);
 
   @override
   List<Object?> get props => [
@@ -93,12 +93,12 @@ class ChatwootMessage extends Equatable {
 
 /// Parses a JSON list of messages, skipping malformed items and items without
 /// a positive id (a missing id would collide with every other id-less message).
-List<ChatwootMessage> parseMessages(Object? data) => [
-  for (final m in parseList(data, ChatwootMessage.fromJson))
+List<ZukkoChatMessage> parseMessages(Object? data) => [
+  for (final m in parseList(data, ZukkoChatMessage.fromJson))
     if (m.id > 0) m,
 ];
 
 /// Parses the body of `GET /messages`: `{payload: [...], meta: {...}}` (a bare
 /// list is accepted too). Malformed items are skipped like in [parseMessages].
-List<ChatwootMessage> parseMessagesPage(Object? data) =>
+List<ZukkoChatMessage> parseMessagesPage(Object? data) =>
     parseMessages(data is Map<String, dynamic> ? data['payload'] : data);

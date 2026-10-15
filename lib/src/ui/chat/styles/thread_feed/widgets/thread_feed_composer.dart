@@ -11,7 +11,7 @@ import '../thread_feed_tokens.dart';
 /// microphone tile, above a hairline.
 class ThreadFeedComposer extends StatelessWidget {
   final ChatComposerData data;
-  final ChatwootL10n l10n;
+  final ZukkoChatL10n l10n;
   final ThreadFeedTokens tokens;
   final double horizontalPadding;
 

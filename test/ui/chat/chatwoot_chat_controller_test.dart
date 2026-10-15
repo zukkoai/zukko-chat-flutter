@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
-import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_controller.dart';
-import 'package:chatwoot_sdk/src/ui/chat/components/gallery_message.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/chatwoot_chat_controller.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/gallery_message.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'chat_fakes.dart';
 
-const _options = ChatwootChatOptions(
+const _options = ZukkoChatOptions(
   baseUrl: 'https://x.test',
   websiteToken: 'in',
 );
@@ -18,15 +18,15 @@ const _options = ChatwootChatOptions(
 void main() {
   late FakeFactory factory;
   late FakeClient client;
-  late List<ChatwootClientException> errors;
+  late List<ZukkoChatException> errors;
   late SpyChat chat;
-  late ChatwootChatController controller;
+  late ZukkoChatController controller;
 
-  ChatwootChatController make({ChatwootCallbacks? callbacks}) {
+  ZukkoChatController make({ZukkoChatCallbacks? callbacks}) {
     chat = SpyChat();
-    return ChatwootChatController(
+    return ZukkoChatController(
       _options,
-      callbacks: callbacks ?? ChatwootCallbacks(onError: errors.add),
+      callbacks: callbacks ?? ZukkoChatCallbacks(onError: errors.add),
       clientFactory: factory.call,
       chat: chat,
     );
@@ -75,7 +75,7 @@ void main() {
 
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
+        ZukkoChatExceptionType.CREATE_CLIENT_FAILED,
       );
       expect(controller.error, isNotNull);
     });
@@ -101,7 +101,7 @@ void main() {
         await pumpEventQueue();
         expect(controller.error, isNotNull);
 
-        factory.completer = Completer<ChatwootClient>();
+        factory.completer = Completer<ZukkoChatClient>();
         controller.retry();
         expect(controller.error, isNull);
         await ready();
@@ -121,8 +121,8 @@ void main() {
     test('allowInsecure reaches the factory (SEC4)', () async {
       controller.dispose();
       factory = FakeFactory();
-      controller = ChatwootChatController(
-        const ChatwootChatOptions(
+      controller = ZukkoChatController(
+        const ZukkoChatOptions(
           baseUrl: 'http://x.test',
           websiteToken: 'in',
           allowInsecure: true,
@@ -135,9 +135,9 @@ void main() {
 
     test('callbacks can be swapped while running (F5)', () async {
       var a = 0, b = 0;
-      controller.callbacks = ChatwootCallbacks(onMessageReceived: (_) => a++);
+      controller.callbacks = ZukkoChatCallbacks(onMessageReceived: (_) => a++);
       await ready();
-      controller.callbacks = ChatwootCallbacks(onMessageReceived: (_) => b++);
+      controller.callbacks = ZukkoChatCallbacks(onMessageReceived: (_) => b++);
       factory.callbacks!.onMessageReceived!(msg(1));
 
       expect([a, b], [0, 1]);
@@ -155,7 +155,7 @@ void main() {
       var received = 0;
       controller.dispose();
       controller = make(
-        callbacks: ChatwootCallbacks(onMessageReceived: (_) => received++),
+        callbacks: ZukkoChatCallbacks(onMessageReceived: (_) => received++),
       );
       final cb = factory.callbacks!;
       controller.dispose();
@@ -185,9 +185,9 @@ void main() {
     test('resend before ready is queued too', () async {
       controller.send('hi');
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
           data: texts().single.id,
         ),
       );
@@ -211,9 +211,9 @@ void main() {
       controller.send('hi');
       final id = texts().single.id;
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
           data: id,
         ),
       );
@@ -221,7 +221,7 @@ void main() {
       expect(texts().single.status, MessageStatus.error);
       expect(
         errors.single.type,
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
       );
 
       controller.resend(id);
@@ -365,8 +365,8 @@ void main() {
 
     test('persisted messages are ignored when persistence is off', () async {
       controller.dispose();
-      controller = ChatwootChatController(
-        const ChatwootChatOptions(
+      controller = ZukkoChatController(
+        const ZukkoChatOptions(
           baseUrl: 'b',
           websiteToken: 'i',
           enablePersistence: false,
@@ -395,7 +395,7 @@ void main() {
     test('agents with ids get their own author with name', () async {
       await ready();
       factory.callbacks!.onMessageReceived!(
-        msg(1, sender: ChatwootEventMessageUser(id: 9, name: 'Ann')),
+        msg(1, sender: ZukkoChatEventMessageUser(id: 9, name: 'Ann')),
       );
 
       final author = chat.messages.single.authorId;
@@ -421,7 +421,7 @@ void main() {
         factory.callbacks!.onMessageReceived!(
           msg(
             id,
-            sender: ChatwootEventMessageUser(id: id, name: 'A', avatarUrl: url),
+            sender: ZukkoChatEventMessageUser(id: id, name: 'A', avatarUrl: url),
           ),
         );
       }
@@ -438,7 +438,7 @@ void main() {
       factory.callbacks!.onMessageReceived!(
         msg(
           1,
-          sender: ChatwootEventMessageUser(
+          sender: ZukkoChatEventMessageUser(
             id: 3,
             name: 'A',
             avatarUrl: 'https://g.test/a?d=404',
@@ -460,13 +460,13 @@ void main() {
       expect(chat.messages.length, 1);
       expect(
         texts().single.text,
-        const ChatwootL10n().conversationResolvedMessage,
+        const ZukkoChatL10n().conversationResolvedMessage,
       );
       final author = await controller.resolveUser(
         chat.messages.single.authorId,
       );
       expect(author.imageSource, isNull);
-      expect(author.name, const ChatwootL10n().botName);
+      expect(author.name, const ZukkoChatL10n().botName);
     });
 
     test('resolved again after new messages is shown again', () async {
@@ -491,7 +491,7 @@ void main() {
       factory.callbacks!.onMessageReceived!(msg(3, content: '  '));
 
       expect(chat.messages.length, 1);
-      expect(texts().single.text, const ChatwootL10n().attachmentLabel);
+      expect(texts().single.text, const ZukkoChatL10n().attachmentLabel);
     });
 
     test(
@@ -543,7 +543,7 @@ void main() {
         expect((m[3] as FileMessage).size, 2048);
         expect(
           (m[4] as TextMessage).text,
-          const ChatwootL10n().attachmentLabel,
+          const ZukkoChatL10n().attachmentLabel,
         );
       },
     );
@@ -554,7 +554,7 @@ void main() {
       'a local preview at once, the server version once confirmed',
       () async {
         await ready();
-        final file = ChatwootUpload.bytes(
+        final file = ZukkoChatUpload.bytes(
           name: 'photo.jpg',
           bytes: Uint8List.fromList([1, 2]),
         );
@@ -591,7 +591,7 @@ void main() {
       'a voice recording keeps its duration; a failed one resends',
       () async {
         await ready();
-        final voice = ChatwootUpload.bytes(
+        final voice = ZukkoChatUpload.bytes(
           name: 'voice.wav',
           bytes: Uint8List.fromList([1, 2]),
         );
@@ -618,7 +618,7 @@ void main() {
     test('online / typing / stopped typing / offline', () async {
       await ready();
       final cb = factory.callbacks!;
-      final seen = <ChatwootChatStatus>[];
+      final seen = <ZukkoChatStatus>[];
       controller.addListener(() => seen.add(controller.status));
 
       cb.onConversationIsOnline!();
@@ -627,24 +627,24 @@ void main() {
       cb.onConversationIsOffline!();
 
       expect(seen, [
-        ChatwootChatStatus.online,
-        ChatwootChatStatus.typing,
-        ChatwootChatStatus.online,
-        ChatwootChatStatus.offline,
+        ZukkoChatStatus.online,
+        ZukkoChatStatus.typing,
+        ZukkoChatStatus.online,
+        ZukkoChatStatus.offline,
       ]);
     });
 
     test('stopped typing while offline stays offline', () async {
       await ready();
       factory.callbacks!.onConversationStoppedTyping!();
-      expect(controller.status, ChatwootChatStatus.offline);
+      expect(controller.status, ZukkoChatStatus.offline);
     });
 
     test('consumer callbacks are forwarded', () async {
       final got = <String>[];
       controller.dispose();
       controller = make(
-        callbacks: ChatwootCallbacks(
+        callbacks: ZukkoChatCallbacks(
           onMessageReceived: (m) => got.add('r${m.id}'),
           onMessageSent: (m, e) => got.add('s${m.id}$e'),
           onConversationIsOnline: () => got.add('on'),
@@ -687,7 +687,7 @@ void main() {
     test('typing: on at once, off after 3 s idle, input restarts the wait', () {
       fakeAsync((async) {
         controller.dispose();
-        factory.completer = Completer<ChatwootClient>(); // in this zone
+        factory.completer = Completer<ZukkoChatClient>(); // in this zone
         controller = make();
         factory.completer.complete(client);
         async.flushMicrotasks();
@@ -744,14 +744,14 @@ void main() {
         'error state; retry builds a new client', () async {
       await ready();
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+          ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
         ),
       );
       expect(
         controller.error?.type,
-        ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
       );
 
       controller.retry();
@@ -763,9 +763,9 @@ void main() {
     test('an ordinary error does not raise the banner', () async {
       await ready();
       factory.callbacks!.onError!(
-        ChatwootClientException(
+        ZukkoChatException(
           'x',
-          ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
         ),
       );
       expect(controller.error, isNull);

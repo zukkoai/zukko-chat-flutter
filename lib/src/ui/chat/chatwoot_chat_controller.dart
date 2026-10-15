@@ -16,17 +16,17 @@ import '../l10n/chatwoot_l10n.dart';
 import 'chatwoot_chat_options.dart';
 import 'components/gallery_message.dart';
 
-/// Signature of [ChatwootClient.create]; the seam tests use to inject a fake.
-typedef ChatwootClientFactory = Future<ChatwootClient> Function({
+/// Signature of [ZukkoChatClient.create]; the seam tests use to inject a fake.
+typedef ZukkoChatClientFactory = Future<ZukkoChatClient> Function({
   required String baseUrl,
   required String websiteToken,
-  ChatwootUser? user,
+  ZukkoChatUser? user,
   bool enablePersistence,
   bool allowInsecure,
-  ChatwootCallbacks? callbacks,
+  ZukkoChatCallbacks? callbacks,
 });
 
-enum ChatwootChatStatus { offline, online, typing }
+enum ZukkoChatStatus { offline, online, typing }
 
 const _meId = 'chatwoot-me';
 const _agentId = 'chatwoot-agent';
@@ -36,7 +36,7 @@ const _resolvedPrefix = 'chatwoot-resolved-';
 /// Without input for this long the user counts as not typing any more.
 const typingIdle = Duration(seconds: 3);
 
-/// Owns the [ChatwootClient] lifecycle and the message list of one chat.
+/// Owns the [ZukkoChatClient] lifecycle and the message list of one chat.
 ///
 /// Messages live in [chat] (oldest first) under a stable key: the client's
 /// `echoId` for messages sent from here, the server id otherwise. Once the
@@ -44,15 +44,15 @@ const typingIdle = Duration(seconds: 3);
 /// server's own `message.created` echo updates the same bubble instead of
 /// adding a second one. Single events use `insertMessage`/`updateMessage`;
 /// only bulk loads use `setMessages`.
-class ChatwootChatController extends ChangeNotifier {
-  ChatwootChatController(
+class ZukkoChatController extends ChangeNotifier {
+  ZukkoChatController(
     this.options, {
     this.callbacks,
-    ChatwootClientFactory clientFactory = ChatwootClient.create,
+    ZukkoChatClientFactory clientFactory = ZukkoChatClient.create,
     InMemoryChatController? chat,
   }) : _factory = clientFactory,
        chat = chat ?? InMemoryChatController(),
-       l10n = options.l10n ?? const ChatwootL10n() {
+       l10n = options.l10n ?? const ZukkoChatL10n() {
     _users[_meId] = User(
       id: _meId,
       name: options.user?.name,
@@ -61,17 +61,17 @@ class ChatwootChatController extends ChangeNotifier {
     unawaited(_start());
   }
 
-  final ChatwootChatOptions options;
-  final ChatwootClientFactory _factory;
+  final ZukkoChatOptions options;
+  final ZukkoChatClientFactory _factory;
 
   /// Consumer callbacks; the view keeps them current across rebuilds.
-  ChatwootCallbacks? callbacks;
+  ZukkoChatCallbacks? callbacks;
 
   /// Backing controller of the flutter_chat_ui `Chat` widget.
   final InMemoryChatController chat;
 
   /// Strings used for generated messages; the view keeps it current.
-  ChatwootL10n l10n;
+  ZukkoChatL10n l10n;
 
   final _users = <String, User>{};
   final _byKey = <String, Message>{};
@@ -85,23 +85,23 @@ class ChatwootChatController extends ChangeNotifier {
   final _queued = <String>{};
   final _uuid = const Uuid();
 
-  ChatwootClient? _client;
+  ZukkoChatClient? _client;
   bool _disposed = false;
   bool _visible = true;
   bool _typingOn = false;
   Timer? _typingIdle;
   int _resolvedCount = 0;
-  ChatwootChatStatus _status = ChatwootChatStatus.offline;
-  ChatwootClientException? _error;
+  ZukkoChatStatus _status = ZukkoChatStatus.offline;
+  ZukkoChatException? _error;
 
   String get currentUserId => _meId;
-  ChatwootChatStatus get status => _status;
+  ZukkoChatStatus get status => _status;
 
   /// True once the client exists; sends before that are queued.
   bool get isReady => _client != null;
 
   /// Set when the client could not be created.
-  ChatwootClientException? get error => _error;
+  ZukkoChatException? get error => _error;
 
   Future<User> resolveUser(String id) async => _users[id] ?? User(id: id);
 
@@ -135,7 +135,7 @@ class ChatwootChatController extends ChangeNotifier {
   }
 
   Future<void> _start() async {
-    final ChatwootClient client;
+    final ZukkoChatClient client;
     try {
       client = await _factory(
         baseUrl: options.baseUrl,
@@ -148,9 +148,9 @@ class ChatwootChatController extends ChangeNotifier {
     } catch (e, st) {
       sdkLog('client failed with error $e: $st');
       if (_disposed) return;
-      _error = ChatwootClientException(
+      _error = ZukkoChatException(
         e.toString(),
-        ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
+        ZukkoChatExceptionType.CREATE_CLIENT_FAILED,
       );
       // Nothing will ever send these: show them as failed (tap to retry).
       _queued.toList().forEach(_markFailed);
@@ -239,7 +239,7 @@ class ChatwootChatController extends ChangeNotifier {
 
   /// Sends [files] as one message, shown at once as a local preview (image,
   /// gallery, voice or file). [audioDuration] is the length of a recording.
-  void sendAttachments(List<ChatwootUpload> files, {Duration? audioDuration}) {
+  void sendAttachments(List<ZukkoChatUpload> files, {Duration? audioDuration}) {
     if (_disposed || files.isEmpty) return;
     _typingOff();
     final echoId = _uuid.v4();
@@ -250,7 +250,7 @@ class ChatwootChatController extends ChangeNotifier {
 
   Message _localPreview(
     String id,
-    List<ChatwootUpload> files,
+    List<ZukkoChatUpload> files,
     Duration? audioDuration,
   ) {
     final createdAt = DateTime.now().toUtc();
@@ -342,10 +342,10 @@ class ChatwootChatController extends ChangeNotifier {
 
   // ---- callbacks ----
 
-  ChatwootCallbacks _wrapCallbacks() {
+  ZukkoChatCallbacks _wrapCallbacks() {
     // Everything from a disposed controller is dropped.
     T? live<T>(T Function() f) => _disposed ? null : f();
-    return ChatwootCallbacks(
+    return ZukkoChatCallbacks(
       onWelcome: () => live(() => callbacks?.onWelcome?.call()),
       onPing: () => live(() => callbacks?.onPing?.call()),
       onConfirmedSubscription: () =>
@@ -353,20 +353,20 @@ class ChatwootChatController extends ChangeNotifier {
       onConnectionStateChanged: (state) =>
           live(() => callbacks?.onConnectionStateChanged?.call(state)),
       onConversationIsOnline: () => live(() {
-        _setStatus(ChatwootChatStatus.online);
+        _setStatus(ZukkoChatStatus.online);
         callbacks?.onConversationIsOnline?.call();
       }),
       onConversationIsOffline: () => live(() {
-        _setStatus(ChatwootChatStatus.offline);
+        _setStatus(ZukkoChatStatus.offline);
         callbacks?.onConversationIsOffline?.call();
       }),
       onConversationStartedTyping: () => live(() {
-        _setStatus(ChatwootChatStatus.typing);
+        _setStatus(ZukkoChatStatus.typing);
         callbacks?.onConversationStartedTyping?.call();
       }),
       onConversationStoppedTyping: () => live(() {
-        if (_status == ChatwootChatStatus.typing) {
-          _setStatus(ChatwootChatStatus.online);
+        if (_status == ZukkoChatStatus.typing) {
+          _setStatus(ZukkoChatStatus.online);
         }
         callbacks?.onConversationStoppedTyping?.call();
       }),
@@ -404,9 +404,9 @@ class ChatwootChatController extends ChangeNotifier {
         callbacks?.onSessionReset?.call();
       }),
       onError: (e) => live(() {
-        if (e.type == ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH ||
-            e.type == ChatwootClientExceptionType.IDENTIFY_FAILED ||
-            e.type == ChatwootClientExceptionType.SESSION_EXPIRED) {
+        if (e.type == ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH ||
+            e.type == ZukkoChatExceptionType.IDENTIFY_FAILED ||
+            e.type == ZukkoChatExceptionType.SESSION_EXPIRED) {
           _error = e;
           notifyListeners();
         }
@@ -434,7 +434,7 @@ class ChatwootChatController extends ChangeNotifier {
     unawaited(chat.setMessages(unsent));
   }
 
-  void _setStatus(ChatwootChatStatus s) {
+  void _setStatus(ZukkoChatStatus s) {
     if (_status == s) return;
     _status = s;
     notifyListeners();
@@ -446,8 +446,8 @@ class ChatwootChatController extends ChangeNotifier {
   ///
   /// Attachments with an https url become an image, a gallery (several
   /// images), an audio or a file message, with the text as caption; others
-  /// fall back to a text message with [ChatwootL10n.attachmentLabel].
-  Message? _convert(ChatwootMessage m, {String? key}) {
+  /// fall back to a text message with [ZukkoChatL10n.attachmentLabel].
+  Message? _convert(ZukkoChatMessage m, {String? key}) {
     final type = m.messageType;
     if (type == 2 || type == 3) return null; // activity / template
     final content = (m.content ?? '').trim().isNotEmpty ? m.content : null;
@@ -538,7 +538,7 @@ class ChatwootChatController extends ChangeNotifier {
     );
   }
 
-  void _upsertServer(ChatwootMessage m, {bool onlyExisting = false}) {
+  void _upsertServer(ZukkoChatMessage m, {bool onlyExisting = false}) {
     final converted = _convert(m);
     if (converted == null) return;
     final existing = _byKey[converted.id];
@@ -565,7 +565,7 @@ class ChatwootChatController extends ChangeNotifier {
 
   /// The server accepted [echoId] as [m]: alias the ids so later server
   /// events for [m] land on the same bubble.
-  void _confirmEcho(ChatwootMessage m, String echoId, MessageStatus status) {
+  void _confirmEcho(ZukkoChatMessage m, String echoId, MessageStatus status) {
     final serverKey = m.id.toString();
     final echo = _byKey[echoId];
     final hadFiles = _outbox.remove(echoId)?.attachments.isNotEmpty ?? false;
@@ -622,7 +622,7 @@ class ChatwootChatController extends ChangeNotifier {
     unawaited(chat.insertMessage(message, index: index));
   }
 
-  void _bulkUpsert(List<ChatwootMessage> list) {
+  void _bulkUpsert(List<ZukkoChatMessage> list) {
     var changed = false;
     // Oldest first with a numeric id tie-break (shared with storage); new
     // keys are appended in that order, existing ones keep their slot.
@@ -672,7 +672,7 @@ class ChatwootChatController extends ChangeNotifier {
 /// Text and files of a message sent from this device.
 class _Outgoing {
   final String text;
-  final List<ChatwootUpload> attachments;
+  final List<ZukkoChatUpload> attachments;
 
   const _Outgoing(this.text, this.attachments);
 }

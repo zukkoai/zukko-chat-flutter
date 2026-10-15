@@ -2,12 +2,12 @@ import 'package:flutter/widgets.dart' show Locale;
 
 /// Every user-visible string of the native chat UI.
 ///
-/// Built-in translations: [ChatwootL10n.new] (English), [ChatwootL10n.ru],
-/// [ChatwootL10n.uzLatn], [ChatwootL10n.uzCyrl], [ChatwootL10n.tr] and
-/// [ChatwootL10n.kaa]. [ChatwootL10n.forLocale] picks one for a locale; the
-/// chat does that with the ambient locale when `ChatwootChatOptions.l10n` is
+/// Built-in translations: [ZukkoChatL10n.new] (English), [ZukkoChatL10n.ru],
+/// [ZukkoChatL10n.uzLatn], [ZukkoChatL10n.uzCyrl], [ZukkoChatL10n.tr] and
+/// [ZukkoChatL10n.kaa]. [ZukkoChatL10n.forLocale] picks one for a locale; the
+/// chat does that with the ambient locale when `ZukkoChatOptions.l10n` is
 /// null.
-class ChatwootL10n {
+class ZukkoChatL10n {
   /// Placeholder for the text field
   final String inputPlaceholder;
 
@@ -32,7 +32,7 @@ class ChatwootL10n {
   /// Name shown for the user's own messages (styles that show names)
   final String youLabel;
 
-  /// Footer text before the brand link, see `ChatwootChatOptions.showBranding`
+  /// Footer text before the brand link, see `ZukkoChatOptions.showBranding`
   final String poweredByText;
 
   /// Tooltip / semantics label of the back button
@@ -105,7 +105,7 @@ class ChatwootL10n {
   final String retryLabel;
 
   /// English.
-  const ChatwootL10n({
+  const ZukkoChatL10n({
     this.inputPlaceholder = 'Type your message',
     this.headerTitle = 'Support',
     this.onlineText = 'Online',
@@ -143,7 +143,7 @@ class ChatwootL10n {
   });
 
   /// Russian.
-  static const ru = ChatwootL10n(
+  static const ru = ZukkoChatL10n(
     inputPlaceholder: 'Напишите сообщение',
     headerTitle: 'Поддержка',
     onlineText: 'В сети',
@@ -180,7 +180,7 @@ class ChatwootL10n {
   );
 
   /// Uzbek, Latin script.
-  static const uzLatn = ChatwootL10n(
+  static const uzLatn = ZukkoChatL10n(
     inputPlaceholder: 'Xabar yozing',
     headerTitle: 'Yordam',
     onlineText: 'Onlayn',
@@ -216,7 +216,7 @@ class ChatwootL10n {
   );
 
   /// Uzbek, Cyrillic script.
-  static const uzCyrl = ChatwootL10n(
+  static const uzCyrl = ZukkoChatL10n(
     inputPlaceholder: 'Хабар ёзинг',
     headerTitle: 'Ёрдам',
     onlineText: 'Онлайн',
@@ -251,7 +251,7 @@ class ChatwootL10n {
   );
 
   /// Turkish.
-  static const tr = ChatwootL10n(
+  static const tr = ZukkoChatL10n(
     inputPlaceholder: 'Mesajınızı yazın',
     headerTitle: 'Destek',
     onlineText: 'Çevrimiçi',
@@ -286,7 +286,7 @@ class ChatwootL10n {
   );
 
   /// Karakalpak, Latin script.
-  static const kaa = ChatwootL10n(
+  static const kaa = ZukkoChatL10n(
     inputPlaceholder: 'Xabar jazıń',
     headerTitle: 'Járdem',
     onlineText: 'Onlayn',
@@ -322,14 +322,14 @@ class ChatwootL10n {
 
   /// The built-in translation for [locale]; English when there is none.
   /// Uzbek is Latin unless the locale asks for Cyrillic (`uz_Cyrl`).
-  static ChatwootL10n forLocale(Locale? locale) =>
+  static ZukkoChatL10n forLocale(Locale? locale) =>
       switch (locale?.languageCode) {
         'ru' => ru,
         'tr' => tr,
         'kaa' => kaa,
         'uz' when locale?.scriptCode == 'Cyrl' => uzCyrl,
         'uz' => uzLatn,
-        _ => const ChatwootL10n(),
+        _ => const ZukkoChatL10n(),
       };
 
   List<String> get _fields => [
@@ -370,7 +370,7 @@ class ChatwootL10n {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    if (other is! ChatwootL10n) return false;
+    if (other is! ZukkoChatL10n) return false;
     final a = _fields;
     final b = other._fields;
     for (var i = 0; i < a.length; i++) {

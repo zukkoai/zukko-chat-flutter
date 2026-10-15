@@ -43,24 +43,24 @@ class MemorySingleStore<T> implements SingleStore<T> {
 }
 
 /// Hive-backed user store that keeps secrets off disk: only
-/// [ChatwootUser.toPersistable] is written, while the full user (with identity
+/// [ZukkoChatUser.toPersistable] is written, while the full user (with identity
 /// hash and custom attributes) stays in memory for this process, because
 /// creating a contact needs it.
-class HiveUserStore implements SingleStore<ChatwootUser> {
+class HiveUserStore implements SingleStore<ZukkoChatUser> {
   HiveUserStore(this._box, this._instanceKey);
 
-  final Box<ChatwootUser> _box;
+  final Box<ZukkoChatUser> _box;
   final String _instanceKey;
-  ChatwootUser? _full;
+  ZukkoChatUser? _full;
 
   @override
-  Future<void> save(ChatwootUser value) {
+  Future<void> save(ZukkoChatUser value) {
     _full = value;
     return _box.put(_instanceKey, value.toPersistable());
   }
 
   @override
-  ChatwootUser? get() => _full ?? _box.get(_instanceKey);
+  ZukkoChatUser? get() => _full ?? _box.get(_instanceKey);
 
   @override
   Future<void> delete() {

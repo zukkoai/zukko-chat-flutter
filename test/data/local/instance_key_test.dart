@@ -1,4 +1,4 @@
-import 'package:chatwoot_sdk/src/data/local/instance_key.dart';
+import 'package:zukko_chat_flutter/src/data/local/instance_key.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String _key(String? hash) =>

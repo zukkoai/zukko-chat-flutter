@@ -1,11 +1,11 @@
-import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
-import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
-import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
-import 'package:chatwoot_sdk/src/data/models/chatwoot_user.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_auth_interceptor.dart';
-import 'package:chatwoot_sdk/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_auth_interceptor.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,13 +22,13 @@ void main() {
   late Dio dio;
   late ChatwootClientServiceImpl service;
   late int resets;
-  late List<ChatwootClientException> reported;
+  late List<ZukkoChatException> reported;
   late DateTime clock;
 
   setUpAll(() async => server = await FakeChatServer.start());
   tearDownAll(() => server.close());
 
-  void rig({ChatwootUser? user, LocalStorage? existing}) {
+  void rig({ZukkoChatUser? user, LocalStorage? existing}) {
     storage = existing ?? LocalStorage.inMemory();
     resets = 0;
     reported = [];
@@ -64,8 +64,8 @@ void main() {
       ..pubsubToken = 'pubsub-secret';
   });
 
-  Matcher typed(ChatwootClientExceptionType type) => throwsA(
-    isA<ChatwootClientException>().having((e) => e.type, 'type', type),
+  Matcher typed(ZukkoChatExceptionType type) => throwsA(
+    isA<ZukkoChatException>().having((e) => e.type, 'type', type),
   );
 
   group('start', () {
@@ -99,7 +99,7 @@ void main() {
         'old conversation dropped', () async {
       final other = server.addContact('someone-else');
       rig(
-        user: ChatwootUser(
+        user: ZukkoChatUser(
           identifier: 'u1',
           identifierHash: FakeChatServer.hashFor('u1'),
         ),
@@ -126,7 +126,7 @@ void main() {
 
     test('set_user carries identifier, hash and phone_number', () async {
       rig(
-        user: ChatwootUser(
+        user: ZukkoChatUser(
           identifier: 'u1',
           identifierHash: FakeChatServer.hashFor('u1'),
           name: 'Ali',
@@ -150,7 +150,7 @@ void main() {
     test('set_user keeps the contact: GET /contact confirms it, the stored '
         'identity follows', () async {
       rig(
-        user: ChatwootUser(
+        user: ZukkoChatUser(
           identifier: 'u1',
           name: 'Ali',
           email: 'a@b.c',
@@ -175,7 +175,7 @@ void main() {
     test('set_user that merged us elsewhere: /config runs once more and the '
         'new contact is adopted', () async {
       server.mergeOnSetUser = true;
-      rig(user: ChatwootUser(identifier: 'u1'));
+      rig(user: ZukkoChatUser(identifier: 'u1'));
 
       await session.start();
 
@@ -192,23 +192,23 @@ void main() {
     test('an HMAC 401 fails closed: typed error, no anonymous fallback, '
         'no request goes out', () async {
       rig(
-        user: ChatwootUser(identifier: 'u1', identifierHash: 'bad'),
+        user: ZukkoChatUser(identifier: 'u1', identifierHash: 'bad'),
       );
 
       await expectLater(
         session.start(),
-        typed(ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
       );
       expect(session.failure, isNotNull);
       server.calls.clear();
 
       await expectLater(
         service.getMessages(),
-        typed(ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
       );
       await expectLater(
         session.ensureReady(),
-        typed(ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
       );
       expect(server.calls, isEmpty);
     });
@@ -216,11 +216,11 @@ void main() {
     test('another set_user failure of an identified user is retryable and '
         'never anonymous', () async {
       server.setUserStatus = 500;
-      rig(user: ChatwootUser(identifier: 'u1'));
+      rig(user: ZukkoChatUser(identifier: 'u1'));
 
       await expectLater(
         session.start(),
-        typed(ChatwootClientExceptionType.IDENTIFY_FAILED),
+        typed(ZukkoChatExceptionType.IDENTIFY_FAILED),
       );
 
       expect(session.isReady, isFalse);
@@ -228,18 +228,18 @@ void main() {
       server.calls.clear();
       await expectLater(
         service.getMessages(),
-        typed(ChatwootClientExceptionType.IDENTIFY_FAILED),
+        typed(ZukkoChatExceptionType.IDENTIFY_FAILED),
       );
       expect(server.requests, isEmpty);
     });
 
     test('a set_user failure without an identifier is only reported', () async {
       server.setUserStatus = 500;
-      rig(user: ChatwootUser(name: 'Jane'));
+      rig(user: ZukkoChatUser(name: 'Jane'));
 
       await session.start();
 
-      expect(reported.single.type, ChatwootClientExceptionType.IDENTIFY_FAILED);
+      expect(reported.single.type, ZukkoChatExceptionType.IDENTIFY_FAILED);
       expect(await service.getMessages(), isNotEmpty);
     });
 
@@ -249,7 +249,7 @@ void main() {
 
       await expectLater(
         session.start(),
-        typed(ChatwootClientExceptionType.GET_CONFIG_FAILED),
+        typed(ZukkoChatExceptionType.GET_CONFIG_FAILED),
       );
 
       server.forceStatus = null;
@@ -291,7 +291,7 @@ void main() {
 
       await expectLater(
         service.getMessages(),
-        typed(ChatwootClientExceptionType.SESSION_EXPIRED),
+        typed(ZukkoChatExceptionType.SESSION_EXPIRED),
       );
       expect(server.requests, ['GET /api/v1/widget/messages']);
     });
@@ -419,7 +419,7 @@ void main() {
 
       await expectLater(
         service.getMessages(),
-        typed(ChatwootClientExceptionType.SESSION_EXPIRED),
+        typed(ZukkoChatExceptionType.SESSION_EXPIRED),
       );
       expect(server.requests, ['GET /api/v1/widget/messages']); // no loop
 
@@ -436,7 +436,7 @@ void main() {
       final created = await service.createMessage(
         ChatwootNewMessageRequest(content: '', echoId: 'e'),
         attachments: [
-          ChatwootUpload.bytes(
+          ZukkoChatUpload.bytes(
             name: 'a.txt',
             bytes: Uint8List.fromList('FILE-BYTES'.codeUnits),
           ),
@@ -461,7 +461,7 @@ void main() {
       debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
       addTearDown(() => debugPrint = originalPrint);
       rig(
-        user: ChatwootUser(
+        user: ZukkoChatUser(
           identifier: 'u1',
           identifierHash: FakeChatServer.hashFor('u1'),
         ),
