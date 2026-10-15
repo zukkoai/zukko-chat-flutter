@@ -116,36 +116,29 @@ Recommended session flow: always call `/config` on start, sending the saved `X-A
 - `GET /messages` returns `{payload, meta}`; pagination is by message id (`before`/`after`).
 - `POST /messages` needs the `referer_url` key.
 - `POST /conversations` always creates a new conversation; `GET /conversations` is one object.
-- WS needs `update_presence` every 20 s, welcome/confirm/reject handling, reconnect refetch, echo dedupe, typing timeout, `conversation.created/updated`, `contact.merged`.
+- WS needs `update_presence` every 20 s, welcome/confirm/reject handling, reconnect refetch, echo dedupe, typing timeout, `conversation.created/updated` (`contact.merged` goes to agents only).
 - `toggle_status` is gated by the `end_conversation` flag.
 - Plan omits: `set_user`/HMAC/token swap, attachments, CSAT, Dyte route, the Public Client API, and `dev_docs/mobile_web_widget_integration.ru.md` (existing WebView guide).
 
 ## 5. Current SDK vs target (gap analysis)
 
-State after phases 1-4 (see `CHANGELOGS/` and `TODO.md`). The SDK still speaks the **Public Client API**; the Widget API migration is open.
+Status 2026-10-15: the SDK speaks the Widget API (see `CHANGELOGS/2026-10-15_widget-api-migration.md`).
 
-**Today**
-- Endpoints: `lib/src/data/remote/api/chatwoot_client_auth_service.dart` (contact + conversation create) and `chatwoot_client_service.dart` (messages get/post, contact get, conversations get). Paths in `chatwoot_paths.dart`.
-- Interceptor `chatwoot_client_api_interceptor.dart` fills the `{INBOX,CONTACT,CONVERSATION}_IDENTIFIER` placeholders, lazily creates contact/conversation, recovers from 401/403/404 (rate-limited); no auth headers.
-- Realtime: `data/remote/realtime/chatwoot_socket.dart` (ActionCable: subscribe on welcome, 20 s `update_presence`, watchdog, reconnect, latest-page refetch). Presence `data` is sent as a JSON string, as the `message` command requires (to verify on the server).
-- No pagination, no typing over HTTP, no attachments, no update_last_seen.
+**Done**
+- `WidgetSession` (`/config` with the saved JWT, `set_user`, second `/config` on a token swap, `GET /contact` check after `set_user`), fail-closed HMAC 401, 404 revalidation + replay in `WidgetAuthInterceptor`, rate limit (3 per minute, `SESSION_EXPIRED`); `website_token` + `X-Auth-Token` on every call.
+- JWT in the encrypted contact box (`authToken`, `@HiveField(5)`); `phoneNumber`; `clientInstanceKey` uses `websiteToken`; no logging of tokens, bodies or URLs with secrets (`LogInterceptor` banned by a test).
+- Messages: `{payload, meta}`, `before`/`after`, send body with `referer_url`/`timestamp`/`echo_id`/`reply_to`, multipart `message[attachments][]` with size/type validation (direct upload dropped), `toggle_typing`, `update_last_seen` (UI wired: debounce 3 s, seen on open/incoming).
+- Realtime: `conversation.created/updated/status_changed` (stored `{id, inboxId, status}`, `onConversationUpdated`), agent attachments, `after=` refetch after a reconnect, rejected/silent subscription -> one rate-limited session refresh, then closed + `onError`. `contact.merged` is not sent to contacts (agents only): not implemented on purpose.
+- Resolved conversation: kept (match the web widget), `onConversationResolved` once; a session reset clears the UI and refetches.
+- Tests: loopback server speaks the Widget routes and `/cable` (`test/utils/fake_chat_server.dart`), end-to-end test in `test/core/widget_end_to_end_test.dart`.
 
-**Done since the first analysis**
-- Typing callbacks no longer swapped; `isMine` is `messageType == 0`; `dateFormat` bug and `print()` calls gone; Riverpod removed; `flutter_secure_storage` is used (Hive key, webview token); the DAO/UI layers were rewritten.
-
-**Must change for the Widget API** (open, tracked in `TODO.md`)
-- Interceptor: attach `website_token` + `X-Auth-Token`; on 404 re-run `/config`.
-- New `/config` call + config model.
-- `ChatwootContact`: `source_id` -> `contactIdentifier`; name/email are non-null but server may send null.
-- Persistence needs an `auth_token` field (new `@HiveField` indexes, never renumber typeIds 0-4).
-- `clientInstanceKey` uses `inboxIdentifier` -> `websiteToken`.
-- Message send body `message:{content,timestamp,echo_id,referer_url}`.
-- GET messages: parse `payload`.
-- Tests/fixtures under `test/` use `/public` paths.
+**Remaining** (tracked in `TODO.md`)
+- Live-server checks: dead pubsub token behaviour (silence vs `reject_subscription`), `set_user` merge (which contact/pubsub token survives).
+- Out of scope in v1: CSAT (`PATCH /messages/:id`), pre-chat form, working hours / out-of-office UI, `toggle_status` (end conversation), Dyte, pagination UI (`before` is supported by the service only), `allow_messages_after_resolved` enforcement (`client.config` exposes it).
 
 **UI vs design image**
 - Theme: `ChatwootChatTheme` (brightness, font, accent/background overrides) feeding three chat styles (`ChatwootChatStyle`: smoothSilk, minimalClean, threadFeed; light and dark).
-- Missing: chat list screen, custom header (avatar + online dot + call buttons), file/image bubbles, voice recording, attachment button, "Powered by Chatwoot" footer hook beyond `showBranding`.
+- Missing: chat list screen (the Widget API has one conversation per contact), custom header with call buttons.
 
 ## 6. Owner requirements (decided 2026-10-13)
 
