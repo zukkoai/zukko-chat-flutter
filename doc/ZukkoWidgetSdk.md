@@ -1,4 +1,4 @@
-# Zukko Widget API migration (chatwoot_sdk)
+# Zukko Widget API migration (zukko_chat_flutter)
 
 Single source of truth for moving this SDK from the Chatwoot Public Client API to the Zukko chat server's Widget API.
 Verified from server code on 2026-10-13. Server repo: `/Users/alisherakhmedov/Desktop/Work/microservices/chat` (Rails Chatwoot fork); all server paths below are relative to it.
@@ -137,7 +137,7 @@ Status 2026-10-15: the SDK speaks the Widget API (see `CHANGELOGS/2026-10-15_wid
 - Out of scope in v1: CSAT (`PATCH /messages/:id`), pre-chat form, working hours / out-of-office UI, `toggle_status` (end conversation), Dyte, pagination UI (`before` is supported by the service only), `allow_messages_after_resolved` enforcement (`client.config` exposes it).
 
 **UI vs design image**
-- Theme: `ChatwootChatTheme` (brightness, font, accent/background overrides) feeding three chat styles (`ChatwootChatStyle`: smoothSilk, minimalClean, threadFeed; light and dark).
+- Theme: `ZukkoChatTheme` (brightness, font, accent/background overrides) feeding three chat styles (`ZukkoChatStyle`: smoothSilk, minimalClean, threadFeed; light and dark).
 - Missing: chat list screen (the Widget API has one conversation per contact), custom header with call buttons.
 
 ## 6. Owner requirements (decided 2026-10-13)

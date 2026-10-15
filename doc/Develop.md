@@ -6,10 +6,10 @@ Set up your local environment for developing a Flutter app by using their [guide
 
 ## Clone the repository
 
-Clone the [chatwoot-flutter-sdk](https://github.com/chatwoot/chatwoot-flutter-sdk) repository.
+Clone the `zukko-chat-flutter` repository.
 
 ```bash
-git clone git@github.com:chatwoot/chatwoot-flutter-sdk.git
+git clone git@github.com:<owner>/zukko-chat-flutter.git
 ```
 
 ## Run the example project for developing
@@ -17,7 +17,7 @@ git clone git@github.com:chatwoot/chatwoot-flutter-sdk.git
 Go to the example directory in the repository.
 
 ```
-cd <path-to>/chatwoot-flutter-sdk/example
+cd <path-to>/zukko-chat-flutter/example
 ```
 
 ### Add the latest dependencies
@@ -30,7 +30,7 @@ This command helps to add all the latest dependencies listed in the pubspec. yam
 
 ### Integration guide
 
-After the above steps, you can follow [how to use steps](https://github.com/chatwoot/chatwoot-flutter-sdk#3-how-to-use).
+After the above steps, you can follow [how to use steps](../README.md#3-zukkochatclient-your-own-ui).
 
 ### Run the project
 
@@ -51,7 +51,7 @@ flutter run
 If you are using IOS, Open the XCode app in macOS and go to the ios directory in the example app.
 
 ```
-cd user/chatwoot-flutter-sdk/example/ios
+cd user/zukko-chat-flutter/example/ios
 ```
 
 And try installing [cocoapods](https://cocoapods.org/) and then try to run build.
