@@ -11,7 +11,7 @@ Server repo: `/Users/alisherakhmedov/Desktop/Work/microservices/chat`. Server co
 - **After every change**: `flutter analyze --fatal-infos` must be clean and `flutter test` must pass. Tests must be real (fail when the logic breaks).
 - **Packages**: always the latest stable version; adapt the code to new APIs instead of staying on an old major. Check with `flutter pub outdated`.
 - **Store safety**: don't add packages that inject storage/media permissions (`READ_MEDIA_*`, `READ/WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE`); no `permission_handler`. Use system pickers.
-- **Naming**: everything a developer sees (package name, README/docs, public classes, screens/widgets, example app) says Zukko / ZukkoChat, never Chatwoot. Internal names and `lib/src` file names may stay. NEVER change Hive box name strings, the secure-storage key string, Hive typeIds/field indices.
+- **Naming**: everything a developer sees (package name, README/docs, public classes, screens/widgets, example app) says Zukko / ZukkoChat, never Chatwoot. Internal identifiers and `lib/src` file names are `zukko_chat_*` too (the only remaining "Chatwoot" strings are the pinned Hive box names and the secure-storage key). NEVER change Hive box name strings, the secure-storage key string, Hive typeIds/field indices.
 - **Parallel sessions**: other sessions may have uncommitted changes in this repo; treat them as the baseline, don't revert or block on them.
 - **Git ignore**: no junk in git (build outputs, IDE/OS files, secrets, root `pubspec.lock`, `TODO.md`).
 
@@ -56,6 +56,10 @@ flutter test
 cd example && flutter analyze && flutter test
 dart pub publish --dry-run
 ```
+
+CI (`.github/workflows/`): `test.yml` runs build_runner, `flutter analyze` and `flutter test` on every push (except `main`) and PR; `release.yml` runs the same tests on `main`, creates tag `v<pubspec version>` (needs secret `RELEASE_TOKEN`), and the tag run publishes to pub.dev via OIDC.
+
+Release: bump `version` in `pubspec.yaml` + `CHANGELOG.md`, merge to `main` -> auto tag -> pub.dev. If the version is already tagged, nothing is published.
 
 ## Key facts
 

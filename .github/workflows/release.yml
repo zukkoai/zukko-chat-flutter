@@ -1,0 +1,68 @@
+name: Release
+
+# main: test, then create tag v<pubspec version> (if new).
+# tag push: test, then publish to pub.dev (pub.dev OIDC only accepts tag-triggered runs).
+on:
+  push:
+    branches: [main]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  tag:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require RELEASE_TOKEN
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::Secret RELEASE_TOKEN is missing. Add a fine-grained PAT (Contents: read & write) as a repository secret; the default GITHUB_TOKEN cannot trigger the publish run."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - name: Create tag from pubspec version
+        run: |
+          version=$(sed -n 's/^version: *\([^ #]*\).*/\1/p' pubspec.yaml | head -n1)
+          [ -n "$version" ] || { echo "::error::version not found in pubspec.yaml"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null; then
+            echo "Version ${version} already released, bump pubspec version to publish."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${version}" -m "Release v${version}"
+          git push origin "v${version}"
+
+  publish:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: pub.dev
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - name: Tag must match pubspec version
+        run: |
+          version=$(sed -n 's/^version: *\([^ #]*\).*/\1/p' pubspec.yaml | head -n1)
+          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match pubspec version v${version}"
+            exit 1
+          fi
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter pub publish --force
