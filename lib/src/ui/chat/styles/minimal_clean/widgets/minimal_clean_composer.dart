@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../l10n/chatwoot_l10n.dart';
-import '../../../chatwoot_chat_style.dart';
-import '../../../components/chat_icon_button.dart';
-import '../../../components/composer_shell.dart';
-import '../../../components/voice_recorder.dart';
+import '../../../../l10n/zukko_chat_l10n.dart';
+import '../../../components/components.dart';
+import '../../../zukko_chat_style.dart';
+import '../minimal_clean_metrics.dart';
 import '../minimal_clean_tokens.dart';
 
 /// Two-row card: the text on top, actions below (attach left; mic and send
@@ -29,92 +28,65 @@ class MinimalCleanComposer extends StatelessWidget {
     onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
-    builder: (context, handle) {
-      final recorder = handle.recorder;
-      return Padding(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding - 4,
-          6,
-          horizontalPadding - 4,
-          4,
+    builder: (context, handle) => Padding(
+      padding: composerInsets(
+        horizontalPadding,
+        shave: MinimalCleanMetrics.composerShave,
+        top: MinimalCleanMetrics.composerTop,
+        bottom: MinimalCleanMetrics.composerBottom,
+      ),
+      child: Container(
+        padding: MinimalCleanMetrics.cardPadding,
+        decoration: BoxDecoration(
+          color: tokens.composerFill,
+          borderRadius: BorderRadius.circular(
+            MinimalCleanMetrics.composerRadius,
+          ),
+          border: Border.all(color: tokens.composerBorder),
         ),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: tokens.composerFill,
-            borderRadius: BorderRadius.circular(
-              MinimalCleanTokens.composerRadius,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: MinimalCleanMetrics.inputPadding,
+              child: ComposerInput(
+                handle: handle,
+                l10n: l10n,
+                tokens: tokens,
+                minHeight: MinimalCleanMetrics.inputMinHeight,
+              ),
             ),
-            border: Border.all(color: tokens.composerBorder),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: recorder != null && recorder.isRecording
-                    ? SizedBox(
-                        height: 44,
-                        child: VoiceRecordingBar(
-                          recorder: recorder,
-                          cancelHint: l10n.voiceCancelHint,
-                          releaseToCancel: l10n.voiceReleaseToCancel,
-                          timerStyle: tokens.body,
-                          hintStyle: tokens.status,
-                          dotColor: tokens.error,
-                        ),
-                      )
-                    : ComposerTextField(
-                        handle: handle,
-                        hintText: l10n.inputPlaceholder,
-                        style: tokens.body,
-                        hintStyle: tokens.hint,
-                        cursorColor: tokens.accent,
-                        keyboardAppearance: tokens.brightness,
-                      ),
-              ),
-              Row(
-                children: [
-                  if (data.onAttach != null)
-                    ChatIconButton(
-                      icon: Icons.add_rounded,
-                      tooltip: l10n.attachLabel,
-                      onPressed: handle.isRecording ? null : data.onAttach,
-                      color: tokens.icon,
-                      size: 44,
-                    ),
-                  const Spacer(),
-                  if (recorder != null)
-                    VoiceRecordButton(
-                      recorder: recorder,
-                      semanticLabel: l10n.voiceRecordLabel,
-                      child: SizedBox.square(
-                        dimension: 44,
-                        child: Icon(
-                          Icons.mic_none_rounded,
-                          size: 22,
-                          color: recorder.isRecording
-                              ? tokens.accent
-                              : tokens.icon,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 4),
-                  ChatIconButton(
-                    icon: Icons.arrow_upward_rounded,
-                    tooltip: l10n.sendLabel,
-                    onPressed: handle.canSend ? handle.send : null,
-                    color: tokens.onAccent,
-                    fill: tokens.accent,
-                    size: 44,
-                    iconSize: 20,
-                  ),
-                ],
-              ),
-            ],
-          ),
+            Row(
+              children: [
+                ComposerAttachButton(
+                  onAttach: data.onAttach,
+                  handle: handle,
+                  l10n: l10n,
+                  tokens: tokens,
+                  icon: Icons.add_rounded,
+                  size: MinimalCleanMetrics.buttonSize,
+                  hiddenWidth: 0,
+                ),
+                const Spacer(),
+                ComposerMicButton(
+                  handle: handle,
+                  l10n: l10n,
+                  tokens: tokens,
+                  size: MinimalCleanMetrics.buttonSize,
+                ),
+                const SizedBox(width: MinimalCleanMetrics.actionGap),
+                ComposerSendButton(
+                  handle: handle,
+                  l10n: l10n,
+                  tokens: tokens,
+                  size: MinimalCleanMetrics.buttonSize,
+                  iconSize: MinimalCleanMetrics.sendIcon,
+                ),
+              ],
+            ),
+          ],
         ),
-      );
-    },
+      ),
+    ),
   );
 }

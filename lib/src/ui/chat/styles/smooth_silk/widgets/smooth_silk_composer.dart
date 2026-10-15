@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../l10n/chatwoot_l10n.dart';
-import '../../../chatwoot_chat_style.dart';
-import '../../../components/chat_icon_button.dart';
-import '../../../components/composer_shell.dart';
-import '../../../components/voice_recorder.dart';
+import '../../../../l10n/zukko_chat_l10n.dart';
+import '../../../components/components.dart';
+import '../../../zukko_chat_style.dart';
+import '../smooth_silk_metrics.dart';
 import '../smooth_silk_tokens.dart';
 
 /// Pill field (attach, text, mic) on the background plus a round send button,
@@ -29,101 +28,71 @@ class SmoothSilkComposer extends StatelessWidget {
     onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
-    builder: (context, handle) {
-      final recorder = handle.recorder;
-      return Padding(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding - 2,
-          8,
-          horizontalPadding - 2,
-          6,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: const BoxConstraints(
-                  minHeight: SmoothSilkTokens.composerHeight,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                decoration: BoxDecoration(
-                  color: tokens.composerFill,
-                  borderRadius: BorderRadius.circular(
-                    SmoothSilkTokens.composerHeight / 2,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (data.onAttach != null && !handle.isRecording)
-                      ChatIconButton(
-                        icon: Icons.add_rounded,
-                        tooltip: l10n.attachLabel,
-                        onPressed: data.onAttach,
-                        color: tokens.icon,
-                        fill: tokens.composerButtonFill,
-                        size: 44,
-                      )
-                    else
-                      const SizedBox(width: 12),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: recorder != null && recorder.isRecording
-                          ? SizedBox(
-                              height: 44,
-                              child: VoiceRecordingBar(
-                                recorder: recorder,
-                                cancelHint: l10n.voiceCancelHint,
-                                releaseToCancel: l10n.voiceReleaseToCancel,
-                                timerStyle: tokens.body,
-                                hintStyle: tokens.status,
-                                dotColor: tokens.error,
-                              ),
-                            )
-                          : ComposerTextField(
-                              handle: handle,
-                              hintText: l10n.inputPlaceholder,
-                              style: tokens.body,
-                              hintStyle: tokens.hint,
-                              cursorColor: tokens.accent,
-                              keyboardAppearance: tokens.brightness,
-                            ),
-                    ),
-                    if (recorder != null)
-                      VoiceRecordButton(
-                        recorder: recorder,
-                        semanticLabel: l10n.voiceRecordLabel,
-                        child: SizedBox.square(
-                          dimension: 44,
-                          child: Icon(
-                            Icons.mic_none_rounded,
-                            size: 22,
-                            color: recorder.isRecording
-                                ? tokens.accent
-                                : tokens.icon,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 8),
-                  ],
+    builder: (context, handle) => Padding(
+      padding: composerInsets(
+        horizontalPadding,
+        shave: SmoothSilkMetrics.composerShave,
+        top: SmoothSilkMetrics.composerTop,
+        bottom: SmoothSilkMetrics.composerBottom,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: SmoothSilkMetrics.composerHeight,
+              ),
+              padding: SmoothSilkMetrics.pillPadding,
+              decoration: BoxDecoration(
+                color: tokens.composerFill,
+                borderRadius: BorderRadius.circular(
+                  SmoothSilkMetrics.composerHeight / 2,
                 ),
               ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ComposerAttachButton(
+                    onAttach: data.onAttach,
+                    handle: handle,
+                    l10n: l10n,
+                    tokens: tokens,
+                    icon: Icons.add_rounded,
+                    fill: tokens.composerButtonFill,
+                    size: SmoothSilkMetrics.buttonSize,
+                    hiddenWidth: SmoothSilkMetrics.hiddenAttachWidth,
+                  ),
+                  const SizedBox(width: SmoothSilkMetrics.attachGap),
+                  Expanded(
+                    child: ComposerInput(
+                      handle: handle,
+                      l10n: l10n,
+                      tokens: tokens,
+                      minHeight: SmoothSilkMetrics.inputMinHeight,
+                    ),
+                  ),
+                  ComposerMicButton(
+                    handle: handle,
+                    l10n: l10n,
+                    tokens: tokens,
+                    size: SmoothSilkMetrics.buttonSize,
+                    absentWidth: SmoothSilkMetrics.micAbsentWidth,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
-            ChatIconButton(
-              icon: Icons.arrow_upward_rounded,
-              tooltip: l10n.sendLabel,
-              onPressed: handle.canSend ? handle.send : null,
-              color: tokens.onAccent,
-              fill: tokens.accent,
-              size: SmoothSilkTokens.composerHeight,
-              iconSize: 22,
-            ),
-          ],
-        ),
-      );
-    },
+          ),
+          const SizedBox(width: SmoothSilkMetrics.sendGap),
+          ComposerSendButton(
+            handle: handle,
+            l10n: l10n,
+            tokens: tokens,
+            size: SmoothSilkMetrics.composerHeight,
+            iconSize: SmoothSilkMetrics.sendIcon,
+          ),
+        ],
+      ),
+    ),
   );
 }

@@ -1,55 +1,63 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../components/chat_avatar.dart';
-import '../../../components/message_meta.dart';
+import '../../../components/components.dart';
+import '../thread_feed_metrics.dart';
 import '../thread_feed_tokens.dart';
 
 /// One full-width row: avatar, then name and time over the content. Later
 /// messages of the same group keep the indent but skip avatar and name.
 class ThreadFeedRow extends StatelessWidget {
   final ThreadFeedTokens tokens;
-  final bool isSentByMe;
-  final String authorName;
-  final String? avatarUrl;
-  final MessageMeta meta;
-  final String failedHint;
+  final MessageSlot slot;
   final Widget child;
 
   const ThreadFeedRow({
     super.key,
     required this.tokens,
-    required this.isSentByMe,
-    required this.authorName,
-    required this.meta,
-    required this.failedHint,
+    required this.slot,
     required this.child,
-    this.avatarUrl,
   });
+
+  /// Files and voice messages sit in a card; the rest is bare.
+  Widget get _content => switch (slot.part) {
+    MessagePart.file => _Card(
+      padding: ThreadFeedMetrics.cardPadding,
+      fill: tokens.cardFill,
+      border: tokens.cardBorder,
+      radius: ThreadFeedMetrics.radius,
+      child: child,
+    ),
+    MessagePart.audio => _Card(
+      padding: ThreadFeedMetrics.audioPadding,
+      fill: tokens.fieldFill,
+      radius: ThreadFeedMetrics.audioRadius,
+      child: child,
+    ),
+    _ => child,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final meta = slot.meta;
+    final sent = slot.isSentByMe;
     final showAuthor = meta.isGroupStart;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showAuthor)
           ChatAvatar(
-            name: authorName,
-            imageUrl: avatarUrl,
-            size: ThreadFeedTokens.avatarSize,
-            radius: isSentByMe ? null : 10,
-            background: isSentByMe
-                ? tokens.userAvatarFill
-                : tokens.agentAvatarFill,
+            name: slot.authorName,
+            imageUrl: slot.avatarUrl,
+            size: ThreadFeedMetrics.avatarSize,
+            radius: sent ? null : ThreadFeedMetrics.rowAvatarRadius,
+            background: sent ? tokens.userAvatarFill : tokens.agentAvatarFill,
             initialStyle: tokens.name.copyWith(
-              color: isSentByMe
-                  ? tokens.userAvatarText
-                  : tokens.agentAvatarText,
+              color: sent ? tokens.userAvatarText : tokens.agentAvatarText,
             ),
           )
         else
-          const SizedBox(width: ThreadFeedTokens.avatarSize),
-        const SizedBox(width: ThreadFeedTokens.avatarGap),
+          const SizedBox(width: ThreadFeedMetrics.avatarSize),
+        const SizedBox(width: ThreadFeedMetrics.avatarGap),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,37 +65,72 @@ class ThreadFeedRow extends StatelessWidget {
             children: [
               if (showAuthor)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
+                  padding: const EdgeInsets.only(
+                    bottom: ThreadFeedMetrics.nameGap,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Flexible(
                         child: Text(
-                          authorName,
+                          slot.authorName,
                           style: tokens.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: ThreadFeedMetrics.timeGap),
                       Text(meta.time, style: tokens.caption),
                     ],
                   ),
                 ),
-              Opacity(opacity: meta.sending ? 0.6 : 1, child: child),
+              SendingOpacity(meta: meta, child: _content),
               if (meta.failed)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    failedHint,
-                    style: tokens.caption.copyWith(color: tokens.error),
+                  padding: const EdgeInsets.only(
+                    top: ThreadFeedMetrics.failedHintTop,
+                  ),
+                  child: FailedHint(
+                    text: slot.failedHint,
+                    captionStyle: tokens.caption,
+                    color: tokens.error,
                   ),
                 ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  final EdgeInsetsGeometry padding;
+  final Color fill;
+  final Color? border;
+  final double radius;
+  final Widget child;
+
+  const _Card({
+    required this.padding,
+    required this.fill,
+    required this.radius,
+    required this.child,
+    this.border,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final line = border;
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(radius),
+        border: line == null ? null : Border.all(color: line),
+      ),
+      child: child,
     );
   }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../l10n/chatwoot_l10n.dart';
-import '../../../chatwoot_chat_style.dart';
-import '../../../components/chat_icon_button.dart';
-import '../../../components/composer_shell.dart';
-import '../../../components/voice_recorder.dart';
+import '../../../../l10n/zukko_chat_l10n.dart';
+import '../../../components/components.dart';
+import '../../../zukko_chat_style.dart';
+import '../thread_feed_metrics.dart';
 import '../thread_feed_tokens.dart';
 
 /// Square-cornered field (attach, text, send inside) and a separate
@@ -23,125 +22,90 @@ class ThreadFeedComposer extends StatelessWidget {
     required this.horizontalPadding,
   });
 
-  static const _height = 50.0;
-
   @override
   Widget build(BuildContext context) => ComposerShell(
     onSend: data.onSend,
     onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
-    builder: (context, handle) {
-      final recorder = handle.recorder;
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: tokens.divider)),
+    builder: (context, handle) => DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: tokens.divider)),
+      ),
+      child: Padding(
+        padding: composerInsets(
+          horizontalPadding,
+          shave: ThreadFeedMetrics.composerShave,
+          top: ThreadFeedMetrics.composerTop,
+          bottom: ThreadFeedMetrics.composerBottom,
         ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding - 4,
-            10,
-            horizontalPadding - 4,
-            4,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: _height),
-                  padding: const EdgeInsetsDirectional.fromSTEB(3, 3, 5, 3),
-                  decoration: BoxDecoration(
-                    color: tokens.fieldFill,
-                    borderRadius: BorderRadius.circular(
-                      ThreadFeedTokens.radius,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(
+                  minHeight: ThreadFeedMetrics.composerHeight,
+                ),
+                padding: ThreadFeedMetrics.fieldPadding,
+                decoration: BoxDecoration(
+                  color: tokens.fieldFill,
+                  borderRadius: BorderRadius.circular(ThreadFeedMetrics.radius),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    ComposerAttachButton(
+                      onAttach: data.onAttach,
+                      handle: handle,
+                      l10n: l10n,
+                      tokens: tokens,
+                      icon: Icons.attach_file_rounded,
+                      radius: ThreadFeedMetrics.attachRadius,
+                      size: ThreadFeedMetrics.attachSize,
+                      hiddenWidth: ThreadFeedMetrics.hiddenAttachWidth,
                     ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (data.onAttach != null && !handle.isRecording)
-                        ChatIconButton(
-                          icon: Icons.attach_file_rounded,
-                          tooltip: l10n.attachLabel,
-                          onPressed: data.onAttach,
-                          color: tokens.icon,
-                          radius: 10,
-                          size: 44,
-                        )
-                      else
-                        const SizedBox(width: 12),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: recorder != null && recorder.isRecording
-                            ? SizedBox(
-                                height: 44,
-                                child: VoiceRecordingBar(
-                                  recorder: recorder,
-                                  cancelHint: l10n.voiceCancelHint,
-                                  releaseToCancel: l10n.voiceReleaseToCancel,
-                                  timerStyle: tokens.body,
-                                  hintStyle: tokens.status,
-                                  dotColor: tokens.error,
-                                ),
-                              )
-                            : ComposerTextField(
-                                handle: handle,
-                                hintText: l10n.inputPlaceholder,
-                                style: tokens.body,
-                                hintStyle: tokens.hint,
-                                cursorColor: tokens.accent,
-                                keyboardAppearance: tokens.brightness,
-                              ),
+                    const SizedBox(width: ThreadFeedMetrics.attachGap),
+                    Expanded(
+                      child: ComposerInput(
+                        handle: handle,
+                        l10n: l10n,
+                        tokens: tokens,
+                        minHeight: ThreadFeedMetrics.inputMinHeight,
                       ),
-                      const SizedBox(width: 6),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: ChatIconButton(
-                          icon: Icons.arrow_upward_rounded,
-                          tooltip: l10n.sendLabel,
-                          onPressed: handle.canSend ? handle.send : null,
-                          color: tokens.onAccent,
-                          fill: tokens.accent,
-                          radius: 9,
-                          size: 40,
-                          iconSize: 19,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: ThreadFeedMetrics.sendGap),
+                    ComposerSendButton(
+                      handle: handle,
+                      l10n: l10n,
+                      tokens: tokens,
+                      radius: ThreadFeedMetrics.sendRadius,
+                      size: ThreadFeedMetrics.sendSize,
+                      iconSize: ThreadFeedMetrics.sendIcon,
+                    ),
+                  ],
                 ),
               ),
-              if (recorder != null) ...[
-                const SizedBox(width: 8),
-                VoiceRecordButton(
-                  recorder: recorder,
-                  semanticLabel: l10n.voiceRecordLabel,
-                  child: Container(
-                    width: _height,
-                    height: _height,
-                    decoration: BoxDecoration(
-                      color: recorder.isRecording
-                          ? tokens.accent
-                          : tokens.micFill,
-                      borderRadius: BorderRadius.circular(
-                        ThreadFeedTokens.radius,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.mic_none_rounded,
-                      size: 23,
-                      color: recorder.isRecording
-                          ? tokens.onAccent
-                          : tokens.micIcon,
-                    ),
-                  ),
+            ),
+            if (handle.recorder != null) ...[
+              const SizedBox(width: ThreadFeedMetrics.micGap),
+              ComposerMicButton(
+                handle: handle,
+                l10n: l10n,
+                tokens: tokens,
+                size: ThreadFeedMetrics.composerHeight,
+                tile: ComposerMicTile(
+                  fill: tokens.micFill,
+                  iconColor: tokens.micIcon,
+                  radius: ThreadFeedMetrics.radius,
+                  size: ThreadFeedMetrics.composerHeight,
+                  iconSize: ThreadFeedMetrics.micIcon,
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
-      );
-    },
+      ),
+    ),
   );
 }
