@@ -2,108 +2,112 @@ import 'package:dio/dio.dart';
 
 import '../../../core/chatwoot_client_exception.dart';
 import '../../../core/chatwoot_upload.dart';
-import '../../models/chatwoot_contact.dart';
 import '../../models/chatwoot_conversation.dart';
 import '../../models/chatwoot_message.dart';
-import '../../../shared/json_converters.dart';
 import 'api_call.dart';
-import 'chatwoot_client_api_interceptor.dart';
 import 'chatwoot_paths.dart';
 import 'requests/chatwoot_new_message_request.dart';
+import 'widget_auth_interceptor.dart';
+import 'widget_message_form.dart';
 
-/// Service for handling chatwoot api calls
+/// Service for handling the Widget API calls of the current session.
 /// See [ChatwootClientServiceImpl]
 abstract class ChatwootClientService {
   final Dio _dio;
 
   ChatwootClientService(this._dio);
 
-  Future<ChatwootContact> getContact();
+  /// One page of messages, oldest first: the latest 20 without a cursor, 20
+  /// older than id [before], or up to 100 newer than id [after].
+  Future<List<ChatwootMessage>> getMessages({int? before, int? after});
 
-  Future<List<ChatwootConversation>> getConversations();
+  /// The contact's current conversation, or null when it has none yet.
+  Future<ChatwootConversation?> getConversation();
 
-  Future<ChatwootMessage> createMessage(ChatwootNewMessageRequest request);
+  /// Sends [request], as multipart when [attachments] is not empty. Creates
+  /// the conversation if the contact has none.
+  Future<ChatwootMessage> createMessage(
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  });
 
-  /// Sends [request] with [attachments] as one multipart message.
-  Future<ChatwootMessage> createMessageWithAttachments(
-    ChatwootNewMessageRequest request,
-    List<ChatwootUpload> attachments,
-  );
+  /// Tells agents the contact started or stopped typing.
+  Future<void> toggleTyping(bool on);
 
-  Future<List<ChatwootMessage>> getAllMessages();
+  /// Marks the agents' messages as read.
+  Future<void> updateLastSeen();
 }
-
-// Paths contain placeholders the interceptor fills in per request.
-const _inbox = ChatwootClientApiInterceptor.inboxPlaceholder;
-const _contact = ChatwootClientApiInterceptor.contactPlaceholder;
-const _conversation = ChatwootClientApiInterceptor.conversationPlaceholder;
-
-final _contactPath = ChatwootPaths.contact(_inbox, _contact);
-final _conversationsPath = ChatwootPaths.conversations(_inbox, _contact);
-final _messagesPath = ChatwootPaths.messages(_inbox, _contact, _conversation);
 
 class ChatwootClientServiceImpl extends ChatwootClientService {
   ChatwootClientServiceImpl({required Dio dio}) : super(dio);
 
-  ///Sends message to chatwoot inbox
+  /// Fire-and-forget calls: a 404 (no conversation yet) must not start a
+  /// session recovery.
+  static final _noRecover = Options(
+    extra: {WidgetAuthInterceptor.noRecover: true},
+  );
+
   @override
-  Future<ChatwootMessage> createMessage(ChatwootNewMessageRequest request) =>
+  Future<List<ChatwootMessage>> getMessages({int? before, int? after}) =>
       apiCall(
-        ChatwootClientExceptionType.SEND_MESSAGE_FAILED,
-        () => _dio.post(_messagesPath, data: request.toJson()),
-        (data) => ChatwootMessage.fromJson(data as Map<String, dynamic>),
+        ChatwootClientExceptionType.GET_MESSAGES_FAILED,
+        () => _dio.get(
+          ChatwootPaths.messages,
+          queryParameters: {'before': ?before, 'after': ?after},
+        ),
+        parseMessagesPage,
       );
 
-  /// Multipart `content` (when not empty), `echo_id` and one
-  /// `attachments[]` part per file; the content type comes from the name.
   @override
-  Future<ChatwootMessage> createMessageWithAttachments(
-    ChatwootNewMessageRequest request,
-    List<ChatwootUpload> attachments,
-  ) => apiCall(ChatwootClientExceptionType.SEND_MESSAGE_FAILED, () async {
-    final form = FormData();
-    if (request.content.isNotEmpty) {
-      form.fields.add(MapEntry('content', request.content));
-    }
-    form.fields.add(MapEntry('echo_id', request.echoId));
+  Future<ChatwootConversation?> getConversation() => apiCall(
+    ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
+    () => _dio.get(ChatwootPaths.conversations),
+    (data) {
+      final conversation = ChatwootConversation.fromJson(
+        data as Map<String, dynamic>,
+      );
+      return conversation.id > 0 ? conversation : null; // `{}`: none yet
+    },
+  );
+
+  @override
+  Future<ChatwootMessage> createMessage(
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  }) => apiCall(ChatwootClientExceptionType.SEND_MESSAGE_FAILED, () async {
     for (final file in attachments) {
-      form.files.add(MapEntry('attachments[]', await _part(file)));
+      await validateUploadFile(file);
     }
-    return _dio.post(_messagesPath, data: form);
+    final Object body = attachments.isEmpty
+        ? buildMessageJson(
+            content: request.content,
+            echoId: request.echoId,
+            replyTo: request.replyTo,
+          )
+        : await buildMessageForm(
+            content: request.content,
+            echoId: request.echoId,
+            files: attachments,
+            replyTo: request.replyTo,
+          );
+    return _dio.post(ChatwootPaths.messages, data: body);
   }, (data) => ChatwootMessage.fromJson(data as Map<String, dynamic>));
 
-  static Future<MultipartFile> _part(ChatwootUpload file) {
-    final bytes = file.bytes;
-    if (bytes != null) {
-      return Future.value(MultipartFile.fromBytes(bytes, filename: file.name));
-    }
-    return MultipartFile.fromFile(file.path!, filename: file.name);
-  }
-
-  ///Gets all messages of current chatwoot client instance's conversation
   @override
-  Future<List<ChatwootMessage>> getAllMessages() => apiCall(
-    ChatwootClientExceptionType.GET_MESSAGES_FAILED,
-    () => _dio.get(_messagesPath),
-    (data) => parseMessages(data),
+  Future<void> toggleTyping(bool on) => apiCall(
+    ChatwootClientExceptionType.UPDATE_CONTACT_FAILED,
+    () => _dio.post(
+      ChatwootPaths.toggleTyping,
+      queryParameters: {'typing_status': on ? 'on' : 'off'},
+      options: _noRecover,
+    ),
+    (_) {},
   );
 
-  ///Gets contact of current chatwoot client instance
   @override
-  Future<ChatwootContact> getContact() => apiCall(
-    ChatwootClientExceptionType.GET_CONTACT_FAILED,
-    () => _dio.get(_contactPath),
-    (data) => ChatwootContact.fromJson(data as Map<String, dynamic>),
-  );
-
-  ///Gets all conversation of current chatwoot client instance
-  @override
-  Future<List<ChatwootConversation>> getConversations() => apiCall(
-    ChatwootClientExceptionType.GET_CONVERSATION_FAILED,
-    () => _dio.get(_conversationsPath),
-    (data) => [
-      for (final c in parseList(data, ChatwootConversation.fromJson))
-        if (c.id > 0) c,
-    ],
+  Future<void> updateLastSeen() => apiCall(
+    ChatwootClientExceptionType.UPDATE_CONTACT_FAILED,
+    () => _dio.post(ChatwootPaths.updateLastSeen, options: _noRecover),
+    (_) {},
   );
 }

@@ -5,38 +5,41 @@ import '../data/chatwoot_repository.dart';
 import '../data/local/instance_key.dart';
 import '../data/local/local_storage.dart';
 import '../data/models/chatwoot_user.dart';
-import '../data/remote/api/chatwoot_client_api_interceptor.dart';
-import '../data/remote/api/chatwoot_client_auth_service.dart';
 import '../data/remote/api/chatwoot_client_service.dart';
 import '../data/remote/api/requests/chatwoot_new_message_request.dart';
+import '../data/remote/api/widget_auth_interceptor.dart';
+import '../data/remote/api/widget_config.dart';
+import '../data/remote/api/widget_session.dart';
 import '../data/remote/realtime/chatwoot_action_data.dart';
 import '../data/remote/realtime/chatwoot_socket.dart';
+import '../shared/http_client.dart';
 import '../shared/sdk_log.dart';
 import '../shared/url_policy.dart';
 import 'chatwoot_callbacks.dart';
 import 'chatwoot_client_exception.dart';
 import 'chatwoot_upload.dart';
 
-/// Represents a chatwoot client instance. All chatwoot operations (Example: sendMessages) are
-/// passed through chatwoot client. For more info visit
-/// https://www.chatwoot.com/docs/product/channels/api/client-apis
+/// Represents a chat client instance on the Zukko/Chatwoot Widget API. All chat
+/// operations (Example: sendMessage) are passed through the client.
 ///
 /// {@category FlutterClientSdk}
 class ChatwootClient {
   final ChatwootRepository _repository;
   final List<Dio> _dios;
+  final WidgetSession? _session;
   bool _disposed = false;
 
   final String baseUrl;
-  final String inboxIdentifier;
+  final String websiteToken;
   final ChatwootCallbacks? callbacks;
   final ChatwootUser? user;
 
   ChatwootClient._(
     this._repository,
-    this._dios, {
+    this._dios,
+    this._session, {
     required this.baseUrl,
-    required this.inboxIdentifier,
+    required this.websiteToken,
     this.user,
     this.callbacks,
   });
@@ -46,11 +49,16 @@ class ChatwootClient {
   ChatwootClient.withRepository(
     ChatwootRepository repository, {
     required this.baseUrl,
-    required this.inboxIdentifier,
+    required this.websiteToken,
     this.user,
     this.callbacks,
   }) : _repository = repository,
-       _dios = const [];
+       _dios = const [],
+       _session = null;
+
+  /// Branding and behaviour of the widget inbox (title, colour, working hours,
+  /// ...); null until the session was established.
+  WidgetConfig? get config => _session?.config;
 
   /// Retrieves chatwoot client's messages. If persistence is enabled
   /// [ChatwootCallbacks.onPersistedMessagesRetrieved] will be triggered with
@@ -67,20 +75,37 @@ class ChatwootClient {
   /// message fails to send [ChatwootCallbacks.onError] will be triggered [echoId] as data.
   ///
   /// [attachments] (images, files, voice; at most [ChatwootUpload.maxSize]
-  /// each) go with the message; [content] may then be empty.
+  /// each) go with the message; [content] may then be empty. [replyTo] is the
+  /// id of the message this one answers.
   Future<void> sendMessage({
     required String content,
     required String echoId,
     List<ChatwootUpload> attachments = const [],
+    int? replyTo,
   }) async {
-    final request = ChatwootNewMessageRequest(content: content, echoId: echoId);
+    final request = ChatwootNewMessageRequest(
+      content: content,
+      echoId: echoId,
+      replyTo: replyTo,
+    );
     await _repository.sendMessage(request, attachments: attachments);
   }
 
-  /// Send chatwoot action performed by user.
+  /// Tells the agents the user started ([on]) or stopped typing. Best effort:
+  /// failures are not reported.
+  Future<void> setTyping(bool on) => _repository.setTyping(on);
+
+  /// Tells the agents the user has read their messages. Best effort.
+  Future<void> markSeen() => _repository.markSeen();
+
+  /// Call when the app returns to the foreground: restarts the realtime
+  /// connection if it had stopped (for instance after a rejected subscription).
+  void resume() => _repository.resume();
+
+  /// Sends the realtime presence action (`update_presence`).
   ///
-  /// Example: User started typing. Completes with `false` when the action
-  /// could not be sent (the realtime connection is not subscribed).
+  /// Completes with `false` when the action could not be sent (the realtime
+  /// connection is not subscribed).
   Future<bool> sendAction(ChatwootActionType action) async =>
       _repository.sendAction(action);
 
@@ -100,14 +125,16 @@ class ChatwootClient {
       _repository.clear(clearChatwootUserStorage: false);
 
   /// Creates an instance of [ChatwootClient] with the [baseUrl] of your chatwoot installation,
-  /// [inboxIdentifier] for the targeted inbox. Specify custom user details using [user] and [callbacks] for
+  /// [websiteToken] of the web widget inbox. Specify custom user details using [user] and [callbacks] for
   /// handling chatwoot events. By default persistence is enabled, to disable persistence set [enablePersistence] as false.
   ///
   /// [baseUrl] must be https; plain http is only accepted for localhost /
   /// 10.0.2.2, or for any host when [allowInsecure] is true (development only).
   /// An invalid [baseUrl] throws an [ArgumentError].
   ///
-  /// Completes once the initial contact and conversation refresh finished.
+  /// Completes once the session (`/config`, `set_user`) and the conversation
+  /// refresh finished. A rejected `identifierHash` fails closed: the client
+  /// reports `INVALID_IDENTIFIER_HASH` and neither fetches nor connects.
   /// Failures during that refresh are reported through [ChatwootCallbacks.onError]
   /// instead of being thrown. If local storage cannot be opened the client
   /// still works, without persistence, and reports `STORAGE_FAILED`.
@@ -118,11 +145,12 @@ class ChatwootClient {
   /// the user's `identifierHash` and `customAttributes` are never written to disk.
   static Future<ChatwootClient> create({
     required String baseUrl,
-    required String inboxIdentifier,
+    required String websiteToken,
     ChatwootUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,
     ChatwootCallbacks? callbacks,
+    @visibleForTesting Duration? socketSubscribeTimeout,
   }) async {
     validateBaseUrl(baseUrl, allowInsecure: allowInsecure);
     final cableUrl = chatwootCableUri(baseUrl);
@@ -134,7 +162,7 @@ class ChatwootClient {
         storage = LocalStorage.persisted(
           getClientInstanceKey(
             baseUrl: baseUrl,
-            inboxIdentifier: inboxIdentifier,
+            websiteToken: websiteToken,
             userIdentifier: user?.identifier,
             identifierHash: user?.identifierHash,
           ),
@@ -153,32 +181,44 @@ class ChatwootClient {
     }
 
     late final ChatwootRepositoryImpl repository;
-    final authDio = Dio(BaseOptions(baseUrl: baseUrl));
-    final dio = Dio(BaseOptions(baseUrl: baseUrl))
-      ..interceptors.add(
-        ChatwootClientApiInterceptor(
-          inboxIdentifier,
-          storage,
-          ChatwootClientAuthServiceImpl(dio: authDio),
-          onSessionReset: () => repository.onSessionReset(),
-        ),
-      );
+    final bareDio = chatwootDio(baseUrl);
+    final session = WidgetSession(
+      dio: bareDio,
+      websiteToken: websiteToken,
+      storage: storage,
+      user: user,
+      onSessionReset: () => repository.onSessionReset(),
+      onReady: () => repository.onSessionReady(),
+      onError: (e) => repository.reportError(e),
+    );
+    final dio = chatwootDio(baseUrl);
+    dio.interceptors.add(
+      WidgetAuthInterceptor(
+        session: session,
+        websiteToken: websiteToken,
+        dio: dio,
+      ),
+    );
 
     repository = ChatwootRepositoryImpl(
       clientService: ChatwootClientServiceImpl(dio: dio),
       socket: ChatwootSocket(
         url: cableUrl,
         tokenProvider: () => storage.contact.get()?.pubsubToken,
+        subscribeTimeout:
+            socketSubscribeTimeout ?? const Duration(seconds: 10),
       ),
       localStorage: storage,
       streamCallbacks: callbacks ?? ChatwootCallbacks(),
+      session: session,
     );
 
     final client = ChatwootClient._(
       repository,
-      [authDio, dio],
+      [bareDio, dio],
+      session,
       baseUrl: baseUrl,
-      inboxIdentifier: inboxIdentifier,
+      websiteToken: websiteToken,
       user: user,
       callbacks: callbacks,
     );
@@ -187,44 +227,46 @@ class ChatwootClient {
     return client;
   }
 
-  /// Creates a chatwoot client instance key using the chatwoot client instance baseurl, inboxIdentifier
+  /// Creates a chatwoot client instance key using the chatwoot client instance baseurl, websiteToken
   /// and userIdentifier. Client instance keys are used to differentiate between client instances and their data
   /// (contact, conversation and messages).
   ///
-  /// Separate persisted [ChatwootClient] instances with same baseUrl, inboxIdentifier and userIdentifier
+  /// Separate persisted [ChatwootClient] instances with same baseUrl, websiteToken and userIdentifier
   /// are regarded as the same and therefore use the same contact and conversation.
   /// The same identifier with a different [identifierHash] is a different instance.
   static String getClientInstanceKey({
     required String baseUrl,
-    required String inboxIdentifier,
+    required String websiteToken,
     String? userIdentifier,
     String? identifierHash,
   }) => chatwootInstanceKey(
     baseUrl: baseUrl,
-    inboxIdentifier: inboxIdentifier,
+    websiteToken: websiteToken,
     userIdentifier: userIdentifier,
     identifierHash: identifierHash,
   );
 
   /// Clears all persisted chatwoot data on device for a particular chatwoot client instance.
-  /// See [getClientInstanceKey] on how chatwoot client instances are differentiated
-  /// (pass the same [identifierHash] the client was created with).
+  /// See [getClientInstanceKey] on how chatwoot client instances are differentiated.
+  /// Records stored under the same [baseUrl], [websiteToken] and [userIdentifier]
+  /// with ANY identifier hash are removed too (a rotated hash leaves no orphan);
+  /// [identifierHash] is not needed. Other users and other inboxes are untouched.
+  /// Use [clearAllData] to wipe everything.
   /// Can be called before any client was created (e.g. on logout).
   static Future<void> clearData({
     required String baseUrl,
-    required String inboxIdentifier,
+    required String websiteToken,
     String? userIdentifier,
     String? identifierHash,
   }) async {
     await LocalStorage.openDB();
-    await LocalStorage.persisted(
+    await LocalStorage.clearInstanceFamily(
       getClientInstanceKey(
         baseUrl: baseUrl,
-        inboxIdentifier: inboxIdentifier,
+        websiteToken: websiteToken,
         userIdentifier: userIdentifier,
-        identifierHash: identifierHash,
       ),
-    ).clear();
+    );
   }
 
   /// Clears all persisted chatwoot data on device.

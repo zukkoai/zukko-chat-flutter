@@ -16,10 +16,10 @@ Future<T> apiCall<T>(
     return parse((await request()).data);
   } on DioException catch (e) {
     final inner = e.error;
-    throw ChatwootClientException(
-      inner is ChatwootClientException ? inner.cause : e.message ?? '',
-      failure,
-    );
+    // a typed failure raised by the interceptor (session, HMAC, rate limit)
+    // keeps its own type
+    if (inner is ChatwootClientException) throw inner;
+    throw ChatwootClientException(e.message ?? '', failure);
   } on ChatwootClientException {
     rethrow;
   } on FormatException catch (e) {

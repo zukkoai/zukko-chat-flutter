@@ -11,12 +11,12 @@ import 'dart:convert';
 /// contact. Without a hash the key is unchanged (keys of earlier versions).
 String chatwootInstanceKey({
   required String baseUrl,
-  required String inboxIdentifier,
+  required String websiteToken,
   String? userIdentifier,
   String? identifierHash,
 }) {
   final base =
-      '${_escape(baseUrl)}$_sep${_escape(userIdentifier ?? '')}$_sep${_escape(inboxIdentifier)}';
+      '${_escape(baseUrl)}$_sep${_escape(userIdentifier ?? '')}$_sep${_escape(websiteToken)}';
   return identifierHash == null || identifierHash.isEmpty
       ? base
       : '$base${_sep}h:${_digest(identifierHash)}';
@@ -52,6 +52,6 @@ String? chatwootInstanceKeyFromLegacy(String legacy) {
   return chatwootInstanceKey(
     baseUrl: parts[0],
     userIdentifier: parts[1] == 'null' ? null : parts[1],
-    inboxIdentifier: parts[2],
+    websiteToken: parts[2],
   );
 }

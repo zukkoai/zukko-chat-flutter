@@ -175,6 +175,29 @@ class LocalStorage {
     }
   }
 
+  /// Deletes every record of the instance with key [baseKey] (a key made
+  /// WITHOUT an identifier hash) and of its hash variants (`baseKey|||h:<digest>`),
+  /// including their messages (`<key>|m|<id>`). Other instances are untouched:
+  /// a component is escaped, so no other key can start with [baseKey] followed
+  /// by one of those separators.
+  static Future<void> clearInstanceFamily(String baseKey) async {
+    await openDB();
+    bool mine(Object? key) =>
+        key is String &&
+        (key == baseKey ||
+            key.startsWith('$baseKey|m|') ||
+            key.startsWith('$baseKey|||h:'));
+    Future<void> sweep<T>(String name) async {
+      final box = Hive.box<T>(name);
+      await box.deleteAll(box.keys.where(mine).toList());
+    }
+
+    await sweep<ChatwootContact>(ChatwootBoxNames.contacts);
+    await sweep<ChatwootConversation>(ChatwootBoxNames.conversations);
+    await sweep<ChatwootMessage>(ChatwootBoxNames.messages);
+    await sweep<ChatwootUser>(ChatwootBoxNames.users);
+  }
+
   /// Deletes this instance's data. Contact and user are kept unless
   /// [clearChatwootUserStorage] is true.
   Future<void> clear({bool clearChatwootUserStorage = true}) async {

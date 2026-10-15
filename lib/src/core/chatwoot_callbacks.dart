@@ -1,3 +1,4 @@
+import '../data/models/chatwoot_conversation.dart';
 import '../data/models/chatwoot_message.dart';
 import '../data/remote/realtime/chatwoot_socket.dart';
 import 'chatwoot_client_exception.dart';
@@ -59,6 +60,14 @@ class ChatwootCallbacks {
   ///Triggered when an agent resolves the current conversation
   final void Function()? onConversationResolved;
 
+  /// Triggered when the conversation is created or changes (status, assignee).
+  final void Function(ChatwootConversation)? onConversationUpdated;
+
+  /// Triggered when the visitor's session was replaced (the server no longer
+  /// knew the old one, so this is a new contact): messages shown so far belong
+  /// to someone else and must be dropped; the latest page is fetched right after.
+  final void Function()? onSessionReset;
+
   /// Triggered whenever the realtime connection changes state (connecting,
   /// subscribed, reconnecting after a drop, ...). Use it to show an offline
   /// banner. Messages missed while disconnected are refetched automatically
@@ -85,6 +94,8 @@ class ChatwootCallbacks {
     this.onConversationIsOnline,
     this.onConversationIsOffline,
     this.onConversationResolved,
+    this.onConversationUpdated,
+    this.onSessionReset,
     this.onConnectionStateChanged,
     this.onError,
   });

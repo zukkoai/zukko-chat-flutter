@@ -1,25 +1,20 @@
 import 'package:equatable/equatable.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'chatwoot_new_message_request.g.dart';
-
-@JsonSerializable(explicitToJson: true)
+/// What the app wants to send: the text, its temporary id and the message it
+/// replies to. The wire format is built by `buildMessageJson` / `buildMessageForm`.
 class ChatwootNewMessageRequest extends Equatable {
-  @JsonKey()
   final String content;
-  @JsonKey(name: "echo_id")
   final String echoId;
+
+  /// Id of the message this one replies to.
+  final int? replyTo;
 
   const ChatwootNewMessageRequest({
     required this.content,
     required this.echoId,
+    this.replyTo,
   });
 
   @override
-  List<Object> get props => [content, echoId];
-
-  factory ChatwootNewMessageRequest.fromJson(Map<String, dynamic> json) =>
-      _$ChatwootNewMessageRequestFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ChatwootNewMessageRequestToJson(this);
+  List<Object?> get props => [content, echoId, replyTo];
 }

@@ -97,3 +97,8 @@ List<ChatwootMessage> parseMessages(Object? data) => [
   for (final m in parseList(data, ChatwootMessage.fromJson))
     if (m.id > 0) m,
 ];
+
+/// Parses the body of `GET /messages`: `{payload: [...], meta: {...}}` (a bare
+/// list is accepted too). Malformed items are skipped like in [parseMessages].
+List<ChatwootMessage> parseMessagesPage(Object? data) =>
+    parseMessages(data is Map<String, dynamic> ? data['payload'] : data);

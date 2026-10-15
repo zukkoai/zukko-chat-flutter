@@ -7,7 +7,7 @@ import '../local/hive_type_ids.dart';
 part 'chatwoot_user.g.dart';
 
 ///
-@JsonSerializable(explicitToJson: true)
+@JsonSerializable(explicitToJson: true, includeIfNull: false)
 @HiveType(typeId: chatwootUserHiveTypeId)
 class ChatwootUser extends Equatable {
   ///custom chatwoot user identifier
@@ -40,6 +40,11 @@ class ChatwootUser extends Equatable {
   @HiveField(5)
   final dynamic customAttributes;
 
+  ///phone number of user (E.164, e.g. `+998901234567`)
+  @JsonKey(name: "phone_number")
+  @HiveField(6)
+  final String? phoneNumber;
+
   const ChatwootUser({
     this.identifier,
     this.identifierHash,
@@ -47,6 +52,7 @@ class ChatwootUser extends Equatable {
     this.email,
     this.avatarUrl,
     this.customAttributes,
+    this.phoneNumber,
   });
 
   /// The copy that is written to disk: without the identity hash (a bearer
@@ -56,7 +62,13 @@ class ChatwootUser extends Equatable {
     name: name,
     email: email,
     avatarUrl: avatarUrl,
+    phoneNumber: phoneNumber,
   );
+
+  /// No identity data: this ends up in logs and crash reports.
+  @override
+  String toString() =>
+      'ChatwootUser(${identifier == null ? 'anonymous' : 'identified'})';
 
   @override
   List<Object?> get props => [
@@ -66,6 +78,7 @@ class ChatwootUser extends Equatable {
     email,
     avatarUrl,
     customAttributes,
+    phoneNumber,
   ];
 
   factory ChatwootUser.fromJson(Map<String, dynamic> json) =>
