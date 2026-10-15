@@ -10,8 +10,11 @@ import 'chatwoot_chat_view.dart';
 class ChatwootChat extends StatelessWidget {
   final ChatwootChatOptions options;
 
-  /// Specifies a custom app bar for the chat page
+  /// Replaces the style's own header with a custom app bar.
   final PreferredSizeWidget? appBar;
+
+  /// Title of the style's header; defaults to `ChatwootL10n.headerTitle`.
+  final String? title;
 
   /// Client events, see [ChatwootCallbacks]
   final ChatwootCallbacks? callbacks;
@@ -27,12 +30,13 @@ class ChatwootChat extends StatelessWidget {
     super.key,
     required this.options,
     this.appBar,
+    this.title,
     this.callbacks,
     this.interactions = const ChatwootChatInteractions(),
     this.clientFactory,
   });
 
-  // The view paints its own background over the whole body.
+  // The view paints its own background and header over the whole body.
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: appBar,
@@ -41,6 +45,9 @@ class ChatwootChat extends StatelessWidget {
       callbacks: callbacks,
       interactions: interactions,
       clientFactory: clientFactory,
+      header: appBar != null
+          ? null
+          : ChatViewHeader(title: title, showBack: Navigator.canPop(context)),
     ),
   );
 }

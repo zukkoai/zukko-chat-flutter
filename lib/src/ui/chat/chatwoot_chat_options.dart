@@ -8,8 +8,7 @@ import '../l10n/chatwoot_l10n.dart';
 import '../theme/chatwoot_chat_theme.dart';
 import 'chatwoot_chat_style.dart';
 
-/// Everything needed to configure a native chat, shared by `ChatwootChat` and
-/// `ChatwootChatDialog`.
+/// Everything needed to configure the native chat (`ChatwootChat`).
 @immutable
 class ChatwootChatOptions {
   /// Installation url for chatwoot
@@ -30,27 +29,30 @@ class ChatwootChatOptions {
   /// Custom user details to be attached to the chatwoot contact
   final ChatwootUser? user;
 
-  /// Theme; defaults to one derived from the ambient `ColorScheme`
-  /// (or a `ChatwootChatTheme` registered in `ThemeData.extensions`).
+  /// Look of the chat, see [ChatwootChatStyle].
+  final ChatwootChatStyle style;
+
+  /// Base theme of the style (brightness, font, accent override); defaults
+  /// to a `ChatwootChatTheme` in `ThemeData.extensions`, else one derived
+  /// from the ambient theme.
   final ChatwootChatTheme? theme;
 
-  /// See [ChatwootL10n]
-  final ChatwootL10n l10n;
+  /// Strings; null picks the built-in translation of the ambient locale
+  /// ([ChatwootL10n.forLocale]).
+  final ChatwootL10n? l10n;
 
   /// Message time format, defaults to `DateFormat.Hm()`
   final DateFormat? timeFormat;
 
-  /// Show avatars for received messages.
-  final bool showUserAvatars;
-
-  /// Show user names for received messages.
-  final bool showUserNames;
-
-  /// Show the "Powered by Chatwoot" footer.
+  /// Show the "Powered by zukko.ai" footer.
   final bool showBranding;
 
-  /// Visual style of the message list and composer.
-  final ChatwootChatStyle style;
+  /// Attachment button: send photos and files (up to 40 MB each).
+  final bool enableAttachments;
+
+  /// Hold-to-record microphone: send voice messages (up to 5 minutes).
+  /// The app needs the microphone permission entries (see README).
+  final bool enableVoiceMessages;
 
   const ChatwootChatOptions({
     required this.baseUrl,
@@ -58,13 +60,13 @@ class ChatwootChatOptions {
     this.enablePersistence = true,
     this.allowInsecure = false,
     this.user,
+    this.style = ChatwootChatStyle.smoothSilk,
     this.theme,
-    this.l10n = const ChatwootL10n(),
+    this.l10n,
     this.timeFormat,
-    this.showUserAvatars = true,
-    this.showUserNames = true,
     this.showBranding = true,
-    this.style = ChatwootChatStyle.classic,
+    this.enableAttachments = true,
+    this.enableVoiceMessages = true,
   });
 
   /// True when [other] talks to the same server, inbox and user, i.e. the
@@ -80,13 +82,13 @@ class ChatwootChatOptions {
   bool operator ==(Object other) =>
       other is ChatwootChatOptions &&
       sameConnection(other) &&
+      style == other.style &&
       theme == other.theme &&
       l10n == other.l10n &&
       timeFormat == other.timeFormat &&
-      showUserAvatars == other.showUserAvatars &&
-      showUserNames == other.showUserNames &&
       showBranding == other.showBranding &&
-      style == other.style;
+      enableAttachments == other.enableAttachments &&
+      enableVoiceMessages == other.enableVoiceMessages;
 
   @override
   int get hashCode => Object.hash(
@@ -95,18 +97,18 @@ class ChatwootChatOptions {
     enablePersistence,
     allowInsecure,
     user,
+    style,
     theme,
     l10n,
     timeFormat,
-    showUserAvatars,
-    showUserNames,
     showBranding,
-    style,
+    enableAttachments,
+    enableVoiceMessages,
   );
 }
 
-/// What the host reacts to in the chat UI; shared by `ChatwootChat` and
-/// `ChatwootChatDialog`. (Client events are `ChatwootCallbacks`.)
+/// What the host reacts to in the chat UI (`ChatwootChat`). Client events
+/// are `ChatwootCallbacks`.
 class ChatwootChatInteractions {
   /// Called when the top of the list (oldest message) is reached.
   final Future<void> Function()? onEndReached;
@@ -121,11 +123,15 @@ class ChatwootChatInteractions {
   /// Called with the text the user sent.
   final void Function(String text)? onSendPressed;
 
+  /// Menu button of the chat header; hidden when null.
+  final VoidCallback? onMorePressed;
+
   const ChatwootChatInteractions({
     this.onEndReached,
     this.onEndReachedThreshold,
     this.onMessageLongPress,
     this.onMessageTap,
     this.onSendPressed,
+    this.onMorePressed,
   });
 }

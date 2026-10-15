@@ -7,12 +7,14 @@ import 'package:uuid/uuid.dart';
 import '../../core/chatwoot_callbacks.dart';
 import '../../core/chatwoot_client.dart';
 import '../../core/chatwoot_client_exception.dart';
+import '../../core/chatwoot_upload.dart';
 import '../../data/models/chatwoot_message.dart';
 import '../../data/models/chatwoot_user.dart';
 import '../../shared/message_order.dart';
 import '../../shared/sdk_log.dart';
 import '../l10n/chatwoot_l10n.dart';
 import 'chatwoot_chat_options.dart';
+import 'components/gallery_message.dart';
 
 /// Signature of [ChatwootClient.create]; the seam tests use to inject a fake.
 typedef ChatwootClientFactory = Future<ChatwootClient> Function({
@@ -47,7 +49,7 @@ class ChatwootChatController extends ChangeNotifier {
     InMemoryChatController? chat,
   }) : _factory = clientFactory,
        chat = chat ?? InMemoryChatController(),
-       l10n = options.l10n {
+       l10n = options.l10n ?? const ChatwootL10n() {
     _users[_meId] = User(
       id: _meId,
       name: options.user?.name,
@@ -71,7 +73,13 @@ class ChatwootChatController extends ChangeNotifier {
   final _users = <String, User>{};
   final _byKey = <String, Message>{};
   final _keyByServerId = <int, String>{};
-  final _pending = <String, String>{}; // echoId -> text, until client is ready
+
+  /// What each unconfirmed local message carries (to send and resend), by
+  /// echoId; dropped once the server confirms it.
+  final _outbox = <String, _Outgoing>{};
+
+  /// EchoIds waiting for the client to exist.
+  final _queued = <String>{};
   final _uuid = const Uuid();
 
   ChatwootClient? _client;
@@ -90,6 +98,9 @@ class ChatwootChatController extends ChangeNotifier {
   ChatwootClientException? get error => _error;
 
   Future<User> resolveUser(String id) async => _users[id] ?? User(id: id);
+
+  /// The author [id] as known so far (name, avatar); null when unknown.
+  User? userById(String id) => _users[id];
 
   /// Tries again after [error]; no-op unless the last start failed.
   void retry() {
@@ -118,8 +129,8 @@ class ChatwootChatController extends ChangeNotifier {
         ChatwootClientExceptionType.CREATE_CLIENT_FAILED,
       );
       // Nothing will ever send these: show them as failed (tap to retry).
-      _pending.keys.toList().forEach(_markFailed);
-      _pending.clear();
+      _queued.toList().forEach(_markFailed);
+      _queued.clear();
       callbacks?.onError?.call(_error!);
       notifyListeners();
       return;
@@ -130,9 +141,11 @@ class ChatwootChatController extends ChangeNotifier {
     }
     _client = client;
     notifyListeners();
-    final queued = Map.of(_pending);
-    _pending.clear();
-    queued.forEach((echoId, text) => unawaited(_dispatch(echoId, text)));
+    final queued = _queued.toList();
+    _queued.clear();
+    for (final echoId in queued) {
+      unawaited(_dispatch(echoId));
+    }
     try {
       await client.loadMessages();
     } catch (e) {
@@ -146,6 +159,7 @@ class ChatwootChatController extends ChangeNotifier {
   void send(String text) {
     if (_disposed || text.trim().isEmpty) return;
     final echoId = _uuid.v4();
+    _outbox[echoId] = _Outgoing(text, const []);
     _upsertLocal(
       TextMessage(
         id: echoId,
@@ -155,31 +169,99 @@ class ChatwootChatController extends ChangeNotifier {
         status: MessageStatus.sending,
       ),
     );
-    unawaited(_dispatch(echoId, text));
+    unawaited(_dispatch(echoId));
+  }
+
+  /// Sends [files] as one message, shown at once as a local preview (image,
+  /// gallery, voice or file). [audioDuration] is the length of a recording.
+  void sendAttachments(List<ChatwootUpload> files, {Duration? audioDuration}) {
+    if (_disposed || files.isEmpty) return;
+    final echoId = _uuid.v4();
+    _outbox[echoId] = _Outgoing('', List.unmodifiable(files));
+    _upsertLocal(_localPreview(echoId, files, audioDuration));
+    unawaited(_dispatch(echoId));
+  }
+
+  Message _localPreview(
+    String id,
+    List<ChatwootUpload> files,
+    Duration? audioDuration,
+  ) {
+    final createdAt = DateTime.now().toUtc();
+    const status = MessageStatus.sending;
+    // A local path shows the image before the upload ends; the web has none.
+    final first = files.first;
+    if (files.length > 1 && files.every((f) => f.isImage)) {
+      return GalleryMessage.create(
+        id: id,
+        authorId: _meId,
+        images: [for (final f in files) f.path ?? ''],
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    if (first.isImage) {
+      return ImageMessage(
+        id: id,
+        authorId: _meId,
+        source: first.path ?? '',
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    if (first.isAudio) {
+      return AudioMessage(
+        id: id,
+        authorId: _meId,
+        source: first.path ?? '',
+        duration: audioDuration ?? Duration.zero,
+        size: first.size,
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    return FileMessage(
+      id: id,
+      authorId: _meId,
+      source: first.path ?? '',
+      name: first.name,
+      size: first.size,
+      createdAt: createdAt,
+      status: status,
+    );
   }
 
   /// Retries the failed message [key].
   void resend(String key) {
     final m = _byKey[key];
-    if (_disposed || m is! TextMessage || m.status != MessageStatus.error) {
+    if (_disposed ||
+        m == null ||
+        !_outbox.containsKey(key) ||
+        m.status != MessageStatus.error) {
       return;
     }
     _upsertLocal(m.copyWith(status: MessageStatus.sending));
-    unawaited(_dispatch(key, m.text));
+    unawaited(_dispatch(key));
   }
 
-  Future<void> _dispatch(String echoId, String text) async {
+  Future<void> _dispatch(String echoId) async {
+    final outgoing = _outbox[echoId];
+    if (outgoing == null) return;
     final client = _client;
     if (client == null) {
       if (_error != null) {
         _markFailed(echoId);
       } else {
-        _pending[echoId] = text;
+        _queued.add(echoId);
       }
       return;
     }
     try {
-      await client.sendMessage(content: text, echoId: echoId);
+      await client.sendMessage(
+        content: outgoing.text,
+        echoId: echoId,
+        attachments: outgoing.attachments,
+      );
     } catch (e) {
       sdkLog('send failed: $e');
       _markFailed(echoId);
@@ -271,15 +353,20 @@ class ChatwootChatController extends ChangeNotifier {
   // ---- message list ----
 
   /// Maps a server message; null when it must not be shown.
+  ///
+  /// Attachments with an https url become an image, a gallery (several
+  /// images), an audio or a file message, with the text as caption; others
+  /// fall back to a text message with [ChatwootL10n.attachmentLabel].
   Message? _convert(ChatwootMessage m, {String? key}) {
     final type = m.messageType;
     if (type == 2 || type == 3) return null; // activity / template
-    final text = (m.content ?? '').trim().isNotEmpty
-        ? m.content!
-        : (m.attachments?.isNotEmpty ?? false)
-        ? l10n.attachmentLabel
-        : null;
-    if (text == null) return null;
+    final content = (m.content ?? '').trim().isNotEmpty ? m.content : null;
+    final attachments = [
+      for (final raw in m.attachments ?? const <dynamic>[])
+        ?_Attachment.tryParse(raw),
+    ];
+    final hasAttachments = m.attachments?.isNotEmpty ?? false;
+    if (content == null && !hasAttachments) return null;
     final String authorId;
     if (type == 1) {
       final sender = m.sender;
@@ -299,14 +386,65 @@ class ChatwootChatController extends ChangeNotifier {
       authorId = _meId;
     }
     key ??= _keyByServerId[m.id] ?? m.id.toString();
+    final createdAt =
+        DateTime.tryParse(m.createdAt)?.toUtc() ??
+        (_byKey[key]?.createdAt ?? DateTime.now().toUtc());
+    final status = authorId == _meId ? MessageStatus.seen : null;
+
+    final images = [
+      for (final a in attachments)
+        if (a.kind == _AttachmentKind.image) a.url,
+    ];
+    if (images.length > 1) {
+      return GalleryMessage.create(
+        id: key,
+        authorId: authorId,
+        images: images,
+        caption: content,
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    if (images.length == 1) {
+      return ImageMessage(
+        id: key,
+        authorId: authorId,
+        source: images.single,
+        text: content,
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    final first = attachments.firstOrNull;
+    if (first != null && first.kind == _AttachmentKind.audio) {
+      return AudioMessage(
+        id: key,
+        authorId: authorId,
+        source: first.url,
+        duration: Duration.zero,
+        text: content,
+        size: first.size,
+        createdAt: createdAt,
+        status: status,
+      );
+    }
+    if (first != null) {
+      return FileMessage(
+        id: key,
+        authorId: authorId,
+        source: first.url,
+        name: first.name ?? l10n.attachmentLabel,
+        size: first.size,
+        createdAt: createdAt,
+        status: status,
+      );
+    }
     return TextMessage(
       id: key,
       authorId: authorId,
-      text: text,
-      createdAt:
-          DateTime.tryParse(m.createdAt)?.toUtc() ??
-          (_byKey[key]?.createdAt ?? DateTime.now().toUtc()),
-      status: authorId == _meId ? MessageStatus.seen : null,
+      text: content ?? l10n.attachmentLabel,
+      createdAt: createdAt,
+      status: status,
     );
   }
 
@@ -340,6 +478,7 @@ class ChatwootChatController extends ChangeNotifier {
   void _confirmEcho(ChatwootMessage m, String echoId, MessageStatus status) {
     final serverKey = m.id.toString();
     final echo = _byKey[echoId];
+    final hadFiles = _outbox.remove(echoId)?.attachments.isNotEmpty ?? false;
     final duplicate = _keyByServerId[m.id] == null ? _byKey[serverKey] : null;
     _keyByServerId[m.id] = echoId;
     if (duplicate != null) {
@@ -352,7 +491,9 @@ class ChatwootChatController extends ChangeNotifier {
       if (converted != null) _upsertLocal(converted.copyWith(status: status));
       return;
     }
-    _upsertLocal(_merge(echo, echo.copyWith(status: status)));
+    // A sent attachment: the server's version has the real urls.
+    final server = hadFiles ? _convert(m, key: echoId) : null;
+    _upsertLocal(_merge(echo, (server ?? echo).copyWith(status: status)));
   }
 
   void _addResolved() {
@@ -425,5 +566,45 @@ class ChatwootChatController extends ChangeNotifier {
     if (client != null) unawaited(client.dispose());
     chat.dispose();
     super.dispose();
+  }
+}
+
+/// Text and files of a message sent from this device.
+class _Outgoing {
+  final String text;
+  final List<ChatwootUpload> attachments;
+
+  const _Outgoing(this.text, this.attachments);
+}
+
+enum _AttachmentKind { image, audio, file }
+
+/// One entry of a Chatwoot message's `attachments` (`file_type`,
+/// `data_url`, `file_size`).
+class _Attachment {
+  final _AttachmentKind kind;
+  final String url;
+  final String? name;
+  final int? size;
+
+  const _Attachment(this.kind, this.url, this.name, this.size);
+
+  /// Null unless [raw] is a map with an https `data_url`.
+  static _Attachment? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final url = raw['data_url'];
+    if (url is! String || !url.startsWith('https://')) return null;
+    final size = raw['file_size'];
+    final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
+    return _Attachment(
+      switch (raw['file_type']) {
+        'image' => _AttachmentKind.image,
+        'audio' => _AttachmentKind.audio,
+        _ => _AttachmentKind.file,
+      },
+      url,
+      segments.isEmpty ? null : segments.last,
+      size is int ? size : null,
+    );
   }
 }

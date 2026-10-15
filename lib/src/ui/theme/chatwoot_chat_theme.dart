@@ -1,126 +1,55 @@
 import 'dart:ui' show lerpDouble;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_core/flutter_chat_core.dart';
 
-/// Chat theme as a [ThemeExtension]: register it in `ThemeData.extensions` or
-/// pass it to `ChatwootChatOptions.theme`. When neither is given the theme is
-/// derived from the ambient [ColorScheme] (dark mode works out of the box).
+/// The style-independent base of the chat look, as a [ThemeExtension].
 ///
-/// flutter_chat_ui 2.x `ChatTheme` is a small sealed class, so [toChatTheme]
-/// maps this theme onto it; the remaining fields are used by the SDK's own
-/// message and composer builders.
+/// Every chat style (`ChatwootChatOptions.style`) derives its own tokens from
+/// this: the style owns its palette and font, this theme decides brightness
+/// and the few values an app may want to force on every style.
+///
+/// Resolution (see [resolve]): `ChatwootChatOptions.theme`, else one
+/// registered in `ThemeData.extensions`, else one derived from the ambient
+/// [ThemeData] (so dark mode follows the app).
 @immutable
 class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
-  final Color backgroundColor;
-  final Color primaryColor;
-  final Color onPrimaryColor;
+  /// Light or dark variant of the style.
+  final Brightness brightness;
 
-  /// Background of received messages.
-  final Color secondaryColor;
-  final Color inputBackgroundColor;
-  final Color inputTextColor;
+  /// Forces one font family on all chat text; null uses the style's own
+  /// design font (Smooth Silk: Manrope, Minimal Clean: Geist, Thread Feed:
+  /// Onest, loaded by google_fonts).
+  final String? fontFamily;
 
-  /// Dot shown next to the title when the conversation is online.
-  final Color onlineIndicatorColor;
-  final BorderRadius inputBorderRadius;
-  final double messageBorderRadius;
+  /// Overrides the style's accent (send button, links, brand link).
+  final Color? accentColor;
 
-  /// Horizontal gap between the screen edge and the message list.
+  /// Overrides the style's chat background.
+  final Color? backgroundColor;
+
+  /// Gap between the screen edge and the messages / composer.
   final double horizontalPadding;
-  final TextStyle sentMessageBodyTextStyle;
-  final TextStyle receivedMessageBodyTextStyle;
-  final TextStyle sentMessageCaptionTextStyle;
-  final TextStyle receivedMessageCaptionTextStyle;
-  final TextStyle userNameTextStyle;
-
-  /// Footer ("Powered by ...") text style.
-  final TextStyle brandingTextStyle;
-
-  /// Avatar background colors; the author id picks one, so colors are stable.
-  final List<Color> userAvatarNameColors;
-  final Widget? sendButtonIcon;
 
   const ChatwootChatTheme({
-    required this.backgroundColor,
-    required this.primaryColor,
-    required this.onPrimaryColor,
-    required this.secondaryColor,
-    required this.inputBackgroundColor,
-    required this.inputTextColor,
-    required this.onlineIndicatorColor,
-    required this.sentMessageBodyTextStyle,
-    required this.receivedMessageBodyTextStyle,
-    required this.sentMessageCaptionTextStyle,
-    required this.receivedMessageCaptionTextStyle,
-    required this.userNameTextStyle,
-    required this.brandingTextStyle,
-    required this.userAvatarNameColors,
-    this.inputBorderRadius = const BorderRadius.all(Radius.circular(10)),
-    this.messageBorderRadius = 20.0,
-    this.horizontalPadding = 16.0,
-    this.sendButtonIcon,
+    required this.brightness,
+    this.fontFamily,
+    this.accentColor,
+    this.backgroundColor,
+    this.horizontalPadding = 16,
   });
 
-  /// Derives every token from [scheme].
-  factory ChatwootChatTheme.fromColorScheme(ColorScheme scheme) {
-    TextStyle style(
-      Color color,
-      double size,
-      FontWeight weight,
-      double height,
-    ) => TextStyle(
-      color: color,
-      fontSize: size,
-      fontWeight: weight,
-      height: height,
-    );
-    return ChatwootChatTheme(
-      backgroundColor: scheme.surfaceContainerLow,
-      primaryColor: scheme.primary,
-      onPrimaryColor: scheme.onPrimary,
-      secondaryColor: scheme.surfaceContainerHighest,
-      inputBackgroundColor: scheme.surfaceContainerHighest,
-      inputTextColor: scheme.onSurface,
-      onlineIndicatorColor: Colors.green,
-      sentMessageBodyTextStyle: style(
-        scheme.onPrimary,
-        16,
-        FontWeight.w500,
-        1.5,
-      ),
-      receivedMessageBodyTextStyle: style(
-        scheme.onSurface,
-        16,
-        FontWeight.w500,
-        1.5,
-      ),
-      sentMessageCaptionTextStyle: style(
-        scheme.onPrimary.withValues(alpha: 0.7),
-        12,
-        FontWeight.w500,
-        1.333,
-      ),
-      receivedMessageCaptionTextStyle: style(
-        scheme.onSurfaceVariant,
-        12,
-        FontWeight.w500,
-        1.333,
-      ),
-      userNameTextStyle: style(scheme.onSurface, 12, FontWeight.w800, 1.333),
-      brandingTextStyle: style(
-        scheme.onSurfaceVariant,
-        12,
-        FontWeight.w400,
-        1.333,
-      ),
-      userAvatarNameColors: [scheme.primary],
-    );
-  }
+  /// Base theme with the brightness of [scheme]; the style keeps its own
+  /// palette. Set [accentColor] to brand it with e.g. `scheme.primary`.
+  factory ChatwootChatTheme.fromColorScheme(ColorScheme scheme) =>
+      ChatwootChatTheme(brightness: scheme.brightness);
+
+  /// Base theme with the brightness of [theme]; fonts and colors stay the
+  /// style's own.
+  factory ChatwootChatTheme.fromThemeData(ThemeData theme) =>
+      ChatwootChatTheme(brightness: theme.brightness);
 
   /// [override] if given, else the theme registered in [ThemeData.extensions],
-  /// else one derived from the ambient color scheme.
+  /// else one derived from the ambient theme.
   static ChatwootChatTheme resolve(
     BuildContext context, [
     ChatwootChatTheme? override,
@@ -128,177 +57,63 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
     final theme = Theme.of(context);
     return override ??
         theme.extension<ChatwootChatTheme>() ??
-        ChatwootChatTheme.fromColorScheme(theme.colorScheme);
+        ChatwootChatTheme.fromThemeData(theme);
   }
 
-  /// Avatar colour of [userId]. Stable across runs and Dart versions
-  /// (`String.hashCode` is neither).
-  Color avatarColorFor(String userId) {
-    final hash = userId.codeUnits.fold<int>(
-      0,
-      (h, c) => (h * 31 + c) & 0x7fffffff,
-    );
-    return userAvatarNameColors[hash % userAvatarNameColors.length];
-  }
+  bool get isDark => brightness == Brightness.dark;
 
-  /// Maps this theme to a flutter_chat_ui 2.x [ChatTheme].
-  ChatTheme toChatTheme() => ChatTheme(
-    colors: ChatColors(
-      primary: primaryColor,
-      onPrimary: onPrimaryColor,
-      surface: backgroundColor,
-      onSurface: receivedMessageBodyTextStyle.color ?? inputTextColor,
-      surfaceContainer: secondaryColor,
-      surfaceContainerLow: inputBackgroundColor,
-      surfaceContainerHigh: secondaryColor,
-    ),
-    typography: ChatTypography.standard().copyWith(
-      bodyMedium: receivedMessageBodyTextStyle,
-      labelSmall: receivedMessageCaptionTextStyle,
-    ),
-    shape: BorderRadius.circular(messageBorderRadius),
-  );
+  /// Readable foreground (text, icon) on [background].
+  static Color foregroundOn(Color background) =>
+      ThemeData.estimateBrightnessForColor(background) == Brightness.dark
+      ? const Color(0xFFFFFFFF)
+      : const Color(0xFF111111);
 
   @override
   ChatwootChatTheme copyWith({
+    Brightness? brightness,
+    String? fontFamily,
+    Color? accentColor,
     Color? backgroundColor,
-    Color? primaryColor,
-    Color? onPrimaryColor,
-    Color? secondaryColor,
-    Color? inputBackgroundColor,
-    Color? inputTextColor,
-    Color? onlineIndicatorColor,
-    BorderRadius? inputBorderRadius,
-    double? messageBorderRadius,
     double? horizontalPadding,
-    TextStyle? sentMessageBodyTextStyle,
-    TextStyle? receivedMessageBodyTextStyle,
-    TextStyle? sentMessageCaptionTextStyle,
-    TextStyle? receivedMessageCaptionTextStyle,
-    TextStyle? userNameTextStyle,
-    TextStyle? brandingTextStyle,
-    List<Color>? userAvatarNameColors,
-    Widget? sendButtonIcon,
   }) => ChatwootChatTheme(
+    brightness: brightness ?? this.brightness,
+    fontFamily: fontFamily ?? this.fontFamily,
+    accentColor: accentColor ?? this.accentColor,
     backgroundColor: backgroundColor ?? this.backgroundColor,
-    primaryColor: primaryColor ?? this.primaryColor,
-    onPrimaryColor: onPrimaryColor ?? this.onPrimaryColor,
-    secondaryColor: secondaryColor ?? this.secondaryColor,
-    inputBackgroundColor: inputBackgroundColor ?? this.inputBackgroundColor,
-    inputTextColor: inputTextColor ?? this.inputTextColor,
-    onlineIndicatorColor: onlineIndicatorColor ?? this.onlineIndicatorColor,
-    inputBorderRadius: inputBorderRadius ?? this.inputBorderRadius,
-    messageBorderRadius: messageBorderRadius ?? this.messageBorderRadius,
     horizontalPadding: horizontalPadding ?? this.horizontalPadding,
-    sentMessageBodyTextStyle:
-        sentMessageBodyTextStyle ?? this.sentMessageBodyTextStyle,
-    receivedMessageBodyTextStyle:
-        receivedMessageBodyTextStyle ?? this.receivedMessageBodyTextStyle,
-    sentMessageCaptionTextStyle:
-        sentMessageCaptionTextStyle ?? this.sentMessageCaptionTextStyle,
-    receivedMessageCaptionTextStyle:
-        receivedMessageCaptionTextStyle ?? this.receivedMessageCaptionTextStyle,
-    userNameTextStyle: userNameTextStyle ?? this.userNameTextStyle,
-    brandingTextStyle: brandingTextStyle ?? this.brandingTextStyle,
-    userAvatarNameColors: userAvatarNameColors ?? this.userAvatarNameColors,
-    sendButtonIcon: sendButtonIcon ?? this.sendButtonIcon,
   );
 
   @override
   ChatwootChatTheme lerp(ThemeExtension<ChatwootChatTheme>? other, double t) {
     if (other is! ChatwootChatTheme) return this;
-    Color c(Color a, Color b) => Color.lerp(a, b, t)!;
-    TextStyle s(TextStyle a, TextStyle b) => TextStyle.lerp(a, b, t)!;
     return ChatwootChatTheme(
-      backgroundColor: c(backgroundColor, other.backgroundColor),
-      primaryColor: c(primaryColor, other.primaryColor),
-      onPrimaryColor: c(onPrimaryColor, other.onPrimaryColor),
-      secondaryColor: c(secondaryColor, other.secondaryColor),
-      inputBackgroundColor: c(inputBackgroundColor, other.inputBackgroundColor),
-      inputTextColor: c(inputTextColor, other.inputTextColor),
-      onlineIndicatorColor: c(onlineIndicatorColor, other.onlineIndicatorColor),
-      inputBorderRadius: BorderRadius.lerp(
-        inputBorderRadius,
-        other.inputBorderRadius,
-        t,
-      )!,
-      messageBorderRadius: lerpDouble(
-        messageBorderRadius,
-        other.messageBorderRadius,
-        t,
-      )!,
+      brightness: t < 0.5 ? brightness : other.brightness,
+      fontFamily: t < 0.5 ? fontFamily : other.fontFamily,
+      accentColor: Color.lerp(accentColor, other.accentColor, t),
+      backgroundColor: Color.lerp(backgroundColor, other.backgroundColor, t),
       horizontalPadding: lerpDouble(
         horizontalPadding,
         other.horizontalPadding,
         t,
       )!,
-      sentMessageBodyTextStyle: s(
-        sentMessageBodyTextStyle,
-        other.sentMessageBodyTextStyle,
-      ),
-      receivedMessageBodyTextStyle: s(
-        receivedMessageBodyTextStyle,
-        other.receivedMessageBodyTextStyle,
-      ),
-      sentMessageCaptionTextStyle: s(
-        sentMessageCaptionTextStyle,
-        other.sentMessageCaptionTextStyle,
-      ),
-      receivedMessageCaptionTextStyle: s(
-        receivedMessageCaptionTextStyle,
-        other.receivedMessageCaptionTextStyle,
-      ),
-      userNameTextStyle: s(userNameTextStyle, other.userNameTextStyle),
-      brandingTextStyle: s(brandingTextStyle, other.brandingTextStyle),
-      userAvatarNameColors: t < 0.5
-          ? userAvatarNameColors
-          : other.userAvatarNameColors,
-      sendButtonIcon: t < 0.5 ? sendButtonIcon : other.sendButtonIcon,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       other is ChatwootChatTheme &&
+      other.brightness == brightness &&
+      other.fontFamily == fontFamily &&
+      other.accentColor == accentColor &&
       other.backgroundColor == backgroundColor &&
-      other.primaryColor == primaryColor &&
-      other.onPrimaryColor == onPrimaryColor &&
-      other.secondaryColor == secondaryColor &&
-      other.inputBackgroundColor == inputBackgroundColor &&
-      other.inputTextColor == inputTextColor &&
-      other.onlineIndicatorColor == onlineIndicatorColor &&
-      other.inputBorderRadius == inputBorderRadius &&
-      other.messageBorderRadius == messageBorderRadius &&
-      other.horizontalPadding == horizontalPadding &&
-      other.sentMessageBodyTextStyle == sentMessageBodyTextStyle &&
-      other.receivedMessageBodyTextStyle == receivedMessageBodyTextStyle &&
-      other.sentMessageCaptionTextStyle == sentMessageCaptionTextStyle &&
-      other.receivedMessageCaptionTextStyle ==
-          receivedMessageCaptionTextStyle &&
-      other.userNameTextStyle == userNameTextStyle &&
-      other.brandingTextStyle == brandingTextStyle &&
-      listEquals(other.userAvatarNameColors, userAvatarNameColors) &&
-      other.sendButtonIcon == sendButtonIcon;
+      other.horizontalPadding == horizontalPadding;
 
   @override
   int get hashCode => Object.hash(
+    brightness,
+    fontFamily,
+    accentColor,
     backgroundColor,
-    primaryColor,
-    onPrimaryColor,
-    secondaryColor,
-    inputBackgroundColor,
-    inputTextColor,
-    onlineIndicatorColor,
-    inputBorderRadius,
-    messageBorderRadius,
     horizontalPadding,
-    sentMessageBodyTextStyle,
-    receivedMessageBodyTextStyle,
-    sentMessageCaptionTextStyle,
-    receivedMessageCaptionTextStyle,
-    userNameTextStyle,
-    brandingTextStyle,
-    Object.hashAll(userAvatarNameColors),
-    sendButtonIcon,
   );
 }

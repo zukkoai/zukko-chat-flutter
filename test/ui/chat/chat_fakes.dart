@@ -8,7 +8,8 @@ class FakeClient extends Fake implements ChatwootClient {
   bool disposed = false;
   int loads = 0;
   Object? sendError;
-  final sent = <({String content, String echoId})>[];
+  final sent =
+      <({String content, String echoId, List<ChatwootUpload> attachments})>[];
 
   @override
   Future<void> loadMessages() async => loads++;
@@ -17,9 +18,10 @@ class FakeClient extends Fake implements ChatwootClient {
   Future<void> sendMessage({
     required String content,
     required String echoId,
+    List<ChatwootUpload> attachments = const [],
   }) async {
     if (sendError != null) throw sendError!;
-    sent.add((content: content, echoId: echoId));
+    sent.add((content: content, echoId: echoId, attachments: attachments));
   }
 
   @override

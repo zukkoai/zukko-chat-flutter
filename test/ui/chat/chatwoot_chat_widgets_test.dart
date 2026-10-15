@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:chatwoot_sdk/chatwoot_sdk.dart';
 import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_view.dart';
+import 'package:flutter/foundation.dart' show SynchronousFuture;
+import 'package:flutter/cupertino.dart'
+    show CupertinoLocalizations, DefaultCupertinoLocalizations;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' as mui;
+import 'package:google_fonts/google_fonts.dart';
 
 import 'chat_fakes.dart';
 
@@ -54,6 +57,9 @@ void main() {
   late FakeFactory factory;
   late FakeClient client;
 
+  // The style fonts come from google_fonts; no network in tests.
+  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+
   setUp(() {
     factory = FakeFactory();
     client = FakeClient();
@@ -67,9 +73,9 @@ void main() {
         tester,
         _app(ChatwootChat(options: _o, clientFactory: factory.call)),
       );
-      await tester.enterText(find.byType(mui.TextField), 'hello');
+      await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byTooltip('Send'));
       await tester.pump();
 
       expect(tester.takeException(), isNull);
@@ -135,9 +141,9 @@ void main() {
         _app(ChatwootChat(options: _o, clientFactory: factory.call)),
       );
       await _settle(tester);
-      await tester.enterText(find.byType(mui.TextField), 'retry me');
+      await tester.enterText(find.byType(TextField), 'retry me');
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byTooltip('Send'));
       await _settle(tester);
       factory.callbacks!.onError!(
         ChatwootClientException(
@@ -236,9 +242,9 @@ void main() {
         tester,
         _app(ChatwootChat(options: _o, clientFactory: factory.call)),
       );
-      await tester.enterText(find.byType(mui.TextField), 'hi');
+      await tester.enterText(find.byType(TextField), 'hi');
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byTooltip('Send'));
       await tester.pump();
       factory.completer.completeError(StateError('boom'));
       await _settle(tester);
@@ -279,57 +285,16 @@ void main() {
       expect(find.text('Ulanmadi'), findsOneWidget);
       expect(find.text('Qayta'), findsOneWidget);
     });
-
-    testWidgets('the dialog takes the same interactions as the page (F17)', (
-      tester,
-    ) async {
-      final sent = <String>[];
-      factory.completer.complete(client);
-      await _pump(
-        tester,
-        _app(
-          ChatwootChatDialog(
-            title: 'S',
-            options: _o,
-            clientFactory: factory.call,
-            interactions: ChatwootChatInteractions(onSendPressed: sent.add),
-          ),
-        ),
-      );
-      await tester.enterText(find.byType(mui.TextField), 'yo');
-      await tester.pump();
-      await tester.tap(find.byIcon(Icons.send));
-      await _settle(tester);
-
-      expect(sent, ['yo']);
-    });
-
-    test('avatar colours are a pure function of the user id (F18)', () {
-      final theme = ChatwootChatTheme.fromColorScheme(const ColorScheme.light())
-          .copyWith(
-            userAvatarNameColors: const [Colors.red, Colors.green, Colors.blue],
-          );
-
-      // fixed expectations: String.hashCode would not guarantee them
-      expect(theme.avatarColorFor('agent:1'), theme.avatarColorFor('agent:1'));
-      expect(
-        [
-          'agent:1',
-          'agent:2',
-          'agent:3',
-          'chatwoot-agent',
-        ].map(theme.avatarColorFor),
-        [Colors.red, Colors.green, Colors.blue, Colors.red],
-      );
-    });
   });
 
-  group('dialog', () {
-    testWidgets('uses the l10n it was given (U5)', (tester) async {
+  group('header', () {
+    testWidgets('title, status and placeholder come from l10n (U5)', (
+      tester,
+    ) async {
       await _pump(
         tester,
         _app(
-          ChatwootChatDialog(
+          ChatwootChat(
             title: 'Support',
             clientFactory: factory.call,
             options: const ChatwootChatOptions(
@@ -355,13 +320,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await _pump(
         tester,
-        _app(
-          ChatwootChatDialog(
-            title: 'Support',
-            options: _o,
-            clientFactory: factory.call,
-          ),
-        ),
+        _app(ChatwootChat(options: _o, clientFactory: factory.call)),
       );
 
       factory.callbacks!.onConversationIsOnline!();
@@ -378,7 +337,7 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('close button: labelled, tappable, at least 48dp (U12)', (
+    testWidgets('back button: shown on a pushed route, 48dp, pops it', (
       tester,
     ) async {
       final handle = tester.ensureSemantics();
@@ -387,56 +346,11 @@ void main() {
         _app(
           Builder(
             builder: (context) => TextButton(
-              onPressed: () => ChatwootChatDialog.show(
+              onPressed: () => Navigator.push(
                 context,
-                options: _o,
-                title: 'Support',
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        ),
-      );
-      await _pump(
-        tester,
-        _app(
-          ChatwootChatDialog(
-            title: 'Support',
-            options: _o,
-            clientFactory: factory.call,
-          ),
-        ),
-      );
-
-      final close = find.byTooltip('Close');
-      expect(close, findsOneWidget);
-      final size = tester.getSize(
-        find.ancestor(
-          of: find.byIcon(Icons.close),
-          matching: find.byType(IconButton),
-        ),
-      );
-      expect(size.width, greaterThanOrEqualTo(48));
-      expect(size.height, greaterThanOrEqualTo(48));
-      expect(
-        tester.getSemantics(close),
-        isSemantics(tooltip: 'Close', isButton: true, hasTapAction: true),
-      );
-      handle.dispose();
-    });
-
-    testWidgets('close pops the route', (tester) async {
-      await _pump(
-        tester,
-        _app(
-          Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => ChatwootChatDialog(
-                  title: 'S',
-                  options: _o,
-                  clientFactory: factory.call,
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      ChatwootChat(options: _o, clientFactory: factory.call),
                 ),
               ),
               child: const Text('open'),
@@ -444,33 +358,26 @@ void main() {
           ),
         ),
       );
+      expect(find.byTooltip('Back'), findsNothing);
+
       await tester.tap(find.text('open'));
       await _settle(tester);
-      expect(find.byType(ChatwootChatDialog), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Close'));
-      await _settle(tester);
-
-      expect(find.byType(ChatwootChatDialog), findsNothing);
-    });
-
-    testWidgets('close label is localised', (tester) async {
-      await _pump(
-        tester,
-        _app(
-          ChatwootChatDialog(
-            title: 'S',
-            clientFactory: factory.call,
-            options: const ChatwootChatOptions(
-              baseUrl: 'b',
-              inboxIdentifier: 'i',
-              l10n: ChatwootL10n(closeLabel: 'Yopish'),
-            ),
-          ),
-        ),
+      final back = find.byTooltip('Back');
+      expect(back, findsOneWidget);
+      final size = tester.getSize(
+        find.ancestor(of: back, matching: find.byType(IconButton)),
+      );
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(
+        tester.getSemantics(back),
+        isSemantics(tooltip: 'Back', isButton: true, hasTapAction: true),
       );
 
-      expect(find.byTooltip('Yopish'), findsOneWidget);
+      await tester.tap(back);
+      await _settle(tester);
+      expect(find.byType(ChatwootChat), findsNothing);
+      handle.dispose();
     });
 
     testWidgets('header mirrors in RTL (U13)', (tester) async {
@@ -478,7 +385,7 @@ void main() {
         await _pump(
           tester,
           _app(
-            ChatwootChatDialog(
+            ChatwootChat(
               title: 'Title',
               options: _o,
               clientFactory: factory.call,
@@ -486,7 +393,7 @@ void main() {
             dir: dir,
           ),
         );
-        final center = tester.getCenter(find.byType(Dialog)).dx;
+        final center = tester.getCenter(find.byType(ChatwootChat)).dx;
         return tester.getCenter(find.text('Title')).dx - center;
       }
 
@@ -601,27 +508,37 @@ void main() {
   });
 
   group('theme value semantics (U11)', () {
-    final a = ChatwootChatTheme.fromColorScheme(const ColorScheme.light());
-    final b = ChatwootChatTheme.fromColorScheme(const ColorScheme.dark());
+    const a = ChatwootChatTheme(
+      brightness: Brightness.light,
+      accentColor: Color(0xff112233),
+    );
+    const b = ChatwootChatTheme(
+      brightness: Brightness.dark,
+      accentColor: Color(0xff445566),
+      backgroundColor: Color(0xff000000),
+    );
 
     test('equality, hashCode and copyWith', () {
-      expect(a, ChatwootChatTheme.fromColorScheme(const ColorScheme.light()));
+      expect(a, const ChatwootChatTheme(
+        brightness: Brightness.light,
+        accentColor: Color(0xff112233),
+      ));
       expect(
-        a.hashCode,
+        ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
         ChatwootChatTheme.fromColorScheme(const ColorScheme.light()).hashCode,
       );
       expect(a, isNot(b));
       expect(a.copyWith(), a);
-      expect(a.copyWith(primaryColor: Colors.pink).primaryColor, Colors.pink);
-      expect(a.copyWith(primaryColor: Colors.pink), isNot(a));
+      expect(a.copyWith(accentColor: Colors.pink).accentColor, Colors.pink);
+      expect(a.copyWith(accentColor: Colors.pink), isNot(a));
     });
 
     test('lerp ends are the inputs', () {
-      expect(a.lerp(b, 0).primaryColor, a.primaryColor);
+      expect(a.lerp(b, 0).accentColor, a.accentColor);
       expect(a.lerp(b, 1).backgroundColor, b.backgroundColor);
       expect(
-        a.lerp(b, 0.5).primaryColor,
-        Color.lerp(a.primaryColor, b.primaryColor, 0.5),
+        a.lerp(b, 0.5).accentColor,
+        Color.lerp(a.accentColor, b.accentColor, 0.5),
       );
       expect(a.lerp(null, 0.5), a);
     });
@@ -638,4 +555,188 @@ void main() {
       expect(const ChatwootL10n(botName: 'x'), isNot(const ChatwootL10n()));
     });
   });
+
+  group('styles', () {
+    for (final style in ChatwootChatStyle.values) {
+      for (final brightness in Brightness.values) {
+        testWidgets('${style.name} / ${brightness.name} renders a chat', (
+          tester,
+        ) async {
+          final semantics = tester.ensureSemantics();
+          factory.completer.complete(client);
+          await _pump(
+            tester,
+            _app(
+              ChatwootChat(
+                title: 'Helper',
+                options: ChatwootChatOptions(
+                  baseUrl: 'b',
+                  inboxIdentifier: 'i',
+                  style: style,
+                ),
+                clientFactory: factory.call,
+                interactions: ChatwootChatInteractions(
+                  onMorePressed: () {},
+                ),
+              ),
+              theme: ThemeData(brightness: brightness),
+            ),
+          );
+          factory.callbacks!.onMessageReceived!(
+            msg(1, content: 'see https://example.com/a'),
+          );
+          factory.callbacks!.onConversationStartedTyping!();
+          await _settle(tester);
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Helper'), findsOneWidget);
+          expect(
+            find.text('see https://example.com/a', findRichText: true),
+            findsOneWidget,
+          );
+          expect(find.text('zukko.ai'), findsOneWidget);
+          expect(find.byTooltip('Attach a file or image'), findsOneWidget);
+          expect(find.byTooltip('More options'), findsOneWidget);
+          expect(
+            find.bySemanticsLabel('Hold to record a voice message'),
+            findsOneWidget,
+          );
+          semantics.dispose();
+        });
+      }
+    }
+
+    testWidgets('attach and voice can be turned off; menu needs a callback', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _app(
+          ChatwootChat(
+            options: const ChatwootChatOptions(
+              baseUrl: 'b',
+              inboxIdentifier: 'i',
+              enableAttachments: false,
+              enableVoiceMessages: false,
+            ),
+            clientFactory: factory.call,
+          ),
+        ),
+      );
+
+      expect(find.byTooltip('Attach a file or image'), findsNothing);
+      expect(find.byTooltip('More options'), findsNothing);
+      expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
+    });
+
+    testWidgets('an app bar replaces the style header', (tester) async {
+      await _pump(
+        tester,
+        _app(
+          ChatwootChat(
+            options: _o,
+            title: 'Header title',
+            appBar: AppBar(title: const Text('App bar')),
+            clientFactory: factory.call,
+          ),
+        ),
+      );
+
+      expect(find.text('App bar'), findsOneWidget);
+      expect(find.text('Header title'), findsNothing);
+    });
+
+    testWidgets('strings follow the app locale when l10n is null', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        MaterialApp(
+          locale: const Locale('uz'),
+          supportedLocales: const [Locale('uz'), Locale('en')],
+          localizationsDelegates: const [
+            _FallbackMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+            _FallbackCupertinoDelegate(),
+          ],
+          home: ChatwootChat(options: _o, clientFactory: factory.call),
+        ),
+      );
+
+      expect(find.text(ChatwootL10n.uzLatn.inputPlaceholder), findsOneWidget);
+      expect(find.text(ChatwootL10n.uzLatn.headerTitle), findsOneWidget);
+    });
+  });
+
+  group('l10n translations', () {
+    test('forLocale picks the built-in translation', () {
+      expect(ChatwootL10n.forLocale(const Locale('ru')), ChatwootL10n.ru);
+      expect(ChatwootL10n.forLocale(const Locale('tr')), ChatwootL10n.tr);
+      expect(ChatwootL10n.forLocale(const Locale('kaa')), ChatwootL10n.kaa);
+      expect(ChatwootL10n.forLocale(const Locale('uz')), ChatwootL10n.uzLatn);
+      expect(
+        ChatwootL10n.forLocale(
+          const Locale.fromSubtags(languageCode: 'uz', scriptCode: 'Cyrl'),
+        ),
+        ChatwootL10n.uzCyrl,
+      );
+      expect(ChatwootL10n.forLocale(const Locale('de')), const ChatwootL10n());
+      expect(ChatwootL10n.forLocale(null), const ChatwootL10n());
+    });
+
+    test('translations differ from English and from each other', () {
+      const all = [
+        ChatwootL10n(),
+        ChatwootL10n.ru,
+        ChatwootL10n.uzLatn,
+        ChatwootL10n.uzCyrl,
+        ChatwootL10n.tr,
+        ChatwootL10n.kaa,
+      ];
+      expect(all.map((l) => l.inputPlaceholder).toSet(), hasLength(all.length));
+      expect(all.toSet(), hasLength(all.length));
+    });
+  });
+}
+
+/// English material strings for any locale (the test app has no
+/// flutter_localizations).
+class _FallbackMaterialLocalizations extends DefaultMaterialLocalizations {
+  const _FallbackMaterialLocalizations();
+
+  static const LocalizationsDelegate<MaterialLocalizations> delegate =
+      _FallbackDelegate();
+}
+
+class _FallbackDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+  const _FallbackDelegate();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<MaterialLocalizations> load(Locale locale) =>
+      SynchronousFuture<MaterialLocalizations>(
+        const _FallbackMaterialLocalizations(),
+      );
+
+  @override
+  bool shouldReload(_FallbackDelegate old) => false;
+}
+
+class _FallbackCupertinoDelegate
+    extends LocalizationsDelegate<CupertinoLocalizations> {
+  const _FallbackCupertinoDelegate();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<CupertinoLocalizations> load(Locale locale) =>
+      SynchronousFuture<CupertinoLocalizations>(
+        const DefaultCupertinoLocalizations(),
+      );
+
+  @override
+  bool shouldReload(_FallbackCupertinoDelegate old) => false;
 }

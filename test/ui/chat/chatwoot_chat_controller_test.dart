@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:chatwoot_sdk/chatwoot_sdk.dart';
 import 'package:chatwoot_sdk/src/ui/chat/chatwoot_chat_controller.dart';
+import 'package:chatwoot_sdk/src/ui/chat/components/gallery_message.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -489,6 +491,114 @@ void main() {
 
       expect(chat.messages.length, 1);
       expect(texts().single.text, const ChatwootL10n().attachmentLabel);
+    });
+
+    test('https attachments become image, gallery, audio and file messages', () async {
+      await ready();
+      Map<String, dynamic> file(String type, String name) => {
+        'file_type': type,
+        'data_url': 'https://cdn.test/$name',
+        'file_size': 2048,
+      };
+      factory.callbacks!.onMessageReceived!(
+        msg(1, content: 'one', attachments: [file('image', 'a.jpg')]),
+      );
+      factory.callbacks!.onMessageReceived!(
+        msg(
+          2,
+          content: 'two',
+          attachments: [file('image', 'b.jpg'), file('image', 'c.jpg')],
+        ),
+      );
+      factory.callbacks!.onMessageReceived!(
+        msg(3, content: null, attachments: [file('audio', 'v.ogg')]),
+      );
+      factory.callbacks!.onMessageReceived!(
+        msg(4, content: null, attachments: [file('file', 'doc.pdf')]),
+      );
+      factory.callbacks!.onMessageReceived!(
+        msg(
+          5,
+          content: null,
+          attachments: [
+            {'file_type': 'image', 'data_url': 'http://insecure.test/x.jpg'},
+          ],
+        ),
+      );
+
+      final m = chat.messages;
+      expect(m.length, 5);
+      expect((m[0] as ImageMessage).source, 'https://cdn.test/a.jpg');
+      expect((m[0] as ImageMessage).text, 'one');
+      expect(GalleryMessage.imagesOf(m[1]), [
+        'https://cdn.test/b.jpg',
+        'https://cdn.test/c.jpg',
+      ]);
+      expect(GalleryMessage.captionOf(m[1]), 'two');
+      expect((m[2] as AudioMessage).source, 'https://cdn.test/v.ogg');
+      expect((m[3] as FileMessage).name, 'doc.pdf');
+      expect((m[3] as FileMessage).size, 2048);
+      expect((m[4] as TextMessage).text, const ChatwootL10n().attachmentLabel);
+    });
+  });
+
+  group('sending attachments', () {
+    test('a local preview at once, the server version once confirmed', () async {
+      await ready();
+      final file = ChatwootUpload.bytes(
+        name: 'photo.jpg',
+        bytes: Uint8List.fromList([1, 2]),
+      );
+
+      controller.sendAttachments([file]);
+      await pumpEventQueue();
+
+      final preview = chat.messages.single as ImageMessage;
+      expect(preview.status, MessageStatus.sending);
+      expect(client.sent.single.attachments, [file]);
+      expect(client.sent.single.content, '');
+
+      factory.callbacks!.onMessageSent!(
+        msg(
+          5,
+          content: null,
+          type: 0,
+          attachments: [
+            {'file_type': 'image', 'data_url': 'https://cdn.test/p.jpg'},
+          ],
+        ),
+        client.sent.single.echoId,
+      );
+      await pumpEventQueue();
+
+      final confirmed = chat.messages.single as ImageMessage;
+      expect(confirmed.id, preview.id);
+      expect(confirmed.source, 'https://cdn.test/p.jpg');
+      expect(confirmed.status, MessageStatus.delivered);
+    });
+
+    test('a voice recording keeps its duration; a failed one resends', () async {
+      await ready();
+      final voice = ChatwootUpload.bytes(
+        name: 'voice.wav',
+        bytes: Uint8List.fromList([1, 2]),
+      );
+      client.sendError = StateError('offline');
+
+      controller.sendAttachments(
+        [voice],
+        audioDuration: const Duration(seconds: 7),
+      );
+      await pumpEventQueue();
+      final failed = chat.messages.single as AudioMessage;
+      expect(failed.duration, const Duration(seconds: 7));
+      expect(failed.status, MessageStatus.error);
+
+      client.sendError = null;
+      controller.resend(failed.id);
+      await pumpEventQueue();
+
+      expect(client.sent.single.attachments, [voice]);
     });
   });
 
