@@ -144,7 +144,7 @@ State after phases 1-4 (see `CHANGELOGS/` and `TODO.md`). The SDK still speaks t
 - Tests/fixtures under `test/` use `/public` paths.
 
 **UI vs design image**
-- Theme covers colors/radius/input (`ChatwootChatTheme`, one `classic` style).
+- Theme: `ChatwootChatTheme` (brightness, font, accent/background overrides) feeding three chat styles (`ChatwootChatStyle`: smoothSilk, minimalClean, threadFeed; light and dark).
 - Missing: chat list screen, custom header (avatar + online dot + call buttons), file/image bubbles, voice recording, attachment button, "Powered by Chatwoot" footer hook beyond `showBranding`.
 
 ## 6. Owner requirements (decided 2026-10-13)

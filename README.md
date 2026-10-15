@@ -2,12 +2,9 @@
 
 # Integrate Chatwoot with a Flutter app
 
-Talk to your visitors in real time from a Flutter app. Two independent ways to embed [Chatwoot](https://github.com/chatwoot/chatwoot):
+Talk to your visitors in real time from a Flutter app: a ready native chat screen (`ChatwootChat`, three styles in light and dark) on an *API inbox* of [Chatwoot](https://github.com/chatwoot/chatwoot), or your own UI on `ChatwootClient`.
 
-1. **Native chat** (`ChatwootChat`, `ChatwootChatDialog`, or build your own UI on `ChatwootClient`): talks to an *API inbox*.
-2. **Web widget** (`ChatwootWidget`): shows the Chatwoot website widget in a webview (*website channel*).
-
-<img src="https://user-images.githubusercontent.com/22669874/225545427-bd3fe38c-d116-4286-b542-67b03a51e2d2.jpg" alt="chatwoot screenshot" height="560"/>
+The `example/` app shows the three styles on demo data (no server needed): `cd example && flutter run`.
 
 ## 1. Install
 
@@ -37,7 +34,7 @@ void openChat(BuildContext context) {
     MaterialPageRoute<void>(
       builder: (_) => ChatwootChat(
         options: options,
-        appBar: AppBar(title: const Text('Support')),
+        title: 'Support',
         callbacks: ChatwootCallbacks(
           onError: (e) => debugPrint('chat error: ${e.cause} (${e.type})'),
         ),
@@ -50,16 +47,6 @@ void openChat(BuildContext context) {
 }
 ```
 
-### Dialog
-
-```dart
-Future<void> openDialog(BuildContext context) => ChatwootChatDialog.show(
-      context,
-      options: options,
-      title: 'Support',
-    );
-```
-
 ### `ChatwootChatOptions`
 
 | Name | Default | Description |
@@ -69,13 +56,19 @@ Future<void> openDialog(BuildContext context) => ChatwootChatDialog.show(
 | `user` | `null` | `ChatwootUser` attached to the contact. |
 | `enablePersistence` | `true` | Keep contact, conversation and messages on disk (encrypted). `false`: memory only. |
 | `allowInsecure` | `false` | Allow plain `http://` for non-loopback hosts. Development only. |
-| `theme` | from `ColorScheme` | `ChatwootChatTheme` (a `ThemeExtension`; may also be registered in `ThemeData.extensions`). |
-| `l10n` | English | `ChatwootL10n` texts. |
+| `style` | `smoothSilk` | `ChatwootChatStyle`: `smoothSilk` (tonal bubbles), `minimalClean` (agent replies without bubbles), `threadFeed` (full-width rows with avatar and name). Each has light and dark. |
+| `theme` | from the app theme | `ChatwootChatTheme` (a `ThemeExtension`; may also be registered in `ThemeData.extensions`): brightness, optional `fontFamily` / `accentColor` / `backgroundColor` overrides. The style keeps its own palette and font (Manrope / Geist / Onest via `google_fonts`). |
+| `l10n` | app locale | `ChatwootL10n` texts. `null` picks the built-in translation of the locale: English, `ru`, `uz` (Latin), `uz_Cyrl`, `tr`, `kaa` (Karakalpak). Presets: `ChatwootL10n.ru`, `.uzLatn`, `.uzCyrl`, `.tr`, `.kaa`. |
 | `timeFormat` | `Hm` | `intl` `DateFormat` for message time. |
-| `showUserAvatars`, `showUserNames`, `showBranding` | `true` | UI switches. |
-| `style` | `classic` | `ChatwootChatStyle` (only `classic` for now). |
+| `showBranding` | `true` | Show the "Powered by zukko.ai" footer. |
+| `enableAttachments` | `true` | Attachment button: photos and files (up to 40 MB each). |
+| `enableVoiceMessages` | `true` | Hold-to-record microphone: voice messages up to 5 minutes (slide to cancel). Needs the microphone permission entries below. |
 
-`ChatwootChatInteractions` carries UI events: `onEndReached`, `onEndReachedThreshold`, `onMessageLongPress`, `onMessageTap`, `onSendPressed`. The `Message` type in them is re-exported from `flutter_chat_core`.
+`ChatwootChatInteractions` carries UI events: `onEndReached`, `onEndReachedThreshold`, `onMessageLongPress`, `onMessageTap`, `onSendPressed`, `onMorePressed` (shows the header menu button).
+
+The chat sends and shows images (several images as a grid), files and voice messages, and plays voice messages, in every style. The `Message` type in them is re-exported from `flutter_chat_core`.
+
+`ChatwootChat` draws the style's header (title from `title`, back button when the route can pop); pass `appBar` to use your own instead.
 
 ## 3. `ChatwootClient` (your own UI)
 
@@ -114,73 +107,50 @@ Future<void> send(ChatwootClient client) =>
 ```
 
 - `create()` completes after the first contact/conversation refresh. Failures arrive via `onError` and are not thrown; only an invalid `baseUrl` throws an `ArgumentError`.
-- `sendMessage` carries your temporary `echoId`; `onMessageSent`/`onError` give it back.
+- `sendMessage` carries your temporary `echoId`; `onMessageSent`/`onError` give it back. Pass `attachments: [ChatwootUpload.file(name: ..., path: ...)]` (or `ChatwootUpload.bytes` on web) to send files; `content` may then be empty.
 - `sendAction(ChatwootActionType.update_presence)` returns `false` while the realtime connection is not subscribed.
 - `onConnectionStateChanged` reports the realtime connection (`ChatwootConnectionState`).
 - Call `await client.dispose()` when done (safe to call twice).
 - Persisted clients with the same `baseUrl`, `inboxIdentifier`, `user.identifier` and `user.identifierHash` share their data.
 
-## 4. Web widget
+## 4. Sign out
 
-Create a website channel ([docs](https://www.chatwoot.com/docs/channels/website)) and use its *website token*.
-
-```dart
-ChatwootWidget(
-  websiteToken: 'website-token',
-  baseUrl: 'https://chat.example.com',
-  user: ChatwootUser(identifier: 'user-42', name: 'Jane', email: 'jane@example.com'),
-  locale: 'en',
-  closeWidget: () => Navigator.of(context).maybePop(),
-  onAttachFile: pickFiles, // Android only; returns a list of file URIs
-  onLoadStarted: () {},
-  onLoadProgress: (progress) {},
-  onLoadCompleted: () {},
-  onError: (description) => debugPrint('widget error: $description'),
-)
-```
-
-The conversation token is kept in secure storage per `baseUrl` + `websiteToken` + user. Custom `tokenStore` and `allowInsecure` are available.
-
-## 5. Sign out
-
-On logout, forget everything this SDK stored for the user. Dispose running clients and remove the widget first.
+On logout, forget everything this SDK stored for the user. Dispose running clients first.
 
 ```dart
 await chatwootSignOut(
   baseUrl: 'https://chat.example.com',
-  inboxIdentifier: 'inbox-identifier', // native client data
-  websiteToken: 'website-token',       // webview token + cookies/storage/cache
-  user: currentUser,                   // same identifier / identifierHash as used before
+  inboxIdentifier: 'inbox-identifier',
+  user: currentUser, // same identifier / identifierHash as used before
 );
 ```
 
-Either identifier may be omitted. `ChatwootClient.clearAllData()` removes all persisted native data of every user.
+`ChatwootClient.clearAllData()` removes all persisted data of every user.
 
-## 6. `ChatwootUser`
+## 5. `ChatwootUser`
 
 `identifier`, `name`, `email`, `avatarUrl`, `customAttributes`, `identifierHash`. `identifierHash` (HMAC of the identifier) must be computed by **your backend** with the inbox secret; never embed the secret in the app. `identifierHash` and `customAttributes` are never written to disk.
 
-## 7. https and `allowInsecure`
+## 6. https and `allowInsecure`
 
 `baseUrl` must be `https://`. Plain `http://` is accepted only for `localhost`, `127.0.0.1` and `10.0.2.2`, or for any host when `allowInsecure: true` (development only). Android 9+ also needs `android:usesCleartextTraffic="true"` for cleartext; iOS needs an App Transport Security exception.
 
-## 8. Platform notes
+## 7. Platform notes
 
-- **Android**: Declare the `INTERNET` permission in your app manifest. `ChatwootWidget` file upload (`onAttachFile`) is Android only; your picker may need `READ_MEDIA_IMAGES`/storage permissions. `minSdk` follows `webview_flutter_android` and `flutter_secure_storage` (see their READMEs).
-- **iOS**: deployment target per `webview_flutter_wkwebview` / `flutter_secure_storage`. Keychain entries use `first_unlock_this_device`.
-- Persisted data and the widget token use the platform keystore/keychain; they need a device with secure storage available. If storage cannot be opened the client still works in memory and reports `STORAGE_FAILED`.
+- **Android**: Declare the `INTERNET` permission in your app manifest, and `RECORD_AUDIO` for voice messages. `minSdk` follows `flutter_secure_storage`, `record` and `file_picker` (see their READMEs).
+- **iOS**: add `NSMicrophoneUsageDescription` (voice messages) and `NSPhotoLibraryUsageDescription` (photos) to `Info.plist`. Deployment target per `flutter_secure_storage`, `record`, `just_audio`. Keychain entries use `first_unlock_this_device`.
+- **Web**: the browser asks for the microphone; files are read into memory.
+- Persisted data uses the platform keystore/keychain; they need a device with secure storage available. If storage cannot be opened the client still works in memory and reports `STORAGE_FAILED`.
 
-## 9. Security notes
+## 8. Security notes
 
 - The server and its agents are trusted: messages are rendered as plain text, never executed.
 - `identifierHash` must be signed by your backend; the SDK is not a trust anchor.
-- The webview runs JavaScript (required by the widget). A hostile iframe inside the widget page is a residual risk; the bridge ignores messages from other pages.
-- The widget URL carries `website_token` and conversation id (web widget protocol).
 - The websocket has no connection auth beyond the `pubsub_token`.
 - There is no certificate pinning by default; add your own if your threat model needs it.
 - Rooted or jailbroken devices are out of scope.
 - `onError` text may end up in your crash reporter; it can include server response details, so treat it as diagnostic data.
 
-## 10. Development
+## 9. Development
 
 See [doc/Develop.md](doc/Develop.md). Generated `*.g.dart` files are gitignored: run `dart run build_runner build --delete-conflicting-outputs` after cloning.

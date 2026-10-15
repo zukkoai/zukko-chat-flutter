@@ -51,7 +51,9 @@ Rewrite of the internals, the native chat UI and the webview widget. Breaking.
 - `ChatwootClient.sendAction` returns `Future<bool>`; `ChatwootActionType.subscribe` is removed (only `update_presence` remains).
 - `ChatwootClient.withRepository` is `@visibleForTesting`; Riverpod DI, `ChatwootParameters` and `RepositoryParameters` are removed (the `riverpod` dependency is gone).
 - `ChatwootChat` and `ChatwootChatDialog` take `ChatwootChatOptions` (connection and look) plus `ChatwootChatInteractions` (`onEndReached`, `onEndReachedThreshold`, `onMessageLongPress`, `onMessageTap`, `onSendPressed`) and `ChatwootCallbacks`, instead of the former loose parameters. `ChatwootChatDialog.show` takes the same. `clientFactory` is test-only.
-- `ChatwootChatTheme` is a `ThemeExtension` derived from the ambient `ColorScheme`; the ~35 unused parameters and the `CHATWOOT_*`/`NEUTRAL_*`/`PRIMARY` constants are removed. `ChatwootL10n` keeps only keys that are used (new: `connectionErrorText`, `retryLabel`).
+- `ChatwootChatTheme` is a `ThemeExtension` holding only the style-independent base (brightness, font, optional `accentColor`/`backgroundColor`), derived from the ambient theme; the old color/text-style fields and the `CHATWOOT_*`/`NEUTRAL_*`/`PRIMARY` constants are removed. `ChatwootChatOptions.l10n` is nullable (null follows the app locale) and `ChatwootL10n.poweredByText` is now only the prefix of the "Powered by zukko.ai" footer.
+- `ChatwootChat` draws the selected style's header; `ChatwootChat.appBar` still replaces it.
+- Removed: `ChatwootWidget` (webview widget), `ChatwootTokenStore`, `ChatwootChatDialog`; `chatwootSignOut` takes `inboxIdentifier` (required) and no longer `websiteToken`/`tokenStore`. Dependencies `webview_flutter`/`webview_flutter_android` are gone.
 - `ChatwootEvent`, `ChatwootEventType`, `ChatwootAction`, `ChatwootActionData` (public wire classes) are removed; `ChatwootCallbacks` fields are `final`.
 - `ChatwootMessage.isMine` is true only for `message_type == 0`; `createdAt` is normalised to ISO-8601 UTC.
 - `ChatwootClientException` fields are `final`; new error types `SOCKET_SUBSCRIPTION_REJECTED`, `SOCKET_DISCONNECTED`, `STORAGE_FAILED`. `UPDATE_CONTACT_FAILED`/`UPDATE_MESSAGE_FAILED` are no longer produced (kept for source compatibility).
@@ -63,7 +65,11 @@ Rewrite of the internals, the native chat UI and the webview widget. Breaking.
 ### Added
 
 - `chatwootSignOut(...)`: one call that clears the native client's persisted data and the webview session for a user.
-- `ChatwootCallbacks.onConnectionStateChanged(ChatwootConnectionState)`, `ChatwootChatStyle` (`classic`), re-exported `Message` type.
+- `ChatwootCallbacks.onConnectionStateChanged(ChatwootConnectionState)`, re-exported `Message` type.
+- Native chat styles: `ChatwootChatOptions.style` = `ChatwootChatStyle.smoothSilk` (default), `minimalClean` or `threadFeed`, each in light and dark; image, multi-image, file, audio and link messages; typing indicator.
+- `ChatwootChatInteractions.onAttachmentPressed`, `voiceRecording` (`ChatwootVoiceRecordCallbacks`, hold-to-record gesture and timer) and `onMorePressed`; `ChatwootChat.title`.
+- Built-in translations: `ChatwootL10n.ru`, `uzLatn`, `uzCyrl`, `tr`, `kaa` and `ChatwootL10n.forLocale`.
+- Native chat sends photos, files and hold-to-record voice messages and plays voice messages (`ChatwootChatOptions.enableAttachments`, `enableVoiceMessages`); `ChatwootClient.sendMessage(attachments:)` with `ChatwootUpload`. New dependencies: `record`, `just_audio`, `file_picker`, `google_fonts`.
 - Realtime: ActionCable handshake with subscribe-on-welcome, 20 s presence, stale watchdog, exponential reconnect, latest-page refetch after a reconnect.
 
 ### Fixed
