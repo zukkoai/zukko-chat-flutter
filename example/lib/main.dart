@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'styles_demo.dart';
+import 'home_screen.dart';
 
 void main() => runApp(const ExampleApp());
 
-/// Shows the three chat styles of the SDK on demo data.
+/// Demo of the SDK: three chat styles on offline data, and a live chat.
 class ExampleApp extends StatefulWidget {
   const ExampleApp({super.key});
 
@@ -26,9 +26,6 @@ class _ExampleAppState extends State<ExampleApp> {
     theme: ThemeData(brightness: Brightness.light),
     darkTheme: ThemeData(brightness: Brightness.dark),
     themeMode: _mode,
-    home: StylesHomeScreen(
-      dark: _mode == ThemeMode.dark,
-      onToggleDark: _toggleMode,
-    ),
+    home: HomeScreen(dark: _mode == ThemeMode.dark, onToggleDark: _toggleMode),
   );
 }
