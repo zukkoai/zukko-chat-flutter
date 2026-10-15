@@ -76,8 +76,37 @@ build/
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
-/coverage/
 
+# Test / coverage output
+coverage/
+lcov.info
+
+# Dart convention: a package does not commit its lockfile (example/pubspec.lock is tracked)
+/pubspec.lock
+
+# Secrets and signing material
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+**/google-services.json
+**/GoogleService-Info.plist
+**/key.properties
+
+# Tooling / OS / editor leftovers
+.fvm/
+.vscode/
+Thumbs.db
+*.orig
+*.rej
+
+# Claude Code local files (project skills and settings.json stay tracked)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
 
 # Local files
 TODO.md
