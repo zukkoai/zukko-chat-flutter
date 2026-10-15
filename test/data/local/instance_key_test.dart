@@ -2,7 +2,7 @@ import 'package:zukko_chat_flutter/src/data/local/instance_key.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String _key(String? hash) =>
-    chatwootInstanceKey(baseUrl: 'u', websiteToken: 'i', identifierHash: hash);
+    zukkoChatInstanceKey(baseUrl: 'u', websiteToken: 'i', identifierHash: hash);
 
 String _digest(String hash) => _key(hash).split('|||h:').last;
 

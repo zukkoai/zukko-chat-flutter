@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
-import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/widget_message_form.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_upload.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_user.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_upload_policy.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session_api.dart';
 import 'package:zukko_chat_flutter/src/shared/http_client.dart';
 import 'package:dio/dio.dart';
 import 'package:fake_async/fake_async.dart';
@@ -152,9 +153,11 @@ void main() {
         final hang = _HangingAdapter();
         final start = DateTime(2026);
         final session = WidgetSession(
-          dio: Dio(BaseOptions(baseUrl: 'https://chat.test'))
-            ..httpClientAdapter = hang,
-          websiteToken: 'site',
+          api: WidgetSessionApi(
+            Dio(BaseOptions(baseUrl: 'https://chat.test'))
+              ..httpClientAdapter = hang,
+            'site',
+          ),
           storage: WidgetRig(server).storage,
           now: () => start.add(async.elapsed),
         );
@@ -260,7 +263,10 @@ void main() {
         // a real rebuild is still possible afterwards
         server.contactId = 2;
         server.messagesStatus = 200;
-        expect(await rig.session.refresh(SessionRefreshReason.manual), isTrue);
+        expect(
+          await rig.session.refresh(SessionRefreshReason.socketRejected),
+          isTrue,
+        );
       },
     );
 
@@ -288,6 +294,57 @@ void main() {
     });
   });
 
+  // B6: one owner announces "the session was replaced"
+  group('reset bookkeeping (B6)', () {
+    test('a rebuild that changes nothing is not a reset', () async {
+      final rig = WidgetRig(server);
+      await rig.session.start();
+      final generation = rig.session.generation;
+
+      final changed = await rig.session.refresh(
+        SessionRefreshReason.socketRejected,
+      );
+
+      expect(changed, isFalse);
+      expect(rig.resets, 0);
+      expect(rig.session.generation, generation);
+    });
+
+    test('same contact, new pubsub token: exactly one reset', () async {
+      final rig = WidgetRig(server);
+      await rig.session.start();
+      final generation = rig.session.generation;
+      server.pubsub = 'pub-2';
+
+      final changed = await rig.session.refresh(
+        SessionRefreshReason.socketRejected,
+      );
+
+      expect(changed, isTrue);
+      expect(rig.resets, 1);
+      expect(rig.session.generation, generation + 1);
+    });
+
+    test('another contact: exactly one reset, however it was found', () async {
+      final rig = WidgetRig(server);
+      await rig.session.start();
+      server.contactId = 2;
+
+      await rig.session.refresh(SessionRefreshReason.staleToken);
+
+      expect(rig.resets, 1);
+    });
+
+    test('a first start is never a reset', () async {
+      final rig = WidgetRig(server);
+
+      await rig.session.start();
+
+      expect(rig.resets, 0);
+      expect(rig.session.generation, 0);
+    });
+  });
+
   group('identity warning (10)', () {
     test(
       'identifier without hash: IDENTITY_NOT_VERIFIED once, not fatal',
@@ -295,7 +352,7 @@ void main() {
         final rig = WidgetRig(server, user: ZukkoChatUser(identifier: 'u1'));
 
         await rig.session.start();
-        await rig.session.refresh(SessionRefreshReason.manual);
+        await rig.session.refresh(SessionRefreshReason.socketRejected);
 
         expect(rig.session.isReady, isTrue);
         expect(rig.reported.map((e) => e.type), [T.IDENTITY_NOT_VERIFIED]);
@@ -345,7 +402,7 @@ void main() {
     test(
       'a 302 to another host is not followed: typed error, one request',
       () async {
-        final dio = chatwootDio('http://127.0.0.1:${origin.port}');
+        final dio = zukkoChatDio('http://127.0.0.1:${origin.port}');
 
         await expectLater(
           dio.get<Object?>(
@@ -371,8 +428,10 @@ void main() {
       'the session turns a redirecting /config into GET_CONFIG_FAILED',
       () async {
         final session = WidgetSession(
-          dio: chatwootDio('http://127.0.0.1:${origin.port}'),
-          websiteToken: 'site',
+          api: WidgetSessionApi(
+            zukkoChatDio('http://127.0.0.1:${origin.port}'),
+            'site',
+          ),
           storage: WidgetRig(server).storage,
         );
 
@@ -383,7 +442,7 @@ void main() {
     );
 
     test('timeouts are set', () {
-      final o = chatwootDio('https://x.test').options;
+      final o = zukkoChatDio('https://x.test').options;
       expect(o.followRedirects, isFalse);
       expect(o.connectTimeout, const Duration(seconds: 15));
       expect(o.receiveTimeout, const Duration(seconds: 30));
@@ -401,19 +460,22 @@ void main() {
       final raf = await f.open(mode: FileMode.write);
       await raf.truncate(bytes); // sparse: no real 40 MB written
       await raf.close();
-      return ZukkoChatUpload.file(name: 'big.png', path: f.path); // size unknown
+      return ZukkoChatUpload.file(
+        name: 'big.png',
+        path: f.path,
+      ); // size unknown
     }
 
     test('a path upload of unknown size over 40 MB is rejected', () async {
       final big = await sparse(ZukkoChatUpload.maxSize + 1);
 
-      await expectLater(validateUploadFile(big), typed(T.SEND_MESSAGE_FAILED));
+      await expectLater(validateUpload(big), typed(T.SEND_MESSAGE_FAILED));
     });
 
     test('exactly 40 MB passes', () async {
       final ok = await sparse(ZukkoChatUpload.maxSize);
 
-      await validateUploadFile(ok);
+      await validateUpload(ok);
     });
 
     test('the service rejects it before building the form', () async {

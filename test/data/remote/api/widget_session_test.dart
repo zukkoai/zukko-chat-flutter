@@ -1,11 +1,12 @@
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
-import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_upload.dart';
 import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/zukko_chat_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/zukko_chat_new_message_request.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/widget_auth_interceptor.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +21,7 @@ void main() {
   late LocalStorage storage;
   late WidgetSession session;
   late Dio dio;
-  late ChatwootClientServiceImpl service;
+  late ZukkoChatClientServiceImpl service;
   late int resets;
   late List<ZukkoChatException> reported;
   late DateTime clock;
@@ -34,23 +35,18 @@ void main() {
     reported = [];
     clock = DateTime(2026);
     session = WidgetSession(
-      dio: Dio(BaseOptions(baseUrl: server.baseUrl)),
-      websiteToken: FakeChatServer.websiteToken,
+      api: WidgetSessionApi(
+        Dio(BaseOptions(baseUrl: server.baseUrl)),
+        FakeChatServer.websiteToken,
+      ),
       storage: storage,
       user: user,
-      onSessionReset: () => resets++,
-      onError: reported.add,
+      listener: SessionListener(onReset: () => resets++, onError: reported.add),
       now: () => clock,
     );
     dio = Dio(BaseOptions(baseUrl: server.baseUrl));
-    dio.interceptors.add(
-      WidgetAuthInterceptor(
-        session: session,
-        websiteToken: FakeChatServer.websiteToken,
-        dio: dio,
-      ),
-    );
-    service = ChatwootClientServiceImpl(dio: dio);
+    dio.interceptors.add(WidgetAuthInterceptor(session: session, dio: dio));
+    service = ZukkoChatClientServiceImpl(dio: dio);
   }
 
   setUp(() {
@@ -64,9 +60,8 @@ void main() {
       ..pubsubToken = 'pubsub-secret';
   });
 
-  Matcher typed(ZukkoChatExceptionType type) => throwsA(
-    isA<ZukkoChatException>().having((e) => e.type, 'type', type),
-  );
+  Matcher typed(ZukkoChatExceptionType type) =>
+      throwsA(isA<ZukkoChatException>().having((e) => e.type, 'type', type));
 
   group('start', () {
     test('anonymous: one /config, JWT + pubsub token stored', () async {
@@ -434,7 +429,7 @@ void main() {
       server.forgetContacts();
 
       final created = await service.createMessage(
-        ChatwootNewMessageRequest(content: '', echoId: 'e'),
+        ZukkoChatNewMessageRequest(content: '', echoId: 'e'),
         attachments: [
           ZukkoChatUpload.bytes(
             name: 'a.txt',

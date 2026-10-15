@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:zukko_chat_flutter/src/data/local/hive_adapters.dart';
 import 'package:zukko_chat_flutter/src/data/local/instance_key.dart';
+import 'package:zukko_chat_flutter/src/data/local/dao/zukko_chat_messages_dao.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_database.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_type_ids.dart';
 import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_contact.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/local/zukko_chat_box_names.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_contact.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_message.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -36,17 +37,15 @@ void main() {
         make = entry.value;
       });
 
-      test('contact, conversation and user round-trip and delete', () async {
+      test('contact and conversation round-trip and delete', () async {
         final storage = make('k');
         expect(storage.contact.get(), isNull);
 
         await storage.contact.save(contact());
         await storage.conversation.save(conversation());
-        await storage.user.save(user());
 
         expect(storage.contact.get(), contact());
         expect(storage.conversation.get()!.id, 7);
-        expect(storage.user.get(), user());
 
         await storage.contact.delete();
         expect(storage.contact.get(), isNull);
@@ -58,16 +57,6 @@ void main() {
         await storage.conversation.save(conversation(id: 2));
 
         expect(storage.conversation.get()!.id, 2);
-      });
-
-      // P10: user without identifier used to be stored under "null"/box.put(null)
-      test('a user without identifier can be saved and read back', () async {
-        final storage = make('k');
-        final anonymous = ZukkoChatUser(name: 'only a name');
-
-        await storage.user.save(anonymous);
-
-        expect(storage.user.get(), anonymous);
       });
 
       // P11: contact without an identifier used to crash with a null check
@@ -167,24 +156,21 @@ void main() {
         expect(b.conversation.get(), isNotNull);
       });
 
-      test('clear() keeps contact and user unless asked', () async {
+      test('clear() keeps the contact unless asked', () async {
         final storage = make('k');
         await storage.contact.save(contact());
-        await storage.user.save(user());
         await storage.conversation.save(conversation());
         await storage.messages.saveMessage(message(1));
 
-        await storage.clear(clearChatwootUserStorage: false);
+        await storage.clear(clearContact: false);
 
         expect(storage.conversation.get(), isNull);
         expect(storage.messages.getMessages(), isEmpty);
         expect(storage.contact.get(), isNotNull);
-        expect(storage.user.get(), isNotNull);
 
         await storage.clear();
 
         expect(storage.contact.get(), isNull);
-        expect(storage.user.get(), isNull);
       });
     });
   }
@@ -193,7 +179,7 @@ void main() {
     setUp(env.open);
 
     test('data survives closing and reopening the boxes', () async {
-      final key = chatwootInstanceKey(
+      final key = zukkoChatInstanceKey(
         baseUrl: 'https://a',
         websiteToken: 'in',
         userIdentifier: 'u',
@@ -202,7 +188,7 @@ void main() {
       await LocalStorage.persisted(key).messages.saveMessage(message(1));
 
       await Hive.close();
-      await LocalStorage.openDB();
+      await HiveDatabase.openDB();
 
       final storage = LocalStorage.persisted(key);
       expect(storage.contact.get(), contact());
@@ -212,8 +198,8 @@ void main() {
     test('openDB is idempotent', () async {
       await LocalStorage.persisted('k').contact.save(contact());
 
-      await LocalStorage.openDB();
-      await LocalStorage.openDB();
+      await HiveDatabase.openDB();
+      await HiveDatabase.openDB();
 
       expect(LocalStorage.persisted('k').contact.get(), isNotNull);
     });
@@ -221,14 +207,14 @@ void main() {
     // An instance key that is a prefix of another must not see its messages.
     test('instance keys that are prefixes do not leak messages', () async {
       final short = LocalStorage.persisted(
-        chatwootInstanceKey(
+        zukkoChatInstanceKey(
           baseUrl: 'https://a',
           websiteToken: 'in',
           userIdentifier: 'u',
         ),
       );
       final long = LocalStorage.persisted(
-        chatwootInstanceKey(
+        zukkoChatInstanceKey(
           baseUrl: 'https://a',
           websiteToken: 'in|m|1',
           userIdentifier: 'u',
@@ -245,191 +231,69 @@ void main() {
       await LocalStorage.persisted('a').contact.save(contact());
       await LocalStorage.persisted('b').messages.saveMessage(message(1));
 
-      await LocalStorage.clearAllPersisted();
+      await HiveDatabase.clearAll();
 
       expect(LocalStorage.persisted('a').contact.get(), isNull);
       expect(LocalStorage.persisted('b').messages.getMessages(), isEmpty);
     });
 
-    test('box names are pinned to the names of earlier SDK versions', () {
+    test('box names are pinned (they are file names on devices)', () {
       expect(
-        ChatwootBoxNames.legacyContacts,
-        'ChatwootContactBoxNames.CONTACTS',
+        ZukkoChatBoxNames.contacts,
+        'ChatwootContactBoxNames.CONTACTS.enc',
       );
       expect(
-        ChatwootBoxNames.legacyConversations,
-        'ChatwootConversationBoxNames.CONVERSATIONS',
+        ZukkoChatBoxNames.conversations,
+        'ChatwootConversationBoxNames.CONVERSATIONS.enc',
       );
       expect(
-        ChatwootBoxNames.legacyMessages,
-        'ChatwootMessagesBoxNames.MESSAGES',
+        ZukkoChatBoxNames.messages,
+        'ChatwootMessagesBoxNames.MESSAGES.enc',
       );
-      expect(ChatwootBoxNames.legacyUsers, 'ChatwootUserBoxNames.USERS');
-      // the encrypted boxes are new files next to them, never the same ones
-      expect(ChatwootBoxNames.contacts, isNot(ChatwootBoxNames.legacyContacts));
-    });
-  });
-
-  group('migration of the plaintext layouts', () {
-    const legacyKey = 'https://old.example|||null|||inbox-1';
-    final newKey = chatwootInstanceKey(
-      baseUrl: 'https://old.example',
-      websiteToken: 'inbox-1',
-    );
-
-    Future<Box<T>> legacy<T>(String name) => Hive.openBox<T>(name);
-
-    /// Writes the data the way SDK <= 0.0.9 did: plaintext, entity-id keys +
-    /// index boxes.
-    Future<void> seedLegacy({String indexKey = legacyKey}) async {
-      await (await legacy<ZukkoChatContact>(ChatwootBoxNames.legacyContacts))
-          .put('source-1', contact());
-      await (await legacy<String>(ChatwootBoxNames.legacyContactIndex))
-          .put(indexKey, 'source-1');
-      await (await legacy<ZukkoChatConversation>(
-        ChatwootBoxNames.legacyConversations,
-      )).put(7, conversation());
-      await (await legacy<String>(ChatwootBoxNames.legacyConversationIndex))
-          .put(indexKey, '7');
-      await (await legacy<ZukkoChatUser>(ChatwootBoxNames.legacyUsers))
-          .put('user-1', user());
-      await (await legacy<String>(ChatwootBoxNames.legacyUserIndex))
-          .put(indexKey, 'user-1');
-      await (await legacy<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages))
-          .put(8, message(8));
-      await (await legacy<String>(ChatwootBoxNames.legacyMessageIndex))
-          .put(8, indexKey);
-    }
-
-    setUp(() async {
-      registerChatwootAdapters();
-      Hive.init(env.dir.path);
+      expect(ZukkoChatBoxNames.users, 'ChatwootUserBoxNames.USERS.enc');
     });
 
-    test('moves contact, conversation, user and messages to encrypted '
-        'instance-keyed boxes and deletes the plaintext ones', () async {
-      await seedLegacy();
-
-      await LocalStorage.openDB(); // migrates
-
-      final storage = LocalStorage.persisted(newKey);
-      expect(storage.contact.get(), contact());
-      expect(storage.conversation.get()!.id, 7);
-      expect(storage.user.get(), user());
-      expect(storage.messages.getMessages().map((m) => m.id), [8]);
-      expect(Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts).keys, [
-        newKey,
-      ]);
-      expect(Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages).keys, [
-        '$newKey|m|8',
-      ]);
-      for (final name in [
-        ChatwootBoxNames.legacyContacts,
-        ChatwootBoxNames.legacyConversations,
-        ChatwootBoxNames.legacyUsers,
-        ChatwootBoxNames.legacyMessages,
-        ChatwootBoxNames.legacyContactIndex,
-        ChatwootBoxNames.legacyConversationIndex,
-        ChatwootBoxNames.legacyUserIndex,
-        ChatwootBoxNames.legacyMessageIndex,
-      ]) {
-        expect(await Hive.boxExists(name), false, reason: name);
-      }
-    });
-
-    // F2
-    test('an index entry with an unparseable key is NOT deleted: value and '
-        'index stay, the resolvable ones still move', () async {
-      await seedLegacy();
-      // a second contact whose index key cannot be parsed (4 parts)
-      await Hive.box<ZukkoChatContact>(ChatwootBoxNames.legacyContacts)
-          .put('source-2', contact(id: 2, identifier: 'source-2'));
-      await Hive.box<String>(ChatwootBoxNames.legacyContactIndex)
-          .put('a|||b|||c|||d', 'source-2');
-      await Hive.box<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages)
-          .put(9, message(9));
-      await Hive.box<String>(ChatwootBoxNames.legacyMessageIndex)
-          .put(9, 'a|||b|||c|||d');
-
-      await LocalStorage.openDB();
-
-      expect(LocalStorage.persisted(newKey).contact.get(), contact());
+    test('the secure-storage key and the type ids are pinned', () {
       expect(
-        LocalStorage.persisted(newKey).messages.getMessages(),
-        hasLength(1),
-      );
-      final keptContacts = await Hive.openBox<ZukkoChatContact>(
-        ChatwootBoxNames.legacyContacts,
-      );
-      expect(keptContacts.keys, ['source-2']);
-      expect(
-        (await Hive.openBox<String>(ChatwootBoxNames.legacyContactIndex))
-            .toMap(),
-        {'a|||b|||c|||d': 'source-2'},
-      );
-      expect(
-        (await Hive.openBox<ZukkoChatMessage>(ChatwootBoxNames.legacyMessages))
-            .keys,
-        [9],
-      );
-      // the resolved index boxes are gone
-      expect(await Hive.boxExists(ChatwootBoxNames.legacyUserIndex), false);
-    });
-
-    test('running it again does not overwrite newer encrypted data with '
-        'stale legacy data', () async {
-      await seedLegacy(indexKey: legacyKey);
-      await Hive.box<ZukkoChatContact>(ChatwootBoxNames.legacyContacts)
-          .put('source-2', contact(id: 2));
-      await Hive.box<String>(ChatwootBoxNames.legacyContactIndex)
-          .put('a|||b|||c|||d', 'source-2'); // keeps the legacy boxes alive
-      await LocalStorage.openDB();
-      await LocalStorage.persisted(newKey).contact
-          .save(contact(pubsubToken: 'newer'));
-
-      await LocalStorage.openDB();
-
-      expect(
-        LocalStorage.persisted(newKey).contact.get()!.pubsubToken,
-        'newer',
+        [
+          zukkoChatContactHiveTypeId,
+          zukkoChatConversationHiveTypeId,
+          zukkoChatMessageHiveTypeId,
+          zukkoChatUserHiveTypeId,
+          zukkoChatEventUserHiveTypeId,
+        ],
+        [0, 1, 2, 3, 4],
       );
     });
 
-    test(
-      'a legacy user is migrated without identifierHash and attributes',
-      () async {
-        await seedLegacy();
-        await Hive.box<ZukkoChatUser>(ChatwootBoxNames.legacyUsers).put(
-          'user-1',
-          ZukkoChatUser(
-            identifier: 'user-1',
-            identifierHash: 'secret-hash',
-            customAttributes: {'plan': 'gold'},
+    test('a full wipe also removes the retired users box', () async {
+      final users = await Hive.openBox<String>(ZukkoChatBoxNames.users);
+      await users.put('k', 'old PII');
+      await users.close();
+      expect(await Hive.boxExists(ZukkoChatBoxNames.users), isTrue);
+
+      await HiveDatabase.clearAll();
+
+      expect(await Hive.boxExists(ZukkoChatBoxNames.users), isFalse);
+    });
+
+    test('only the newest maxStored messages are kept per instance', () async {
+      final storage = LocalStorage.persisted('k');
+      final many = [
+        for (var i = 1; i <= PersistedZukkoChatMessagesDao.maxStored + 5; i++)
+          message(
+            i,
+            createdAt: '2024-01-01T00:00:00.${i.toString().padLeft(3, '0')}Z',
           ),
-        );
+      ];
 
-        await LocalStorage.openDB();
+      await storage.messages.saveAllMessages(many);
 
-        final migrated = Hive.box<ZukkoChatUser>(ChatwootBoxNames.users)
-            .get(newKey)!;
-        expect(migrated.identifier, 'user-1');
-        expect(migrated.identifierHash, isNull);
-        expect(migrated.customAttributes, isNull);
-      },
-    );
-
-    test(
-      'entries already keyed by instance (unreleased layout) move too',
-      () async {
-        await (await legacy<ZukkoChatContact>(ChatwootBoxNames.legacyContacts))
-            .put(newKey, contact());
-
-        await LocalStorage.openDB();
-
-        expect(LocalStorage.persisted(newKey).contact.get(), contact());
-        expect(await Hive.boxExists(ChatwootBoxNames.legacyContacts), false);
-      },
-    );
+      final kept = storage.messages.getMessages();
+      expect(kept, hasLength(PersistedZukkoChatMessagesDao.maxStored));
+      expect(kept.first.id, 6);
+      expect(kept.last.id, PersistedZukkoChatMessagesDao.maxStored + 5);
+    });
   });
 
   // SEC3
@@ -456,10 +320,10 @@ void main() {
       await storage.messages.saveMessage(message(1, content: 'PRIVATE-TEXT'));
 
       final contactBytes = await bytesOf(
-        Hive.box<ZukkoChatContact>(ChatwootBoxNames.contacts),
+        Hive.box<ZukkoChatContact>(ZukkoChatBoxNames.contacts),
       );
       final messageBytes = await bytesOf(
-        Hive.box<ZukkoChatMessage>(ChatwootBoxNames.messages),
+        Hive.box<ZukkoChatMessage>(ZukkoChatBoxNames.messages),
       );
 
       expect(contains(contactBytes, 'SOURCE-ID-SECRET'), isFalse);
@@ -485,7 +349,7 @@ void main() {
       expect(key, hasLength(32));
 
       await Hive.close();
-      await LocalStorage.openDB();
+      await HiveDatabase.openDB();
 
       expect(env.keys.key, key);
       expect(env.keys.writes, 1);
@@ -496,7 +360,7 @@ void main() {
           .save(contact(authToken: 'jwt-1'));
 
       await Hive.close();
-      await LocalStorage.openDB();
+      await HiveDatabase.openDB();
 
       expect(
         LocalStorage.persisted('k').contact.get(),
@@ -511,70 +375,35 @@ void main() {
         await Hive.close();
         env.keys.key = null; // keystore was reset
 
-        await LocalStorage.openDB();
+        await HiveDatabase.openDB();
 
         expect(LocalStorage.persisted('k').contact.get(), isNull);
         await LocalStorage.persisted('k').contact.save(contact());
         expect(LocalStorage.persisted('k').contact.get(), isNotNull);
+        // reported once, so the app can tell the visitor lost the session
+        expect(HiveDatabase.takeRecreated(), isNotEmpty);
+        expect(HiveDatabase.takeRecreated(), isEmpty);
       },
     );
-
-    test('identifierHash and customAttributes never reach the disk', () async {
-      final full = ZukkoChatUser(
-        identifier: 'u',
-        identifierHash: 'HASH-SECRET',
-        customAttributes: {'plan': 'gold'},
-        email: 'a@b.c',
-      );
-      final storage = LocalStorage.persisted('k');
-
-      await storage.user.save(full);
-
-      // this process still has the full user (contact creation needs it) ...
-      expect(storage.user.get(), full);
-      // ... a fresh store (another process) reads what is on disk
-      final onDisk = LocalStorage.persisted('k').user.get()!;
-      expect(onDisk.identifier, 'u');
-      expect(onDisk.email, 'a@b.c');
-      expect(onDisk.identifierHash, isNull);
-      expect(onDisk.customAttributes, isNull);
-      await storage.user.delete();
-      expect(storage.user.get(), isNull);
-    });
   });
 
   // F9
   group('openDB is serialised', () {
-    test(
-      'concurrent calls with legacy boxes migrate once, no exception',
-      () async {
-        registerChatwootAdapters();
-        Hive.init(env.dir.path);
-        await (await Hive.openBox<ZukkoChatContact>(
-          ChatwootBoxNames.legacyContacts,
-        )).put('source-1', contact());
-        await (await Hive.openBox<String>(ChatwootBoxNames.legacyContactIndex))
-            .put('https://a|||null|||in', 'source-1');
-        await Hive.close();
+    test('concurrent calls open once, no exception', () async {
+      await Future.wait([
+        HiveDatabase.openDB(),
+        HiveDatabase.openDB(),
+        HiveDatabase.openDB(),
+      ]);
 
-        await Future.wait([
-          LocalStorage.openDB(),
-          LocalStorage.openDB(),
-          LocalStorage.openDB(),
-        ]);
-
-        final key = chatwootInstanceKey(
-          baseUrl: 'https://a',
-          websiteToken: 'in',
-        );
-        expect(LocalStorage.persisted(key).contact.get(), contact());
-        expect(env.keys.writes, 1);
-      },
-    );
+      expect(env.keys.writes, 1);
+      await LocalStorage.persisted('k').contact.save(contact());
+      expect(LocalStorage.persisted('k').contact.get(), isNotNull);
+    });
   });
 
-  group('chatwootInstanceKey hash (SEC5)', () {
-    String key({String? hash}) => chatwootInstanceKey(
+  group('zukkoChatInstanceKey hash (SEC5)', () {
+    String key({String? hash}) => zukkoChatInstanceKey(
       baseUrl: 'https://a',
       websiteToken: 'in',
       userIdentifier: 'u',
@@ -597,8 +426,8 @@ void main() {
     });
   });
 
-  group('chatwootInstanceKey', () {
-    String key({String? user}) => chatwootInstanceKey(
+  group('zukkoChatInstanceKey', () {
+    String key({String? user}) => zukkoChatInstanceKey(
       baseUrl: 'https://a',
       websiteToken: 'in',
       userIdentifier: user,
@@ -610,12 +439,12 @@ void main() {
     });
 
     test('a separator inside a component cannot forge another key', () {
-      final forged = chatwootInstanceKey(
+      final forged = zukkoChatInstanceKey(
         baseUrl: 'https://a',
         websiteToken: 'in',
         userIdentifier: 'x|||y',
       );
-      final other = chatwootInstanceKey(
+      final other = zukkoChatInstanceKey(
         baseUrl: 'https://a|||x',
         websiteToken: 'in',
         userIdentifier: 'y',

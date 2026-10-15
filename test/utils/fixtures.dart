@@ -1,7 +1,7 @@
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_contact.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_contact.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_user.dart';
 
 ZukkoChatContact contact({
   int id = 1,
@@ -17,13 +17,8 @@ ZukkoChatContact contact({
   authToken: authToken,
 );
 
-ZukkoChatConversation conversation({int id = 7, ZukkoChatContact? forContact}) =>
-    ZukkoChatConversation(
-      id: id,
-      inboxId: 1,
-      contact: forContact,
-      status: 'open',
-    );
+ZukkoChatConversation conversation({int id = 7}) =>
+    ZukkoChatConversation(id: id, inboxId: 1, status: 'open');
 
 /// [createdAt] must be lexicographically sortable (the model stores a string).
 ZukkoChatMessage message(

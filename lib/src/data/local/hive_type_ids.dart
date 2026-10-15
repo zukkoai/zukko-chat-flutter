@@ -1,6 +1,6 @@
 /// Hive type ids of the persisted models. Never reuse or renumber an id.
-const chatwootContactHiveTypeId = 0;
-const chatwootConversationHiveTypeId = 1;
-const chatwootMessageHiveTypeId = 2;
-const chatwootUserHiveTypeId = 3;
-const chatwootEventUserHiveTypeId = 4;
+const zukkoChatContactHiveTypeId = 0;
+const zukkoChatConversationHiveTypeId = 1;
+const zukkoChatMessageHiveTypeId = 2;
+const zukkoChatUserHiveTypeId = 3;
+const zukkoChatEventUserHiveTypeId = 4;

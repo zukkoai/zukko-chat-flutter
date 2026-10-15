@@ -30,6 +30,20 @@ void main() {
     expect(theme, isNull);
   });
 
+  test('the config and conversation types of the public API are exported', () {
+    // ZukkoChatClient.config and ZukkoChatCallbacks.onConversationUpdated
+    const ZukkoChatConfig? config = null;
+    final updates = <ZukkoChatConversation>[];
+    final callbacks = ZukkoChatCallbacks(onConversationUpdated: updates.add);
+
+    callbacks.onConversationUpdated!(
+      const ZukkoChatConversation(id: 1, inboxId: 2, status: 'resolved'),
+    );
+
+    expect(config, isNull);
+    expect(updates.single.isResolved, isTrue);
+  });
+
   test('the connection state callback receives states the app can match', () {
     final states = <ZukkoChatConnectionState>[];
     final callbacks = ZukkoChatCallbacks(onConnectionStateChanged: states.add);

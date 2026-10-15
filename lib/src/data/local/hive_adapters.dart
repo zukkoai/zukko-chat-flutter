@@ -1,11 +1,11 @@
 import 'package:hive_ce/hive.dart';
 
-import '../../core/chatwoot_client_exception.dart';
-import '../models/chatwoot_contact.dart';
-import '../models/chatwoot_conversation.dart';
-import '../models/chatwoot_event_message_user.dart';
-import '../models/chatwoot_message.dart';
-import '../models/chatwoot_user.dart';
+import '../../core/zukko_chat_client_exception.dart';
+import '../models/zukko_chat_contact.dart';
+import '../models/zukko_chat_conversation.dart';
+import '../models/zukko_chat_event_message_user.dart';
+import '../models/zukko_chat_message.dart';
+import '../models/zukko_chat_user.dart';
 import 'hive_type_ids.dart';
 
 final _registered = <int>{};
@@ -15,7 +15,7 @@ final _registered = <int>{};
 /// Throws a [ZukkoChatException] of type `STORAGE_FAILED` when the host
 /// app already registered a different adapter on one of the SDK's type ids:
 /// skipping ours would make Hive read the SDK's records with a foreign adapter.
-void registerChatwootAdapters() {
+void registerZukkoChatAdapters() {
   void register<T>(int typeId, TypeAdapter<T> Function() adapter) {
     if (_registered.contains(typeId)) return;
     try {
@@ -30,9 +30,9 @@ void registerChatwootAdapters() {
     _registered.add(typeId);
   }
 
-  register(chatwootContactHiveTypeId, ZukkoChatContactAdapter.new);
-  register(chatwootConversationHiveTypeId, ZukkoChatConversationAdapter.new);
-  register(chatwootMessageHiveTypeId, ZukkoChatMessageAdapter.new);
-  register(chatwootUserHiveTypeId, ZukkoChatUserAdapter.new);
-  register(chatwootEventUserHiveTypeId, ZukkoChatEventMessageUserAdapter.new);
+  register(zukkoChatContactHiveTypeId, ZukkoChatContactAdapter.new);
+  register(zukkoChatConversationHiveTypeId, ZukkoChatConversationAdapter.new);
+  register(zukkoChatMessageHiveTypeId, ZukkoChatMessageAdapter.new);
+  register(zukkoChatUserHiveTypeId, ZukkoChatUserAdapter.new);
+  register(zukkoChatEventUserHiveTypeId, ZukkoChatEventMessageUserAdapter.new);
 }
