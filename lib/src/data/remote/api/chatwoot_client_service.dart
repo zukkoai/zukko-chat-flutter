@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/chatwoot_client_exception.dart';
+import '../../../core/chatwoot_upload.dart';
 import '../../models/chatwoot_contact.dart';
 import '../../models/chatwoot_conversation.dart';
 import '../../models/chatwoot_message.dart';
@@ -22,6 +23,12 @@ abstract class ChatwootClientService {
   Future<List<ChatwootConversation>> getConversations();
 
   Future<ChatwootMessage> createMessage(ChatwootNewMessageRequest request);
+
+  /// Sends [request] with [attachments] as one multipart message.
+  Future<ChatwootMessage> createMessageWithAttachments(
+    ChatwootNewMessageRequest request,
+    List<ChatwootUpload> attachments,
+  );
 
   Future<List<ChatwootMessage>> getAllMessages();
 }
@@ -46,6 +53,32 @@ class ChatwootClientServiceImpl extends ChatwootClientService {
         () => _dio.post(_messagesPath, data: request.toJson()),
         (data) => ChatwootMessage.fromJson(data as Map<String, dynamic>),
       );
+
+  /// Multipart `content` (when not empty), `echo_id` and one
+  /// `attachments[]` part per file; the content type comes from the name.
+  @override
+  Future<ChatwootMessage> createMessageWithAttachments(
+    ChatwootNewMessageRequest request,
+    List<ChatwootUpload> attachments,
+  ) => apiCall(ChatwootClientExceptionType.SEND_MESSAGE_FAILED, () async {
+    final form = FormData();
+    if (request.content.isNotEmpty) {
+      form.fields.add(MapEntry('content', request.content));
+    }
+    form.fields.add(MapEntry('echo_id', request.echoId));
+    for (final file in attachments) {
+      form.files.add(MapEntry('attachments[]', await _part(file)));
+    }
+    return _dio.post(_messagesPath, data: form);
+  }, (data) => ChatwootMessage.fromJson(data as Map<String, dynamic>));
+
+  static Future<MultipartFile> _part(ChatwootUpload file) {
+    final bytes = file.bytes;
+    if (bytes != null) {
+      return Future.value(MultipartFile.fromBytes(bytes, filename: file.name));
+    }
+    return MultipartFile.fromFile(file.path!, filename: file.name);
+  }
 
   ///Gets all messages of current chatwoot client instance's conversation
   @override

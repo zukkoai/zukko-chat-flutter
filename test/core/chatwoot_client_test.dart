@@ -24,8 +24,13 @@ class _RecordingRepository extends Fake implements ChatwootRepository {
   Future<void> getMessages() async => log.add('getMessages');
 
   @override
-  Future<void> sendMessage(ChatwootNewMessageRequest request) async =>
-      log.add('sendMessage ${request.content} ${request.echoId}');
+  Future<void> sendMessage(
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  }) async => log.add(
+    'sendMessage ${request.content} ${request.echoId} '
+    '${attachments.length}',
+  );
 
   @override
   bool sendAction(ChatwootActionType action) {
@@ -83,7 +88,7 @@ void main() {
       await client.clearClientData();
 
       expect(repo.log, [
-        'sendMessage hi e',
+        'sendMessage hi e 0',
         'sendAction ChatwootActionType.update_presence',
         'clear keepUser=true',
       ]);

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:chatwoot_sdk/src/core/chatwoot_callbacks.dart';
 import 'package:chatwoot_sdk/src/data/local/dao/chatwoot_messages_dao.dart';
 import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
+import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
 import 'package:chatwoot_sdk/src/data/chatwoot_repository.dart';
 import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
@@ -246,6 +248,19 @@ void main() {
       expect(sent.single.$1.id, 5);
       expect(sent.single.$2, 'echo-1');
       expect(storage.messages.getMessage(5), isNotNull);
+    });
+
+    test('attachments go through the multipart call', () async {
+      service.createMessageResult = message(6);
+      final file = ChatwootUpload.bytes(
+        name: 'a.pdf',
+        bytes: Uint8List.fromList([1]),
+      );
+
+      await repo.sendMessage(request, attachments: [file]);
+
+      expect(service.uploadedAttachments.single, [file]);
+      expect(sent.single.$2, 'echo-1');
     });
 
     test('a failure is reported with the echo id as data', () async {

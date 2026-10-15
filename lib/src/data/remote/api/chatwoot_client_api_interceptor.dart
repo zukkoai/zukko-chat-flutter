@@ -163,7 +163,10 @@ class ChatwootClientApiInterceptor extends Interceptor {
       if (session == null) return handler.next(err);
       if (reset) onSessionReset?.call();
 
+      // A multipart body can be sent only once: replay a copy.
+      final body = options.data;
       final retry = options.copyWith(
+        data: body is FormData ? body.clone() : body,
         path: _resolve(template, session.sourceId, session.conversationId),
         extra: {...options.extra, _retriedKey: true},
       );

@@ -15,6 +15,7 @@ import '../shared/sdk_log.dart';
 import '../shared/url_policy.dart';
 import 'chatwoot_callbacks.dart';
 import 'chatwoot_client_exception.dart';
+import 'chatwoot_upload.dart';
 
 /// Represents a chatwoot client instance. All chatwoot operations (Example: sendMessages) are
 /// passed through chatwoot client. For more info visit
@@ -64,12 +65,16 @@ class ChatwootClient {
   /// Sends chatwoot message. The echoId is your temporary message id. When message sends successfully
   /// [ChatwootMessage] will be returned with the [echoId] on [ChatwootCallbacks.onMessageSent]. If
   /// message fails to send [ChatwootCallbacks.onError] will be triggered [echoId] as data.
+  ///
+  /// [attachments] (images, files, voice; at most [ChatwootUpload.maxSize]
+  /// each) go with the message; [content] may then be empty.
   Future<void> sendMessage({
     required String content,
     required String echoId,
+    List<ChatwootUpload> attachments = const [],
   }) async {
     final request = ChatwootNewMessageRequest(content: content, echoId: echoId);
-    await _repository.sendMessage(request);
+    await _repository.sendMessage(request, attachments: attachments);
   }
 
   /// Send chatwoot action performed by user.

@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
+import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
 import 'package:chatwoot_sdk/src/data/local/local_storage.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_api_interceptor.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_auth_service.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/chatwoot_client_service.dart';
 import 'package:chatwoot_sdk/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../utils/fake_http.dart';
@@ -46,6 +50,29 @@ void main() {
       expect(created.id, 8);
       expect(http.calls, ['POST $_conv/7/messages']);
       expect(http.requests.single.data, {'content': 'hi', 'echo_id': 'e1'});
+    });
+
+    test('createMessageWithAttachments sends multipart', () async {
+      http.handler = (_) => (200, message(9).toJson());
+
+      final created = await service.createMessageWithAttachments(
+        ChatwootNewMessageRequest(content: '', echoId: 'e2'),
+        [
+          ChatwootUpload.bytes(
+            name: 'photo.png',
+            bytes: Uint8List.fromList([1, 2, 3]),
+          ),
+        ],
+      );
+
+      expect(created.id, 9);
+      expect(http.calls, ['POST $_conv/7/messages']);
+      final form = http.requests.single.data as FormData;
+      expect(form.fields.map((f) => '${f.key}=${f.value}'), ['echo_id=e2']);
+      final part = form.files.single;
+      expect(part.key, 'attachments[]');
+      expect(part.value.filename, 'photo.png');
+      expect(part.value.contentType?.mimeType, 'image/png');
     });
 
     test('getAllMessages', () async {

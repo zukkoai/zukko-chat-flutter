@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/chatwoot_callbacks.dart';
 import '../core/chatwoot_client_exception.dart';
+import '../core/chatwoot_upload.dart';
 import '../shared/sdk_log.dart';
 import 'local/local_storage.dart';
 import 'models/chatwoot_message.dart';
@@ -37,7 +38,10 @@ abstract class ChatwootRepository {
 
   void listenForEvents();
 
-  Future<void> sendMessage(ChatwootNewMessageRequest request);
+  Future<void> sendMessage(
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  });
 
   /// Returns whether the action was sent (`false` while not subscribed).
   bool sendAction(ChatwootActionType action);
@@ -166,12 +170,21 @@ class ChatwootRepositoryImpl extends ChatwootRepository {
 
   String? get _pubsubToken => localStorage.contact.get()?.pubsubToken;
 
-  ///Sends message to chatwoot inbox
+  ///Sends message to chatwoot inbox, with [attachments] as one multipart
+  ///message.
   @override
-  Future<void> sendMessage(ChatwootNewMessageRequest request) async {
+  Future<void> sendMessage(
+    ChatwootNewMessageRequest request, {
+    List<ChatwootUpload> attachments = const [],
+  }) async {
     final ChatwootMessage createdMessage;
     try {
-      createdMessage = await clientService.createMessage(request);
+      createdMessage = attachments.isEmpty
+          ? await clientService.createMessage(request)
+          : await clientService.createMessageWithAttachments(
+              request,
+              attachments,
+            );
     } catch (e) {
       // anything may fail here; the UI bubble waits for this echoId
       _emitError(

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:chatwoot_sdk/src/core/chatwoot_client_exception.dart';
+import 'package:chatwoot_sdk/src/core/chatwoot_upload.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_contact.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_conversation.dart';
 import 'package:chatwoot_sdk/src/data/models/chatwoot_message.dart';
@@ -44,6 +45,18 @@ class FakeClientService extends Fake implements ChatwootClientService {
     ChatwootNewMessageRequest request,
   ) async {
     createdMessageRequests.add(request);
+    return _unwrap(createMessageResult);
+  }
+
+  final uploadedAttachments = <List<ChatwootUpload>>[];
+
+  @override
+  Future<ChatwootMessage> createMessageWithAttachments(
+    ChatwootNewMessageRequest request,
+    List<ChatwootUpload> attachments,
+  ) async {
+    createdMessageRequests.add(request);
+    uploadedAttachments.add(attachments);
     return _unwrap(createMessageResult);
   }
 }

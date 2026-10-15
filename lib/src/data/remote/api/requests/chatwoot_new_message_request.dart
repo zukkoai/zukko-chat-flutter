@@ -10,7 +10,10 @@ class ChatwootNewMessageRequest extends Equatable {
   @JsonKey(name: "echo_id")
   final String echoId;
 
-  const ChatwootNewMessageRequest({required this.content, required this.echoId});
+  const ChatwootNewMessageRequest({
+    required this.content,
+    required this.echoId,
+  });
 
   @override
   List<Object> get props => [content, echoId];
