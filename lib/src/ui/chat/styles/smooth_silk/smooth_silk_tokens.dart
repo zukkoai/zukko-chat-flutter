@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../theme/chatwoot_chat_theme.dart';
 
@@ -134,5 +133,5 @@ TextStyle _font(ChatwootChatTheme base, TextStyle style) {
   final family = base.fontFamily;
   return family != null
       ? style.copyWith(fontFamily: family)
-      : GoogleFonts.manrope(textStyle: style);
+      : style.copyWith(fontFamily: 'packages/chatwoot_sdk/Manrope');
 }

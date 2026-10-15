@@ -18,7 +18,7 @@ class ChatwootChatTheme extends ThemeExtension<ChatwootChatTheme> {
 
   /// Forces one font family on all chat text; null uses the style's own
   /// design font (Smooth Silk: Manrope, Minimal Clean: Geist, Thread Feed:
-  /// Onest, loaded by google_fonts).
+  /// Onest, bundled with the package).
   final String? fontFamily;
 
   /// Overrides the style's accent (send button, links, brand link).
