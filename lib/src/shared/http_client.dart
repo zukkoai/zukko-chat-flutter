@@ -5,12 +5,18 @@ import 'package:dio/dio.dart';
 /// Redirects are never followed: the `X-Auth-Token` header must not travel to
 /// another host, so a 3xx surfaces as an error. The timeouts keep a stuck
 /// server from holding the session lock (or the UI) forever.
-Dio chatwootDio(String baseUrl) => Dio(
+Dio zukkoChatDio(String baseUrl) => Dio(
   BaseOptions(
     baseUrl: baseUrl,
     followRedirects: false,
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 30),
-    sendTimeout: const Duration(seconds: 60), // uploads
+    connectTimeout: connectTimeout,
+    receiveTimeout: receiveTimeout,
+    sendTimeout: sendTimeout,
   ),
 );
+
+const connectTimeout = Duration(seconds: 15);
+const receiveTimeout = Duration(seconds: 30);
+
+/// Default for a request body; a file upload sets its own, longer one.
+const sendTimeout = Duration(seconds: 60);

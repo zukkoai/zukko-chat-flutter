@@ -64,4 +64,47 @@ void main() {
       },
     );
   });
+
+  // B1: the trimmed URL is the one to use everywhere
+  test('validateBaseUrl trims and returns the trimmed uri', () {
+    expect(
+      validateBaseUrl('  https://chat.example.com ').toString(),
+      'https://chat.example.com',
+    );
+  });
+
+  test(
+    'user info and fragments are refused (they end up in keys and logs)',
+    () {
+      for (final url in ['https://user:pw@h.com', 'https://h.com/#frag']) {
+        expect(() => validateBaseUrl(url), throwsArgumentError, reason: url);
+      }
+    },
+  );
+
+  group('zukkoChatCableUri (S16)', () {
+    String cable(String url) => zukkoChatCableUri(Uri.parse(url)).toString();
+
+    test('maps scheme and appends /cable', () {
+      expect(cable('http://h'), 'ws://h/cable');
+      expect(cable('https://h/'), 'wss://h/cable');
+      expect(cable('https://h/prefix'), 'wss://h/prefix/cable');
+      expect(cable('http://h:3000/'), 'ws://h:3000/cable');
+    });
+
+    test('a host that merely contains "http" is untouched', () {
+      expect(cable('https://http.example.com'), 'wss://http.example.com/cable');
+    });
+  });
+
+  group('safeAvatarUrl (X10)', () {
+    test('only https, no ?d=404 placeholder', () {
+      expect(safeAvatarUrl('https://a/b.png'), 'https://a/b.png');
+      expect(safeAvatarUrl('HTTPS://a/b.png'), 'HTTPS://a/b.png');
+      expect(safeAvatarUrl('http://a/b.png'), isNull);
+      expect(safeAvatarUrl('javascript:alert(1)'), isNull);
+      expect(safeAvatarUrl('https://a/b?d=404'), isNull);
+      expect(safeAvatarUrl(null), isNull);
+    });
+  });
 }

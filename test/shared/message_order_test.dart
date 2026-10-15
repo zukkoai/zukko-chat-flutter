@@ -1,4 +1,4 @@
-import 'package:zukko_chat_flutter/src/shared/message_order.dart';
+import 'package:zukko_chat_flutter/src/data/models/message_order.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../utils/fixtures.dart';
@@ -49,5 +49,15 @@ void main() {
 
     expect(input.first.id, 2);
     expect(sorted.map((m) => m.id), [1, 2]);
+  });
+
+  test('compareByTimeThenId is the order sortMessagesOldestFirst uses', () {
+    final a = message(2, createdAt: '2024-01-01T00:00:00Z');
+    final b = message(1, createdAt: '2024-01-01T00:00:00Z');
+    final c = message(3, createdAt: '2023-12-31T00:00:00Z');
+
+    expect(compareByTimeThenId(a, b), greaterThan(0)); // same instant: by id
+    expect(compareByTimeThenId(c, b), lessThan(0)); // earlier first
+    expect([a, b, c]..sort(compareByTimeThenId), [c, b, a]);
   });
 }
