@@ -95,6 +95,12 @@ class ChatwootL10n {
   /// Shown when the chat could not be started
   final String connectionErrorText;
 
+  /// Shown when the server rejected the user's identity (identifier hash)
+  final String identityRejectedText;
+
+  /// Shown when the chat session could not be kept alive
+  final String sessionExpiredText;
+
   /// Label of the button that tries to start the chat again
   final String retryLabel;
 
@@ -131,6 +137,8 @@ class ChatwootL10n {
     this.closeLabel = 'Close',
     this.messageFailedHint = 'Failed to send. Tap to retry',
     this.connectionErrorText = 'Could not connect to the chat',
+    this.identityRejectedText = 'Your account could not be verified',
+    this.sessionExpiredText = 'The chat session has expired',
     this.retryLabel = 'Retry',
   });
 
@@ -166,6 +174,8 @@ class ChatwootL10n {
     closeLabel: 'Закрыть',
     messageFailedHint: 'Не отправлено. Нажмите, чтобы повторить',
     connectionErrorText: 'Не удалось подключиться к чату',
+    identityRejectedText: 'Не удалось подтвердить ваш аккаунт',
+    sessionExpiredText: 'Сессия чата истекла',
     retryLabel: 'Повторить',
   );
 
@@ -200,6 +210,8 @@ class ChatwootL10n {
     closeLabel: 'Yopish',
     messageFailedHint: 'Yuborilmadi. Qayta yuborish uchun bosing',
     connectionErrorText: 'Chatga ulanib boʻlmadi',
+    identityRejectedText: 'Hisobingizni tasdiqlab boʻlmadi',
+    sessionExpiredText: 'Chat seansi muddati tugadi',
     retryLabel: 'Qayta urinish',
   );
 
@@ -233,6 +245,8 @@ class ChatwootL10n {
     closeLabel: 'Ёпиш',
     messageFailedHint: 'Юборилмади. Қайта юбориш учун босинг',
     connectionErrorText: 'Чатга уланиб бўлмади',
+    identityRejectedText: 'Ҳисобингизни тасдиқлаб бўлмади',
+    sessionExpiredText: 'Чат сеанси муддати тугади',
     retryLabel: 'Қайта уриниш',
   );
 
@@ -266,6 +280,8 @@ class ChatwootL10n {
     closeLabel: 'Kapat',
     messageFailedHint: 'Gönderilemedi. Tekrar denemek için dokunun',
     connectionErrorText: 'Sohbete bağlanılamadı',
+    identityRejectedText: 'Hesabınız doğrulanamadı',
+    sessionExpiredText: 'Sohbet oturumunun süresi doldu',
     retryLabel: 'Tekrar dene',
   );
 
@@ -299,6 +315,8 @@ class ChatwootL10n {
     closeLabel: 'Jabıw',
     messageFailedHint: 'Jiberilmedi. Qayta jiberiw ushın basıń',
     connectionErrorText: 'Chatqa jalǵanıw múmkin bolmadı',
+    identityRejectedText: 'Akkauntıńızdı tastıyıqlaw múmkin bolmadı',
+    sessionExpiredText: 'Chat seansınıń waqtı pitti',
     retryLabel: 'Qayta urınıw',
   );
 
@@ -344,6 +362,8 @@ class ChatwootL10n {
     closeLabel,
     messageFailedHint,
     connectionErrorText,
+    identityRejectedText,
+    sessionExpiredText,
     retryLabel,
   ];
 

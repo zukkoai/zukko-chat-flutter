@@ -56,7 +56,12 @@ Future<List<ChatwootUpload>> pickAttachments(AttachmentSource source) async {
 
 Future<ChatwootUpload?> _toUpload(PlatformFile file) async {
   if (kIsWeb) {
-    // The web has no file paths, only bytes.
+    // The web has no file paths, only bytes. Check the reported size before
+    // reading: an oversized placeholder (never sent) lets the view say so.
+    final size = await file.length();
+    if ((size ?? 0) > ChatwootUpload.maxSize) {
+      return ChatwootUpload.file(name: file.name, path: '', size: size);
+    }
     return ChatwootUpload.bytes(
       name: file.name,
       bytes: await file.readAsBytes(),

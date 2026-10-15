@@ -109,8 +109,12 @@ class ChatComposerData {
   /// The microphone was refused or failed.
   final ValueChanged<VoiceRecorderIssue>? onVoiceIssue;
 
+  /// The text changed (the user is typing).
+  final VoidCallback? onTyping;
+
   const ChatComposerData({
     required this.onSend,
+    this.onTyping,
     this.onAttach,
     this.onVoiceRecorded,
     this.onVoiceIssue,

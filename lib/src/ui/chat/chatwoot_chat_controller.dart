@@ -19,7 +19,7 @@ import 'components/gallery_message.dart';
 /// Signature of [ChatwootClient.create]; the seam tests use to inject a fake.
 typedef ChatwootClientFactory = Future<ChatwootClient> Function({
   required String baseUrl,
-  required String inboxIdentifier,
+  required String websiteToken,
   ChatwootUser? user,
   bool enablePersistence,
   bool allowInsecure,
@@ -32,6 +32,9 @@ const _meId = 'chatwoot-me';
 const _agentId = 'chatwoot-agent';
 const _systemId = 'chatwoot-system';
 const _resolvedPrefix = 'chatwoot-resolved-';
+
+/// Without input for this long the user counts as not typing any more.
+const typingIdle = Duration(seconds: 3);
 
 /// Owns the [ChatwootClient] lifecycle and the message list of one chat.
 ///
@@ -84,6 +87,9 @@ class ChatwootChatController extends ChangeNotifier {
 
   ChatwootClient? _client;
   bool _disposed = false;
+  bool _visible = true;
+  bool _typingOn = false;
+  Timer? _typingIdle;
   int _resolvedCount = 0;
   ChatwootChatStatus _status = ChatwootChatStatus.offline;
   ChatwootClientException? _error;
@@ -102,10 +108,28 @@ class ChatwootChatController extends ChangeNotifier {
   /// The author [id] as known so far (name, avatar); null when unknown.
   User? userById(String id) => _users[id];
 
-  /// Tries again after [error]; no-op unless the last start failed.
+  /// Whether the user can see the chat. While it is, incoming agent messages
+  /// are marked as read; becoming visible marks what arrived meanwhile.
+  set visible(bool value) {
+    if (_visible == value) return;
+    _visible = value;
+    if (value) {
+      _markSeen();
+      try {
+        _client?.resume(); // realtime may have stopped while in background
+      } catch (e) {
+        sdkLog('resume failed: ${e.runtimeType}');
+      }
+    }
+  }
+
+  /// Tries again after [error]; no-op unless the chat is in an error state.
   void retry() {
     if (_disposed || _error == null) return;
     _error = null;
+    final old = _client;
+    _client = null; // a session failure leaves a client that must be replaced
+    if (old != null) unawaited(old.dispose());
     notifyListeners();
     unawaited(_start());
   }
@@ -115,7 +139,7 @@ class ChatwootChatController extends ChangeNotifier {
     try {
       client = await _factory(
         baseUrl: options.baseUrl,
-        inboxIdentifier: options.inboxIdentifier,
+        websiteToken: options.websiteToken,
         user: options.user,
         enablePersistence: options.enablePersistence,
         allowInsecure: options.allowInsecure,
@@ -151,6 +175,46 @@ class ChatwootChatController extends ChangeNotifier {
     } catch (e) {
       sdkLog('loadMessages failed: $e');
     }
+    if (_error == null) _markSeen();
+  }
+
+  /// Best effort: the client never throws here, a fake might.
+  void _markSeen() {
+    final client = _client;
+    if (_disposed || !_visible || client == null) return;
+    unawaited(_quiet(client.markSeen()));
+  }
+
+  static Future<void> _quiet(Future<void> call) async {
+    try {
+      await call;
+    } catch (e) {
+      sdkLog('best-effort call failed: ${e.runtimeType}');
+    }
+  }
+
+  // ---- typing ----
+
+  /// The composer text changed: tells the agents the user is typing, and that
+  /// they stopped after [typingIdle] without input.
+  void typing() {
+    if (_disposed) return;
+    if (!_typingOn) {
+      _typingOn = true;
+      final client = _client;
+      if (client != null) unawaited(_quiet(client.setTyping(true)));
+    }
+    _typingIdle?.cancel();
+    _typingIdle = Timer(typingIdle, _typingOff);
+  }
+
+  void _typingOff() {
+    _typingIdle?.cancel();
+    _typingIdle = null;
+    if (!_typingOn) return;
+    _typingOn = false;
+    final client = _client;
+    if (client != null) unawaited(_quiet(client.setTyping(false)));
   }
 
   // ---- sending ----
@@ -158,6 +222,7 @@ class ChatwootChatController extends ChangeNotifier {
   /// Adds an optimistic bubble and sends [text] (queued until ready).
   void send(String text) {
     if (_disposed || text.trim().isEmpty) return;
+    _typingOff();
     final echoId = _uuid.v4();
     _outbox[echoId] = _Outgoing(text, const []);
     _upsertLocal(
@@ -176,6 +241,7 @@ class ChatwootChatController extends ChangeNotifier {
   /// gallery, voice or file). [audioDuration] is the length of a recording.
   void sendAttachments(List<ChatwootUpload> files, {Duration? audioDuration}) {
     if (_disposed || files.isEmpty) return;
+    _typingOff();
     final echoId = _uuid.v4();
     _outbox[echoId] = _Outgoing('', List.unmodifiable(files));
     _upsertLocal(_localPreview(echoId, files, audioDuration));
@@ -314,6 +380,7 @@ class ChatwootChatController extends ChangeNotifier {
       }),
       onMessageReceived: (m) => live(() {
         _upsertServer(m);
+        _markSeen();
         callbacks?.onMessageReceived?.call(m);
       }),
       onMessageUpdated: (m) => live(() {
@@ -332,16 +399,39 @@ class ChatwootChatController extends ChangeNotifier {
         _addResolved();
         callbacks?.onConversationResolved?.call();
       }),
+      onSessionReset: () => live(() {
+        _dropServerMessages();
+        callbacks?.onSessionReset?.call();
+      }),
       onError: (e) => live(() {
-        final data = e.data;
-        if (e.type == ChatwootClientExceptionType.SEND_MESSAGE_FAILED &&
-            data is String) {
-          _markFailed(data);
+        if (e.type == ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH ||
+            e.type == ChatwootClientExceptionType.IDENTIFY_FAILED ||
+            e.type == ChatwootClientExceptionType.SESSION_EXPIRED) {
+          _error = e;
+          notifyListeners();
         }
+        final data = e.data;
+        // any typed failure of a send (INVALID_IDENTIFIER_HASH, SESSION_EXPIRED,
+        // SEND_MESSAGE_FAILED, ...) carries the echoId of its bubble
+        if (data is String && _outbox.containsKey(data)) _markFailed(data);
         sdkLog('error: ${e.cause}');
         callbacks?.onError?.call(e);
       }),
     );
+  }
+
+  /// The session now belongs to another contact: nothing the server sent so
+  /// far may stay on screen. Messages still waiting to be sent are kept.
+  void _dropServerMessages() {
+    final unsent = [
+      for (final m in chat.messages)
+        if (_outbox.containsKey(m.id)) m,
+    ];
+    _byKey
+      ..clear()
+      ..addEntries([for (final m in unsent) MapEntry(m.id, m)]);
+    _keyByServerId.clear();
+    unawaited(chat.setMessages(unsent));
   }
 
   void _setStatus(ChatwootChatStatus s) {
@@ -562,8 +652,18 @@ class ChatwootChatController extends ChangeNotifier {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _typingIdle?.cancel();
     final client = _client;
-    if (client != null) unawaited(client.dispose());
+    if (client != null) {
+      // tell the agents we stopped typing before the HTTP clients close
+      if (_typingOn) {
+        unawaited(
+          _quiet(client.setTyping(false)).then((_) => client.dispose()),
+        );
+      } else {
+        unawaited(client.dispose());
+      }
+    }
     chat.dispose();
     super.dispose();
   }

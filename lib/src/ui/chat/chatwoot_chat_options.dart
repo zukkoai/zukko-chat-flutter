@@ -14,10 +14,8 @@ class ChatwootChatOptions {
   /// Installation url for chatwoot
   final String baseUrl;
 
-  /// Identifier for target chatwoot inbox.
-  ///
-  /// For more details see https://www.chatwoot.com/docs/product/channels/api/client-apis
-  final String inboxIdentifier;
+  /// Website token of the target web widget inbox.
+  final String websiteToken;
 
   /// Persist the contact, conversation and messages to disk. When false
   /// everything is held in memory and dropped with the client.
@@ -56,7 +54,7 @@ class ChatwootChatOptions {
 
   const ChatwootChatOptions({
     required this.baseUrl,
-    required this.inboxIdentifier,
+    required this.websiteToken,
     this.enablePersistence = true,
     this.allowInsecure = false,
     this.user,
@@ -73,7 +71,7 @@ class ChatwootChatOptions {
   /// client can be kept alive across a rebuild.
   bool sameConnection(ChatwootChatOptions other) =>
       baseUrl == other.baseUrl &&
-      inboxIdentifier == other.inboxIdentifier &&
+      websiteToken == other.websiteToken &&
       enablePersistence == other.enablePersistence &&
       allowInsecure == other.allowInsecure &&
       user == other.user;
@@ -93,7 +91,7 @@ class ChatwootChatOptions {
   @override
   int get hashCode => Object.hash(
     baseUrl,
-    inboxIdentifier,
+    websiteToken,
     enablePersistence,
     allowInsecure,
     user,

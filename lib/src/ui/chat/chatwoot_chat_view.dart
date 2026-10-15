@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart' as mui;
 
 import '../../core/chatwoot_callbacks.dart';
 import '../../core/chatwoot_client.dart';
+import '../../core/chatwoot_client_exception.dart';
 import '../l10n/chatwoot_l10n.dart';
 import '../theme/chatwoot_chat_theme.dart';
 import 'chatwoot_chat_controller.dart';
@@ -60,7 +61,8 @@ class ChatwootChatView extends StatefulWidget {
   State<ChatwootChatView> createState() => _ChatwootChatViewState();
 }
 
-class _ChatwootChatViewState extends State<ChatwootChatView> {
+class _ChatwootChatViewState extends State<ChatwootChatView>
+    with WidgetsBindingObserver {
   late ChatwootChatController _controller = _createController();
   final _audio = AudioPlaybackController();
   ChatwootL10n _l10n = const ChatwootL10n();
@@ -70,6 +72,17 @@ class _ChatwootChatViewState extends State<ChatwootChatView> {
     callbacks: widget.callbacks,
     clientFactory: widget.clientFactory ?? ChatwootClient.create,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Only a resumed app shows the chat to the user.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _controller.visible = state == AppLifecycleState.resumed;
 
   @override
   void didChangeDependencies() {
@@ -99,6 +112,7 @@ class _ChatwootChatViewState extends State<ChatwootChatView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _audio.dispose();
     super.dispose();
@@ -221,6 +235,7 @@ class _ChatwootChatViewState extends State<ChatwootChatView> {
                   context,
                   ChatComposerData(
                     onSend: _send,
+                    onTyping: _controller.typing,
                     onAttach: o.enableAttachments
                         ? () => unawaited(_attach(style))
                         : null,
@@ -336,7 +351,10 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) {
-      if (controller.error == null) return const SizedBox.shrink();
+      final error = controller.error;
+      if (error == null) return const SizedBox.shrink();
+      final rejected =
+          error.type == ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH;
       return Semantics(
         liveRegion: true,
         child: Padding(
@@ -347,16 +365,21 @@ class _ErrorBanner extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  l10n.connectionErrorText,
-                  style: TextStyle(color: color),
+                child: Text(switch (error.type) {
+                  ChatwootClientExceptionType.INVALID_IDENTIFIER_HASH =>
+                    l10n.identityRejectedText,
+                  ChatwootClientExceptionType.SESSION_EXPIRED =>
+                    l10n.sessionExpiredText,
+                  _ => l10n.connectionErrorText,
+                }, style: TextStyle(color: color)),
+              ),
+              // the same identity would be rejected again
+              if (!rejected)
+                TextButton(
+                  onPressed: controller.retry,
+                  style: TextButton.styleFrom(foregroundColor: color),
+                  child: Text(l10n.retryLabel),
                 ),
-              ),
-              TextButton(
-                onPressed: controller.retry,
-                style: TextButton.styleFrom(foregroundColor: color),
-                child: Text(l10n.retryLabel),
-              ),
             ],
           ),
         ),

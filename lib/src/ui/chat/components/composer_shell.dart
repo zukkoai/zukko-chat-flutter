@@ -32,6 +32,9 @@ class ComposerHandle {
 class ComposerShell extends StatefulWidget {
   final ValueChanged<String> onSend;
 
+  /// Called on every edit that leaves text in the field.
+  final VoidCallback? onTyping;
+
   /// Null turns voice messages off.
   final ValueChanged<VoiceRecording>? onVoiceRecorded;
   final ValueChanged<VoiceRecorderIssue>? onVoiceIssue;
@@ -41,6 +44,7 @@ class ComposerShell extends StatefulWidget {
     super.key,
     required this.onSend,
     required this.builder,
+    this.onTyping,
     this.onVoiceRecorded,
     this.onVoiceIssue,
   });
@@ -93,6 +97,7 @@ class _ComposerShellState extends State<ComposerShell> {
 
   void _onTextChanged() {
     final canSend = _text.text.trim().isNotEmpty;
+    if (canSend) widget.onTyping?.call();
     if (canSend != _canSend) setState(() => _canSend = canSend);
   }
 

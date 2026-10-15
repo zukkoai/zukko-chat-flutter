@@ -28,6 +28,7 @@ class ThreadFeedComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ComposerShell(
     onSend: data.onSend,
+    onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
     builder: (context, handle) {
