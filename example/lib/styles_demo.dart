@@ -1,4 +1,4 @@
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:flutter/material.dart';
 
 import 'demo_client.dart';
@@ -17,27 +17,27 @@ class StylesHomeScreen extends StatelessWidget {
   });
 
   static const _styles = [
-    (ChatwootChatStyle.smoothSilk, 'Smooth Silk'),
-    (ChatwootChatStyle.minimalClean, 'Minimal Clean'),
-    (ChatwootChatStyle.threadFeed, 'Thread Feed'),
+    (ZukkoChatStyle.smoothSilk, 'Smooth Silk'),
+    (ZukkoChatStyle.minimalClean, 'Minimal Clean'),
+    (ZukkoChatStyle.threadFeed, 'Thread Feed'),
   ];
 
-  void _open(BuildContext context, ChatwootChatStyle style) => Navigator.push(
+  void _open(BuildContext context, ZukkoChatStyle style) => Navigator.push(
     context,
     MaterialPageRoute<void>(
-      builder: (_) => ChatwootChat(
+      builder: (_) => ZukkoChat(
         title: 'Zukko AI',
-        options: ChatwootChatOptions(
+        options: ZukkoChatOptions(
           baseUrl: 'https://demo.zukko.ai',
           websiteToken: 'demo',
           enablePersistence: false,
           style: style,
-          l10n: ChatwootL10n.uzLatn,
+          l10n: ZukkoChatL10n.uzLatn,
         ),
         // Demo only: the offline client instead of a real server.
         // ignore: invalid_use_of_visible_for_testing_member
-        clientFactory: DemoChatwootClient.create,
-        interactions: ChatwootChatInteractions(onMorePressed: onToggleDark),
+        clientFactory: DemoZukkoChatClient.create,
+        interactions: ZukkoChatInteractions(onMorePressed: onToggleDark),
       ),
     ),
   );

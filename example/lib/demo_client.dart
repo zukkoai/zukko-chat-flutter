@@ -1,29 +1,29 @@
 import 'dart:async';
 
-import 'package:chatwoot_sdk/chatwoot_sdk.dart';
+import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 
-/// Offline stand-in for [ChatwootClient], so the chat styles can be checked
+/// Offline stand-in for [ZukkoChatClient], so the chat styles can be checked
 /// without a server: it loads a fixed conversation (text, link, images,
 /// file, voice) and answers every sent message after a short "typing".
-class DemoChatwootClient implements ChatwootClient {
-  DemoChatwootClient(this._callbacks);
+class DemoZukkoChatClient implements ZukkoChatClient {
+  DemoZukkoChatClient(this._callbacks);
 
-  /// Same signature as [ChatwootClient.create].
-  static Future<ChatwootClient> create({
+  /// Same signature as [ZukkoChatClient.create].
+  static Future<ZukkoChatClient> create({
     required String baseUrl,
     required String websiteToken,
-    ChatwootUser? user,
+    ZukkoChatUser? user,
     bool enablePersistence = true,
     bool allowInsecure = false,
-    ChatwootCallbacks? callbacks,
-  }) async => DemoChatwootClient(callbacks);
+    ZukkoChatCallbacks? callbacks,
+  }) async => DemoZukkoChatClient(callbacks);
 
-  final ChatwootCallbacks? _callbacks;
+  final ZukkoChatCallbacks? _callbacks;
   final _timers = <Timer>[];
   var _nextId = 100;
   var _disposed = false;
 
-  static const _agent = ChatwootEventMessageUser(id: 1, name: 'Zukko AI');
+  static const _agent = ZukkoChatEventMessageUser(id: 1, name: 'Zukko AI');
 
   @override
   Future<void> loadMessages() async {
@@ -35,7 +35,7 @@ class DemoChatwootClient implements ChatwootClient {
   Future<void> sendMessage({
     required String content,
     required String echoId,
-    List<ChatwootUpload> attachments = const [],
+    List<ZukkoChatUpload> attachments = const [],
     int? replyTo,
   }) async {
     // Stands in for the server's stored copies of the uploaded files.
@@ -87,7 +87,7 @@ class DemoChatwootClient implements ChatwootClient {
   static const _sampleAudio =
       'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
 
-  Map<String, dynamic> _hosted(ChatwootUpload file) => {
+  Map<String, dynamic> _hosted(ZukkoChatUpload file) => {
     'file_type': file.isImage
         ? 'image'
         : file.isAudio
@@ -101,7 +101,7 @@ class DemoChatwootClient implements ChatwootClient {
     'file_size': file.size,
   };
 
-  List<ChatwootMessage> _conversation() {
+  List<ZukkoChatMessage> _conversation() {
     Map<String, dynamic> image(String seed) => {
       'file_type': 'image',
       'data_url': 'https://picsum.photos/seed/$seed/600/450',
@@ -175,13 +175,13 @@ class DemoChatwootClient implements ChatwootClient {
     ];
   }
 
-  ChatwootMessage _message(
+  ZukkoChatMessage _message(
     int id, {
     required String? content,
     bool mine = false,
     int minutesAgo = 0,
     List<dynamic>? attachments,
-  }) => ChatwootMessage(
+  }) => ZukkoChatMessage(
     id: id,
     content: content,
     messageType: mine ? 0 : 1,

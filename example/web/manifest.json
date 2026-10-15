@@ -1,11 +1,11 @@
 {
-    "name": "example",
-    "short_name": "example",
+    "name": "Zukko Chat",
+    "short_name": "Zukko Chat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "An example project for chatwoot client sdk",
+    "description": "An example project for Zukko Chat",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
