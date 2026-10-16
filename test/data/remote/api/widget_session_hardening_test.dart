@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
 import 'package:zukko_chat_flutter/src/core/zukko_chat_upload.dart';
@@ -11,6 +10,7 @@ import 'package:zukko_chat_flutter/src/data/remote/api/widget_session_api.dart';
 import 'package:zukko_chat_flutter/src/shared/http_client.dart';
 import 'package:dio/dio.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../utils/fixtures.dart';
@@ -342,9 +342,18 @@ void main() {
     });
   });
 
-  group('identity warning (10)', () {
+  group('identity logging (10)', () {
+    late List<String> logs;
+    late DebugPrintCallback saved;
+    setUp(() {
+      logs = [];
+      saved = debugPrint;
+      debugPrint = (m, {wrapWidth}) => logs.add(m ?? '');
+    });
+    tearDown(() => debugPrint = saved);
+
     test(
-      'identifier without hash: IDENTITY_NOT_VERIFIED once, not fatal',
+      'identifier without hash, inbox not enforcing: silent, no onError',
       () async {
         final rig = WidgetRig(server, user: ZukkoChatUser(identifier: 'u1'));
 
@@ -352,9 +361,44 @@ void main() {
         await rig.session.refresh(SessionRefreshReason.socketRejected);
 
         expect(rig.session.isReady, isTrue);
-        expect(rig.reported.map((e) => e.type), [T.identityNotVerified]);
+        expect(rig.reported, isEmpty);
+        expect(logs, isEmpty);
       },
     );
+
+    test('401 without a hash: one ERROR line, "missing"', () async {
+      server.setUserStatus = 401;
+      final rig = WidgetRig(server, user: ZukkoChatUser(identifier: 'u1'));
+
+      await expectLater(
+        rig.session.start(),
+        throwsA(
+          isA<ZukkoChatException>().having(
+            (e) => e.type,
+            'type',
+            T.invalidIdentifierHash,
+          ),
+        ),
+      );
+
+      expect(logs, hasLength(1));
+      expect(logs.single, startsWith('[zukko_chat] ERROR: '));
+      expect(logs.single, contains('identifierHash is missing'));
+    });
+
+    test('401 with a hash: one ERROR line, "wrong"', () async {
+      server.setUserStatus = 401;
+      final rig = WidgetRig(server, user: identified);
+
+      await expectLater(
+        rig.session.start(),
+        throwsA(isA<ZukkoChatException>()),
+      );
+
+      expect(logs, hasLength(1));
+      expect(logs.single, contains('identifierHash is wrong'));
+      expect(logs.single, isNot(contains("'h'")));
+    });
 
     test('with a hash there is no warning', () async {
       final rig = WidgetRig(server, user: identified);

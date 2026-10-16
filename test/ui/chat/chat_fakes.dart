@@ -1,5 +1,6 @@
 import 'package:zukko_chat_flutter/src/ui/chat/zukko_chat_view.dart'
     show debugClientFactory;
+
 import 'dart:async';
 
 import 'package:zukko_chat_flutter/src/data/models/zukko_chat_attachment.dart';

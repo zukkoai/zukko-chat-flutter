@@ -23,26 +23,19 @@ void main() {
       }
     });
 
-    test(
-      'other schemes and non-urls are refused',
-      () {
-        for (final url in [
-          'ftp://example.com',
-          'file:///etc/passwd',
-          'javascript:alert(1)',
-          'ws://example.com',
-          'example.com',
-          '',
-          'https://',
-        ]) {
-          expect(
-            () => validateBaseUrl(url),
-            throwsArgumentError,
-            reason: url,
-          );
-        }
-      },
-    );
+    test('other schemes and non-urls are refused', () {
+      for (final url in [
+        'ftp://example.com',
+        'file:///etc/passwd',
+        'javascript:alert(1)',
+        'ws://example.com',
+        'example.com',
+        '',
+        'https://',
+      ]) {
+        expect(() => validateBaseUrl(url), throwsArgumentError, reason: url);
+      }
+    });
   });
 
   // B1: the trimmed URL is the one to use everywhere

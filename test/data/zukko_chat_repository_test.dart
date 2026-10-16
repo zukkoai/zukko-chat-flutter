@@ -243,17 +243,20 @@ void main() {
           '${(id % 60).toString().padLeft(2, '0')}',
     );
 
-    test('a cache saved with 500 messages reports the newest 20, oldest first', () async {
-      await storage.messages.saveAllMessages([
-        for (var i = 1; i <= 500; i++) m(i),
-      ]);
+    test(
+      'a cache saved with 500 messages reports the newest 20, oldest first',
+      () async {
+        await storage.messages.saveAllMessages([
+          for (var i = 1; i <= 500; i++) m(i),
+        ]);
 
-      repo.getPersistedMessages();
+        repo.getPersistedMessages();
 
-      expect(persistedRetrieved.map((x) => x.id), [
-        for (var i = 481; i <= 500; i++) i,
-      ]);
-    });
+        expect(persistedRetrieved.map((x) => x.id), [
+          for (var i = 481; i <= 500; i++) i,
+        ]);
+      },
+    );
 
     test('a small cache is reported whole', () async {
       await storage.messages.saveAllMessages([m(1), m(2)]);

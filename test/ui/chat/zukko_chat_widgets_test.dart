@@ -65,10 +65,7 @@ void main() {
       WidgetTester tester,
       ZukkoChatOptions o,
     ) async {
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: o)));
       // The scope sits inside the view, so look it up from a descendant.
       return LinkPreviewScope.maybeOf(
         tester.element(find.byType(ChatMessageList)),
@@ -93,10 +90,7 @@ void main() {
     testWidgets('typing and sending before the client exists is queued (U4)', (
       tester,
     ) async {
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
       await tester.tap(find.byTooltip('Send'));
@@ -116,10 +110,7 @@ void main() {
     testWidgets('typing in the composer tells the agents; the banner explains '
         'a rejected identity without a retry button', (tester) async {
       factory.completer.complete(client);
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await _settle(tester);
 
       await tester.enterText(find.byType(TextField), 'h');
@@ -166,10 +157,7 @@ void main() {
       tester,
     ) async {
       factory.completer.complete(client);
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await tester.pump();
 
       factory.callbacks!.onMessageReceived!(msg(1, content: 'from agent'));
@@ -187,10 +175,7 @@ void main() {
       client.loadGate = Completer<void>();
       client.older = (_) async => [msg(1), msg(2)]; // short: the start
       factory.completer.complete(client);
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await tester.pump();
       factory.callbacks!.onMessagesRetrieved!([
         for (var i = 21; i <= 40; i++)
@@ -217,10 +202,7 @@ void main() {
 
     testWidgets('tapping a failed message resends it', (tester) async {
       factory.completer.complete(client);
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await _settle(tester);
       await tester.enterText(find.byType(TextField), 'retry me');
       await tester.pump();
@@ -317,10 +299,7 @@ void main() {
     testWidgets('start failure: message fails, error shown, retry works (F6)', (
       tester,
     ) async {
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
       await tester.enterText(find.byType(TextField), 'hi');
       await tester.pump();
       await tester.tap(find.byTooltip('Send'));
@@ -401,10 +380,7 @@ void main() {
       tester,
     ) async {
       final handle = tester.ensureSemantics();
-      await _pump(
-        tester,
-        _app(ZukkoChat(options: _o)),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o)));
 
       factory.callbacks!.onConversationIsOnline!();
       await tester.pump();
@@ -431,10 +407,7 @@ void main() {
             builder: (context) => TextButton(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      ZukkoChat(options: _o),
-                ),
+                MaterialPageRoute<void>(builder: (_) => ZukkoChat(options: _o)),
               ),
               child: const Text('open'),
             ),
@@ -521,13 +494,7 @@ void main() {
       tester,
     ) async {
       Future<Color?> bg(ThemeData t) async {
-        await _pump(
-          tester,
-          _app(
-            ZukkoChat(options: _o),
-            theme: t,
-          ),
-        );
+        await _pump(tester, _app(ZukkoChat(options: _o), theme: t));
         return _background(tester);
       }
 
@@ -701,15 +668,7 @@ void main() {
     });
 
     testWidgets('the style header shows the title', (tester) async {
-      await _pump(
-        tester,
-        _app(
-          ZukkoChat(
-            options: _o,
-            title: 'Header title',
-          ),
-        ),
-      );
+      await _pump(tester, _app(ZukkoChat(options: _o, title: 'Header title')));
 
       expect(find.text('Header title'), findsOneWidget);
     });

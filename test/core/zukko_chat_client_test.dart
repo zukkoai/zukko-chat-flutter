@@ -277,17 +277,19 @@ void main() {
       'http://localhost:3000',
       'http://127.0.0.1:3000',
     ]) {
-      test('plain http "$url" throws ArgumentError, nothing is opened',
-          () async {
-        await expectLater(
-          ZukkoChatClient.create(
-            baseUrl: url,
-            websiteToken: 'in',
-            enablePersistence: false,
-          ),
-          throwsArgumentError,
-        );
-      });
+      test(
+        'plain http "$url" throws ArgumentError, nothing is opened',
+        () async {
+          await expectLater(
+            ZukkoChatClient.create(
+              baseUrl: url,
+              websiteToken: 'in',
+              enablePersistence: false,
+            ),
+            throwsArgumentError,
+          );
+        },
+      );
     }
 
     for (final url in ['ftp://chat.example.com', 'chat.example.com', '']) {
@@ -302,7 +304,6 @@ void main() {
         );
       });
     }
-
   });
 
   // F14

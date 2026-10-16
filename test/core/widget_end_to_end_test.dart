@@ -1,7 +1,7 @@
-import 'dart:typed_data';
 
 import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../utils/fake_chat_server.dart';
@@ -278,6 +278,24 @@ void main() {
       ]);
     });
 
+    test('inbox with hmac_mandatory and no hash: the debug log gets exactly '
+        'one line, the ERROR', () async {
+      server.hmacMandatory = true;
+      final logs = <String>[];
+      final previous = debugPrint;
+      debugPrint = (m, {wrapWidth}) => logs.add(m ?? '');
+      addTearDown(() => debugPrint = previous);
+      final errors = <ZukkoChatException>[];
+      await connect(errors: errors, user: ZukkoChatUser(identifier: 'u1'));
+      expect(
+        errors.map((e) => e.type),
+        contains(ZukkoChatExceptionType.invalidIdentifierHash),
+      );
+      expect(logs, hasLength(1));
+      expect(logs.single, startsWith('[zukko_chat] ERROR: '));
+      expect(logs.single, contains('identifierHash is missing'));
+    });
+
     test('inbox with hmac_mandatory: no hash is rejected, the right one '
         'passes', () async {
       server.hmacMandatory = true;
@@ -286,7 +304,6 @@ void main() {
         errors: errors,
         user: ZukkoChatUser(identifier: 'u1'),
       );
-      // the SDK also warns up front that the identity is unverified
       expect(
         errors.map((e) => e.type),
         contains(ZukkoChatExceptionType.invalidIdentifierHash),

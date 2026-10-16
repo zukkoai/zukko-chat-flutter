@@ -87,17 +87,6 @@ void main() {
 
       expect(controller.error?.type, ZukkoChatExceptionType.identifyFailed);
     });
-
-    test('IDENTITY_NOT_VERIFIED is a warning, not an error state', () async {
-      factory.completer.complete(client);
-      await pumpEventQueue();
-
-      factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.identityNotVerified),
-      );
-
-      expect(controller.error, isNull);
-    });
   });
 
   test('coming back to the foreground resumes realtime', () async {
