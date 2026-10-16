@@ -59,6 +59,14 @@ class MinimalCleanMessage extends StatelessWidget {
               color: tokens.error,
             ),
           )
+        else if (meta.sending)
+          Padding(
+            padding: const EdgeInsets.only(top: MinimalCleanMetrics.metaTop),
+            child: SendingMark(
+              label: slot.sendingLabel,
+              captionStyle: tokens.caption,
+            ),
+          )
         else if (meta.isGroupEnd && meta.time.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: MinimalCleanMetrics.metaTop),

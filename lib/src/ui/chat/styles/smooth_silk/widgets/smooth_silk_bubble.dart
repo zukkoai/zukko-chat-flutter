@@ -34,6 +34,8 @@ class SmoothSilkBubble extends StatelessWidget {
             captionStyle: tokens.caption,
             color: tokens.error,
           )
+        : meta.sending
+        ? SendingMark(label: slot.sendingLabel, captionStyle: tokens.caption)
         : meta.isGroupEnd && meta.time.isNotEmpty
         ? Text(meta.time, style: tokens.caption)
         : null;

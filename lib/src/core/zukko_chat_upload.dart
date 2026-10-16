@@ -10,6 +10,33 @@ class ZukkoChatUpload {
   static const maxSizeMb = 40;
   static const maxSize = maxSizeMb * 1024 * 1024;
 
+  /// Server limit of message text, in characters.
+  static const maxMessageLength = 150000;
+
+  /// Server limit of attachments per message.
+  static const maxAttachments = 15;
+
+  /// Types the server accepts besides any `image/`, `video/` and `audio/`.
+  static const acceptedDocumentTypes = {
+    'text/csv',
+    'text/plain',
+    'text/rtf',
+    'application/json',
+    'application/pdf',
+    'application/zip',
+    'application/x-7z-compressed',
+    'application/vnd.rar',
+    'application/x-tar',
+    'application/msword',
+    'application/vnd.ms-excel',
+    'application/vnd.ms-powerpoint',
+    'application/rtf',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+
   final String name;
   final String? path;
   final Uint8List? bytes;
@@ -39,5 +66,10 @@ class ZukkoChatUpload {
   bool get isImage => mimeType?.startsWith('image/') ?? false;
   bool get isAudio => mimeType?.startsWith('audio/') ?? false;
   bool get isVideo => mimeType?.startsWith('video/') ?? false;
+
+  /// Whether the server accepts this file's type (guessed from the name).
+  bool get isTypeAccepted =>
+      isImage || isAudio || isVideo || acceptedDocumentTypes.contains(mimeType);
+
   bool get isTooLarge => (size ?? 0) > maxSize;
 }

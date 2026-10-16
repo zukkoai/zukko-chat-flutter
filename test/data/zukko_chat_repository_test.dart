@@ -32,6 +32,7 @@ void main() {
   late List<ZukkoChatMessage> received;
   late List<ZukkoChatMessage> updated;
   late List<String> events;
+  late List<int> conversationUpdates;
 
   setUp(() {
     service = FakeClientService();
@@ -45,6 +46,7 @@ void main() {
     received = [];
     updated = [];
     events = [];
+    conversationUpdates = [];
     repo = ZukkoChatRepositoryImpl(
       clientService: service,
       localStorage: storage,
@@ -55,6 +57,7 @@ void main() {
       ),
       streamCallbacks: ZukkoChatCallbacks(
         onError: errors.add,
+        onConversationUpdated: (c) => conversationUpdates.add(c.id),
         onMessagesRetrieved: retrieved.addAll,
         onPersistedMessagesRetrieved: persistedRetrieved.addAll,
         onMessageSent: (m, echo) => sent.add((m, echo)),
@@ -88,12 +91,12 @@ void main() {
 
     test('a failing fetch reports the error and stores nothing', () async {
       service.messagesResult = failure(
-        ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+        ZukkoChatExceptionType.getMessagesFailed,
       );
 
       await repo.getMessages();
 
-      expect(errors.single.type, ZukkoChatExceptionType.GET_MESSAGES_FAILED);
+      expect(errors.single.type, ZukkoChatExceptionType.getMessagesFailed);
       expect(retrieved, isEmpty);
       expect(storage.messages.getMessages(), isEmpty);
     });
@@ -114,10 +117,7 @@ void main() {
           );
 
           expect(uncaught, isEmpty);
-          expect(
-            errors.single.type,
-            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
-          );
+          expect(errors.single.type, ZukkoChatExceptionType.getMessagesFailed);
           expect(retrieved, isEmpty);
         });
       }
@@ -234,6 +234,78 @@ void main() {
     });
   });
 
+  group('older history paging', () {
+    // sortable timestamps for ids up to 3599
+    ZukkoChatMessage m(int id) => message(
+      id,
+      createdAt:
+          '2024-01-01 00:${(id ~/ 60).toString().padLeft(2, '0')}:'
+          '${(id % 60).toString().padLeft(2, '0')}',
+    );
+
+    test('a cache of 500 reports only the newest 20, oldest first', () async {
+      await storage.messages.saveAllMessages([
+        for (var i = 1; i <= 500; i++) m(i),
+      ]);
+
+      repo.getPersistedMessages();
+
+      expect(persistedRetrieved.map((x) => x.id), [
+        for (var i = 481; i <= 500; i++) i,
+      ]);
+    });
+
+    test('a small cache is reported whole', () async {
+      await storage.messages.saveAllMessages([m(1), m(2)]);
+
+      repo.getPersistedMessages();
+
+      expect(persistedRetrieved.map((x) => x.id), [1, 2]);
+    });
+
+    test('getOlderMessages asks before=<id>, returns the page, persists and '
+        'reports nothing', () async {
+      await storage.messages.saveAllMessages([m(100)]);
+      service.messagesResult = [m(60), m(61)];
+
+      final page = await repo.getOlderMessages(100);
+
+      expect(page!.map((x) => x.id), [60, 61]);
+      expect(service.messageCursors.single, (before: 100, after: null));
+      expect(storage.messages.getMessages().map((x) => x.id), [100]);
+      expect(retrieved, isEmpty);
+    });
+
+    test('older pages never evict the newest cached messages', () async {
+      final newest = [for (var i = 501; i <= 1000; i++) m(i)];
+      await storage.messages.saveAllMessages(newest);
+      service.messagesResult = [for (var i = 481; i <= 500; i++) m(i)];
+
+      await repo.getOlderMessages(501);
+
+      final stored = storage.messages.getMessages().map((x) => x.id).toList();
+      expect(stored.length, 500);
+      expect(stored.first, 501);
+      expect(stored.last, 1000);
+    });
+
+    test(
+      'a failure returns null, reports it, and the next call retries',
+      () async {
+        service.messagesResult = failure(
+          ZukkoChatExceptionType.getMessagesFailed,
+        );
+
+        expect(await repo.getOlderMessages(100), isNull);
+        expect(errors.single.type, ZukkoChatExceptionType.getMessagesFailed);
+
+        service.messagesResult = [m(99)];
+        expect((await repo.getOlderMessages(100))!.single.id, 99);
+        expect(service.messageCursors.length, 2);
+      },
+    );
+  });
+
   group('sendMessage', () {
     final request = ZukkoChatNewMessageRequest(content: 'hi', echoId: 'echo-1');
 
@@ -262,12 +334,12 @@ void main() {
 
     test('a failure is reported with the echo id as data', () async {
       service.createMessageResult = failure(
-        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.sendMessageFailed,
       );
 
       await repo.sendMessage(request);
 
-      expect(errors.single.type, ZukkoChatExceptionType.SEND_MESSAGE_FAILED);
+      expect(errors.single.type, ZukkoChatExceptionType.sendMessageFailed);
       expect(errors.single.data, 'echo-1');
       expect(storage.messages.getMessages(), isEmpty);
     });
@@ -286,7 +358,7 @@ void main() {
 
         await repo.sendMessage(request);
 
-        expect(errors.single.type, ZukkoChatExceptionType.SEND_MESSAGE_FAILED);
+        expect(errors.single.type, ZukkoChatExceptionType.sendMessageFailed);
         expect(errors.single.data, 'echo-1');
       });
     }
@@ -301,6 +373,20 @@ void main() {
 
       expect(storage.conversation.get(), conv);
       expect(errors, isEmpty);
+    });
+
+    test('reports the initial conversation, but not after dispose', () async {
+      service.conversationResult = conversation(id: 7);
+      await repo.initialize();
+      expect(conversationUpdates, [7]);
+
+      final gate = service.conversationGate = Completer<void>();
+      final pending = repo.initialize();
+      await repo.dispose();
+      gate.complete();
+      await pending;
+
+      expect(conversationUpdates, [7]);
     });
 
     test('a contact without a conversation yet is not an error', () async {
@@ -343,15 +429,12 @@ void main() {
 
     test('a failing service call is reported', () async {
       service.conversationResult = failure(
-        ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
+        ZukkoChatExceptionType.getConversationFailed,
       );
 
       await repo.initialize();
 
-      expect(
-        errors.single.type,
-        ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
-      );
+      expect(errors.single.type, ZukkoChatExceptionType.getConversationFailed);
     });
 
     test('an unexpected error is wrapped and reported, never thrown', () async {
@@ -359,7 +442,7 @@ void main() {
 
       await repo.initialize();
 
-      expect(errors.single.type, ZukkoChatExceptionType.CREATE_CLIENT_FAILED);
+      expect(errors.single.type, ZukkoChatExceptionType.createClientFailed);
     });
   });
 

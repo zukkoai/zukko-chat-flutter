@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zukko_chat_flutter/src/ui/chat/components/components.dart';
@@ -24,6 +25,12 @@ class _FakeEngine implements AudioEngine {
   Future<Duration?> setUrl(String url) {
     log.add('load $url');
     return (loads[url] = Completer<Duration?>()).future;
+  }
+
+  @override
+  Future<Duration?> setFilePath(String path) async {
+    log.add('file $path');
+    return const Duration(seconds: 5);
   }
 
   @override
@@ -106,5 +113,49 @@ void main() {
   test('local paths cannot be played', () async {
     await playback.toggle('/data/user/0/x.wav');
     expect(engine.log, isEmpty);
+  });
+
+  group('local recordings', () {
+    late Directory dir;
+    late String file;
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('zukko_audio');
+      file = '${dir.path}/note.m4a';
+      File(file).writeAsBytesSync([0]);
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('an existing file plays through the file API, not setUrl', () async {
+      expect(AudioPlaybackController.canPlay(file), isTrue);
+      await playback.toggle(file);
+      expect(engine.log, ['file $file', 'play']);
+    });
+
+    test('http goes to setUrl', () async {
+      final t = playback.toggle(a);
+      engine.loads[a]!.complete(null);
+      await t;
+      expect(engine.log.first, 'load $a');
+    });
+
+    test('a missing file is not playable and does nothing', () async {
+      final missing = '${dir.path}/gone.m4a';
+      expect(AudioPlaybackController.canPlay(missing), isFalse);
+      await playback.toggle(missing);
+      await playback.seek(missing, 0.5);
+      expect(engine.log, isEmpty);
+    });
+
+    test('release stops the current source and idles its watcher', () async {
+      await playback.toggle(file);
+      engine.playing.add(true);
+      expect(playback.watch(file).value.playing, isTrue);
+      playback.release(file);
+      expect(engine.log.last, 'pause');
+      expect(playback.watch(file).value, AudioPlaybackView.idle);
+      engine.log.clear();
+      playback.release(file); // not current any more: no-op
+      expect(engine.log, isEmpty);
+    });
   });
 }

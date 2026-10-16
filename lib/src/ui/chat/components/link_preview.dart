@@ -6,6 +6,7 @@ import 'package:flutter_chat_core/flutter_chat_core.dart' show LinkPreviewData;
 
 import 'chat_image.dart';
 import 'link_launcher.dart';
+import 'link_preview_service.dart';
 
 /// Colors and text of a [LinkPreviewCard].
 @immutable
@@ -130,10 +131,14 @@ class LinkPreviewCard extends StatelessWidget {
     final border = look.border;
     return Semantics(
       link: true,
+      label: title == null ? _domain : '$title, $_domain',
+      excludeSemantics: true,
+      onTap: () => unawaited(openExternalLink(uri)),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => unawaited(openExternalLink(uri)),
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: look.fill,
@@ -145,4 +150,72 @@ class LinkPreviewCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// [LinkPreviewCard] that fetches its preview lazily, when first built, through
+/// the ambient [LinkPreviewScope] (no scope service: no fetch). [data] is used
+/// until the fetch resolves, and when it fails.
+class LoadedLinkPreviewCard extends StatefulWidget {
+  final Uri uri;
+  final LinkPreviewData? data;
+  final LinkPreviewLook look;
+  final Axis direction;
+
+  const LoadedLinkPreviewCard({
+    super.key,
+    required this.uri,
+    required this.look,
+    this.data,
+    this.direction = Axis.vertical,
+  });
+
+  @override
+  State<LoadedLinkPreviewCard> createState() => _LoadedLinkPreviewCardState();
+}
+
+class _LoadedLinkPreviewCardState extends State<LoadedLinkPreviewCard> {
+  LinkPreviewService? _service;
+  LinkPreviewData? _fetched;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final service = LinkPreviewScope.maybeOf(context);
+    if (service != _service) {
+      _service = service;
+      _load();
+    }
+  }
+
+  @override
+  void didUpdateWidget(LoadedLinkPreviewCard old) {
+    super.didUpdateWidget(old);
+    if (old.uri != widget.uri) _load();
+  }
+
+  void _load() {
+    final service = _service;
+    final uri = widget.uri;
+    _fetched = null;
+    if (service == null || widget.data != null) return;
+    if (service.isCached(uri)) {
+      _fetched = service.cached(uri);
+      return;
+    }
+    unawaited(
+      service.load(uri).then((data) {
+        if (mounted && widget.uri == uri && _service == service) {
+          setState(() => _fetched = data);
+        }
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => LinkPreviewCard(
+    uri: widget.uri,
+    data: widget.data ?? _fetched,
+    look: widget.look,
+    direction: widget.direction,
+  );
 }

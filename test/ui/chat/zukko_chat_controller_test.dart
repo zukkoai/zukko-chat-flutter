@@ -73,7 +73,7 @@ void main() {
       factory.completer.completeError(StateError('boom'));
       await pumpEventQueue();
 
-      expect(errors.single.type, ZukkoChatExceptionType.CREATE_CLIENT_FAILED);
+      expect(errors.single.type, ZukkoChatExceptionType.createClientFailed);
       expect(controller.error, isNotNull);
     });
 
@@ -184,7 +184,7 @@ void main() {
       factory.callbacks!.onError!(
         ZukkoChatException(
           'x',
-          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.sendMessageFailed,
           data: texts().single.id,
         ),
       );
@@ -210,13 +210,13 @@ void main() {
       factory.callbacks!.onError!(
         ZukkoChatException(
           'x',
-          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.sendMessageFailed,
           data: id,
         ),
       );
 
       expect(texts().single.status, MessageStatus.error);
-      expect(errors.single.type, ZukkoChatExceptionType.SEND_MESSAGE_FAILED);
+      expect(errors.single.type, ZukkoChatExceptionType.sendMessageFailed);
 
       controller.resend(id);
 
@@ -613,29 +613,85 @@ void main() {
   });
 
   group('status and callbacks', () {
-    test('online / typing / stopped typing / offline', () async {
+    ZukkoChatConversation conv(String? status) =>
+        ZukkoChatConversation(id: 1, inboxId: 1, status: status);
+
+    Future<ZukkoChatCallbacks> readyCb() async {
       await ready();
-      final cb = factory.callbacks!;
-      final seen = <ZukkoChatStatus>[];
-      controller.addListener(() => seen.add(controller.status));
+      return factory.callbacks!;
+    }
 
-      cb.onConversationIsOnline!();
-      cb.onConversationStartedTyping!();
-      cb.onConversationStoppedTyping!();
+    test(
+      'no conversation yet: online (the AI answers the first message)',
+      () async {
+        await ready();
+        expect(controller.status, ZukkoChatStatus.online);
+      },
+    );
+
+    test('pending and resolved: online with every agent offline', () async {
+      final cb = await readyCb();
       cb.onConversationIsOffline!();
-
-      expect(seen, [
-        ZukkoChatStatus.online,
-        ZukkoChatStatus.typing,
-        ZukkoChatStatus.online,
-        ZukkoChatStatus.offline,
-      ]);
+      cb.onConversationUpdated!(conv('pending'));
+      expect(controller.status, ZukkoChatStatus.online);
+      cb.onConversationUpdated!(conv('resolved'));
+      expect(controller.status, ZukkoChatStatus.online);
     });
 
-    test('stopped typing while offline stays offline', () async {
-      await ready();
-      factory.callbacks!.onConversationStoppedTyping!();
+    test('open / snoozed: online only while an agent is online', () async {
+      final cb = await readyCb();
+      cb.onConversationUpdated!(conv('open'));
       expect(controller.status, ZukkoChatStatus.offline);
+      cb.onConversationIsOnline!();
+      expect(controller.status, ZukkoChatStatus.online);
+      cb.onConversationIsOffline!(); // also what a busy agent reports
+      expect(controller.status, ZukkoChatStatus.offline);
+      cb.onConversationUpdated!(conv('snoozed'));
+      expect(controller.status, ZukkoChatStatus.offline);
+    });
+
+    test('open -> pending flips offline to online live', () async {
+      final cb = await readyCb();
+      final seen = <ZukkoChatStatus>[];
+      controller.addListener(() => seen.add(controller.status));
+      cb.onConversationUpdated!(conv('open'));
+      cb.onConversationUpdated!(conv('pending'));
+      expect(seen, [ZukkoChatStatus.offline, ZukkoChatStatus.online]);
+    });
+
+    test('typing overrides, then falls back to the computed status', () async {
+      final cb = await readyCb();
+      cb.onConversationUpdated!(conv('open'));
+      cb.onConversationStartedTyping!();
+      expect(controller.status, ZukkoChatStatus.typing);
+      cb.onConversationStoppedTyping!();
+      expect(controller.status, ZukkoChatStatus.offline);
+
+      cb.onConversationUpdated!(conv('pending'));
+      cb.onConversationStartedTyping!();
+      cb.onConversationUpdated!(conv('open')); // typing still wins
+      expect(controller.status, ZukkoChatStatus.typing);
+      cb.onConversationStoppedTyping!();
+      expect(controller.status, ZukkoChatStatus.offline);
+    });
+
+    test('a session reset forgets the conversation status', () async {
+      final cb = await readyCb();
+      cb.onConversationUpdated!(conv('open'));
+      cb.onSessionReset!();
+      expect(controller.status, ZukkoChatStatus.online);
+    });
+
+    test('the consumer still gets onConversationUpdated', () async {
+      final got = <String?>[];
+      controller.dispose();
+      controller = make(
+        callbacks: ZukkoChatCallbacks(
+          onConversationUpdated: (c) => got.add(c.status),
+        ),
+      );
+      factory.callbacks!.onConversationUpdated!(conv('open'));
+      expect(got, ['open']);
     });
 
     test('consumer callbacks are forwarded', () async {
@@ -742,11 +798,11 @@ void main() {
         'error state; retry builds a new client', () async {
       await ready();
       factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        ZukkoChatException('x', ZukkoChatExceptionType.invalidIdentifierHash),
       );
       expect(
         controller.error?.type,
-        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.invalidIdentifierHash,
       );
 
       controller.retry();
@@ -758,7 +814,7 @@ void main() {
     test('an ordinary error does not raise the banner', () async {
       await ready();
       factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.GET_MESSAGES_FAILED),
+        ZukkoChatException('x', ZukkoChatExceptionType.getMessagesFailed),
       );
       expect(controller.error, isNull);
     });

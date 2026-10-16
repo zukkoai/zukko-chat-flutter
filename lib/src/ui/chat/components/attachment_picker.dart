@@ -61,11 +61,40 @@ class _AttachmentOption extends StatelessWidget {
   );
 }
 
-/// What the user picked: the files that fit [ZukkoChatUpload.maxSize] and how
-/// many were left out for being too large.
-typedef AttachmentPick = ({List<ZukkoChatUpload> fitting, int tooLarge});
+/// What the user picked: the files the server accepts and how many were left
+/// out, by reason: over [ZukkoChatUpload.maxSize], of a type the server
+/// rejects, or beyond [ZukkoChatUpload.maxAttachments].
+typedef AttachmentPick = ({
+  List<ZukkoChatUpload> fitting,
+  int tooLarge,
+  int badType,
+  int overCount,
+});
 
-/// The whole attachment flow: source sheet, system picker, size check. Empty
+/// Splits [files] into what can be sent and what was left out, and why.
+AttachmentPick screenAttachments(List<ZukkoChatUpload> files) {
+  final fitting = <ZukkoChatUpload>[];
+  var tooLarge = 0, badType = 0, overCount = 0;
+  for (final f in files) {
+    if (f.isTooLarge) {
+      tooLarge++;
+    } else if (!f.isTypeAccepted) {
+      badType++;
+    } else if (fitting.length >= ZukkoChatUpload.maxAttachments) {
+      overCount++;
+    } else {
+      fitting.add(f);
+    }
+  }
+  return (
+    fitting: fitting,
+    tooLarge: tooLarge,
+    badType: badType,
+    overCount: overCount,
+  );
+}
+
+/// The whole attachment flow: source sheet, system picker, limit checks. Empty
 /// when the user dismissed either step or [context] went away meanwhile.
 Future<AttachmentPick> pickWithSheet(
   BuildContext context, {
@@ -73,7 +102,12 @@ Future<AttachmentPick> pickWithSheet(
   required Color background,
   required Color foreground,
 }) async {
-  const none = (fitting: <ZukkoChatUpload>[], tooLarge: 0);
+  const none = (
+    fitting: <ZukkoChatUpload>[],
+    tooLarge: 0,
+    badType: 0,
+    overCount: 0,
+  );
   final source = await showAttachmentSourceSheet(
     context,
     l10n: l10n,
@@ -82,11 +116,7 @@ Future<AttachmentPick> pickWithSheet(
   );
   if (source == null) return none;
   final files = await pickAttachments(source);
-  final fitting = [
-    for (final f in files)
-      if (!f.isTooLarge) f,
-  ];
-  return (fitting: fitting, tooLarge: files.length - fitting.length);
+  return screenAttachments(files);
 }
 
 /// Opens the system picker; empty when cancelled.

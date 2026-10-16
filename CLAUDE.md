@@ -11,7 +11,7 @@ Server repo: `/Users/alisherakhmedov/Desktop/Work/microservices/chat`. Server co
 - **After every change**: `flutter analyze --fatal-infos` must be clean and `flutter test` must pass. Tests must be real (fail when the logic breaks).
 - **Packages**: always the latest stable version; adapt the code to new APIs instead of staying on an old major. Check with `flutter pub outdated`.
 - **Store safety**: don't add packages that inject storage/media permissions (`READ_MEDIA_*`, `READ/WRITE_EXTERNAL_STORAGE`, `MANAGE_EXTERNAL_STORAGE`); no `permission_handler`. Use system pickers.
-- **Naming**: everything a developer sees (package name, README/docs, public classes, screens/widgets, example app) says Zukko / ZukkoChat, never Chatwoot. Internal identifiers and `lib/src` file names are `zukko_chat_*` too (the only remaining "Chatwoot" strings are the pinned Hive box names and the secure-storage key). NEVER change Hive box name strings, the secure-storage key string, Hive typeIds/field indices.
+- **Naming**: everything a developer sees (package name, README/docs, public classes, screens/widgets, example app) says Zukko / ZukkoChat, never Chatwoot. Internal identifiers and `lib/src` file names are `zukko_chat_*` too (the only remaining "Chatwoot" strings are the pinned Hive box names and the secure-storage key). NEVER change Hive box name strings, the secure-storage key string, Hive typeIds/field indices. SDK Hive typeIds live at 210-214 (moved from 0-4 on 2026-10-16 by owner decision, to avoid clashes with the host app; 200/201 are taken by hive_ce_flutter Color/TimeOfDay adapters, max is 223).
 - **Parallel sessions**: other sessions may have uncommitted changes in this repo; treat them as the baseline, don't revert or block on them.
 - **Git ignore**: no junk in git (build outputs, IDE/OS files, secrets, root `pubspec.lock`, `TODO.md`).
 
@@ -50,7 +50,7 @@ Trivial one-line edits may be done directly.
 
 ```
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # *.g.dart are gitignored: run after clone / model changes
+dart run build_runner build   # *.g.dart are gitignored: run after clone / model changes
 flutter analyze --fatal-infos
 flutter test
 cd example && flutter analyze && flutter test

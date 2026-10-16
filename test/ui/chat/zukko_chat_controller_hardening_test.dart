@@ -43,11 +43,11 @@ void main() {
 
   group('a failed send marks its bubble whatever the error type (1)', () {
     for (final type in [
-      ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
-      ZukkoChatExceptionType.SESSION_EXPIRED,
-      ZukkoChatExceptionType.IDENTIFY_FAILED,
-      ZukkoChatExceptionType.GET_CONFIG_FAILED,
-      ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+      ZukkoChatExceptionType.invalidIdentifierHash,
+      ZukkoChatExceptionType.sessionExpired,
+      ZukkoChatExceptionType.identifyFailed,
+      ZukkoChatExceptionType.getConfigFailed,
+      ZukkoChatExceptionType.sendMessageFailed,
     ]) {
       test(type.name, () async {
         final echoId = await sendOne();
@@ -67,7 +67,7 @@ void main() {
       factory.callbacks!.onError!(
         ZukkoChatException(
           'x',
-          ZukkoChatExceptionType.SESSION_EXPIRED,
+          ZukkoChatExceptionType.sessionExpired,
           data: 'not-an-echo-id',
         ),
       );
@@ -82,10 +82,10 @@ void main() {
       await pumpEventQueue();
 
       factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.IDENTIFY_FAILED),
+        ZukkoChatException('x', ZukkoChatExceptionType.identifyFailed),
       );
 
-      expect(controller.error?.type, ZukkoChatExceptionType.IDENTIFY_FAILED);
+      expect(controller.error?.type, ZukkoChatExceptionType.identifyFailed);
     });
 
     test('IDENTITY_NOT_VERIFIED is a warning, not an error state', () async {
@@ -93,7 +93,7 @@ void main() {
       await pumpEventQueue();
 
       factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.IDENTITY_NOT_VERIFIED),
+        ZukkoChatException('x', ZukkoChatExceptionType.identityNotVerified),
       );
 
       expect(controller.error, isNull);
@@ -116,7 +116,7 @@ void main() {
       await pumpEventQueue();
       final oldCallbacks = factory.callbacks!;
       oldCallbacks.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.SESSION_EXPIRED),
+        ZukkoChatException('x', ZukkoChatExceptionType.sessionExpired),
       );
       expect(controller.error, isNotNull);
 
@@ -127,7 +127,7 @@ void main() {
 
       // the dying client reports late
       oldCallbacks.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.SESSION_EXPIRED),
+        ZukkoChatException('x', ZukkoChatExceptionType.sessionExpired),
       );
       oldCallbacks.onMessageReceived!(msg(7));
       await pumpEventQueue();

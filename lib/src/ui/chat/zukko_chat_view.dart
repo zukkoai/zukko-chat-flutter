@@ -6,9 +6,12 @@ import 'package:material_ui/material_ui.dart' as mui;
 
 import '../../core/zukko_chat_callbacks.dart';
 import '../../core/zukko_chat_client.dart';
+import '../../core/zukko_chat_upload.dart';
+import '../../shared/sdk_log.dart';
 import '../l10n/zukko_chat_l10n.dart';
 import '../theme/zukko_chat_theme.dart';
 import 'chat_attachment_flow.dart';
+import 'chat_connection_banner.dart';
 import 'chat_error_banner.dart';
 import 'chat_header.dart';
 import 'chat_message_list.dart';
@@ -102,11 +105,56 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
   ChatComposerData? _composer;
   ({bool attach, bool voice})? _composerKey;
 
-  ZukkoChatController _createController() => ZukkoChatController(
-    widget.options,
-    callbacks: widget.callbacks,
-    clientFactory: widget.clientFactory ?? ZukkoChatClient.create,
-  );
+  /// Whether the inbox allows voice messages, once the session is known.
+  bool _serverAllowsAudio = true;
+
+  ZukkoChatController _createController() {
+    final factory = widget.clientFactory ?? ZukkoChatClient.create;
+    late final ZukkoChatController controller;
+    controller = ZukkoChatController(
+      widget.options,
+      callbacks: widget.callbacks,
+      clientFactory:
+          ({
+            required baseUrl,
+            required websiteToken,
+            user,
+            enablePersistence = true,
+            allowInsecure = false,
+            callbacks,
+          }) async {
+            final client = await factory(
+              baseUrl: baseUrl,
+              websiteToken: websiteToken,
+              user: user,
+              enablePersistence: enablePersistence,
+              allowInsecure: allowInsecure,
+              callbacks: callbacks,
+            );
+            if (mounted && identical(controller, _controller)) {
+              _adoptConfig(client);
+            }
+            return client;
+          },
+    );
+    return controller;
+  }
+
+  /// The controller does not expose the client: read the inbox settings here.
+  void _adoptConfig(ZukkoChatClient client) {
+    var allows = true;
+    try {
+      allows = client.config?.audioMessagesEnabled ?? true;
+    } catch (e) {
+      // a custom client (demo, test) may not implement config
+      sdkLog('client config unavailable: ${e.runtimeType}');
+    }
+    if (allows != _serverAllowsAudio) {
+      setState(() => _serverAllowsAudio = allows);
+    }
+  }
+
+  final _linkPreviews = LinkPreviewService();
 
   @override
   void initState() {
@@ -131,6 +179,7 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
     super.didUpdateWidget(old);
     if (!widget.options.sameConnection(old.options)) {
       _controller.dispose();
+      _serverAllowsAudio = true; // until the new session says otherwise
       _controller = _createController();
     } else {
       _controller.callbacks = widget.callbacks;
@@ -206,7 +255,10 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
   /// instance survives rebuilds and only changes with the option flags.
   ChatComposerData _composerData() {
     final o = widget.options;
-    final key = (attach: o.enableAttachments, voice: o.enableVoiceMessages);
+    final key = (
+      attach: o.enableAttachments,
+      voice: o.enableVoiceMessages && _serverAllowsAudio,
+    );
     if (_composerKey == key) return _composer!;
     _composerKey = key;
     return _composer = ChatComposerData(
@@ -222,6 +274,8 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
             ], audioDuration: recording.duration)
           : null,
       onVoiceIssue: (issue) => _notify(voiceIssueText(_l10n, issue)),
+      onTooLong: () =>
+          _notify(_l10n.messageTooLong(ZukkoChatUpload.maxMessageLength)),
     );
   }
 
@@ -249,46 +303,55 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
     final style = r.style;
     final header = widget.header;
 
-    return ColoredBox(
-      color: style.backgroundColor,
-      child: Column(
-        children: [
-          if (header != null)
-            ChatHeader(
-              controller: _controller,
-              style: style,
-              header: header,
+    return LinkPreviewScope(
+      service: o.enableLinkPreviews ? _linkPreviews : null,
+      child: ColoredBox(
+        color: style.backgroundColor,
+        child: Column(
+          children: [
+            if (header != null)
+              ChatHeader(
+                controller: _controller,
+                style: style,
+                header: header,
+                l10n: _l10n,
+                onMore: widget.interactions.onMorePressed,
+              ),
+            ChatConnectionBanner(
+              monitor: _controller.connection,
               l10n: _l10n,
-              onMore: widget.interactions.onMorePressed,
+              color: style.foregroundColor,
+              horizontalPadding: r.theme.horizontalPadding,
             ),
-          ChatErrorBanner(
-            controller: _controller,
-            l10n: _l10n,
-            color: style.foregroundColor,
-            horizontalPadding: r.theme.horizontalPadding,
-          ),
-          Expanded(
-            child: ChatMessageList(
+            ChatErrorBanner(
               controller: _controller,
-              style: style,
-              interactions: widget.interactions,
-              env: r.env,
-              builders: r.builders,
-              muiTheme: r.muiTheme,
-              onTap: _onTap,
+              l10n: _l10n,
+              color: style.foregroundColor,
+              horizontalPadding: r.theme.horizontalPadding,
             ),
-          ),
-          SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                style.buildComposer(context, _composerData(), _l10n),
-                if (o.showBranding) style.buildFooter(context, _l10n),
-              ],
+            Expanded(
+              child: ChatMessageList(
+                controller: _controller,
+                style: style,
+                interactions: widget.interactions,
+                env: r.env,
+                builders: r.builders,
+                muiTheme: r.muiTheme,
+                onTap: _onTap,
+              ),
             ),
-          ),
-        ],
+            SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  style.buildComposer(context, _composerData(), _l10n),
+                  if (o.showBranding) style.buildFooter(context, _l10n),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

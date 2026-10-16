@@ -221,7 +221,7 @@ void main() {
           'event': 'message.created',
           'data': {'id': 1},
         }).event,
-        ZukkoChatEventMessageType.message_created,
+        ZukkoChatEventMessageType.messageCreated,
       );
     });
 
@@ -232,8 +232,8 @@ void main() {
     });
 
     test('action wire names', () {
-      expect(ZukkoChatActionType.update_presence.wire, 'update_presence');
-      expect(ZukkoChatActionType.values, [ZukkoChatActionType.update_presence]);
+      expect(ZukkoChatActionType.updatePresence.wire, 'update_presence');
+      expect(ZukkoChatActionType.values, [ZukkoChatActionType.updatePresence]);
     });
   });
 
@@ -276,6 +276,6 @@ void main() {
 
     expect(user.id, 5);
     expect(user.toJson()['avatar_url'], 'https://a/x.png');
-    expect(ZukkoChatEventMessageUserAdapter().typeId, 4);
+    expect(ZukkoChatEventMessageUserAdapter().typeId, 214);
   });
 }

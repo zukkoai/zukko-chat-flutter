@@ -26,4 +26,21 @@ void main() {
     expect(config.raw['extra'], 1);
     expect(() => config.raw['x'] = 1, throwsUnsupportedError);
   });
+
+  test('voice messages are off only when audio_messaging_enabled is false', () {
+    bool audio(Map<String, dynamic> m) =>
+        ZukkoChatConfig.fromJson(m).audioMessagesEnabled;
+
+    expect(audio({}), isTrue); // missing: old backend
+    expect(audio({'audio_messaging_enabled': false}), isFalse);
+    expect(audio({'audio_messaging_enabled': true}), isTrue);
+    expect(audio({'audio_messaging_enabled': 'no'}), isTrue); // not a bool
+    // the feature list is no longer consulted
+    expect(
+      audio({
+        'enabled_features': ['attachments'],
+      }),
+      isTrue,
+    );
+  });
 }

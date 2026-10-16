@@ -41,6 +41,12 @@ class DemoZukkoChatClient implements ZukkoChatClient {
     callbacks?.onConversationIsOnline?.call();
   }
 
+  // The demo conversation is the whole history.
+  @override
+  Future<List<ZukkoChatMessage>?> loadOlderMessages({
+    required int before,
+  }) async => const [];
+
   @override
   Future<void> sendMessage({
     required String content,

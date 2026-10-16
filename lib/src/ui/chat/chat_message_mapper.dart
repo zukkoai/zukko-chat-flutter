@@ -1,6 +1,7 @@
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 
 import '../../core/zukko_chat_upload.dart';
+import '../../data/models/zukko_chat_attachment.dart';
 import '../../data/models/zukko_chat_message.dart';
 import '../../shared/url_policy.dart';
 import '../l10n/zukko_chat_l10n.dart';
@@ -42,7 +43,7 @@ class ChatMessageMapper {
     if (m.isActivity || m.isTemplate) return null;
     final content = (m.content ?? '').trim().isNotEmpty ? m.content : null;
     final attachments = [
-      for (final raw in m.attachments ?? const <dynamic>[])
+      for (final raw in m.attachments ?? const <ZukkoChatAttachment>[])
         ?_Attachment.tryParse(raw),
     ];
     final hasAttachments = m.attachments?.isNotEmpty ?? false;
@@ -205,21 +206,19 @@ class _Attachment {
   const _Attachment(this.kind, this.url, this.name, this.size);
 
   /// Null unless [raw] is a map with an https `data_url`.
-  static _Attachment? tryParse(Object? raw) {
-    if (raw is! Map) return null;
-    final url = raw['data_url'];
-    if (url is! String || !isHttpsUrl(url)) return null;
-    final size = raw['file_size'];
+  static _Attachment? tryParse(ZukkoChatAttachment raw) {
+    final url = raw.dataUrl;
+    if (url == null || !isHttpsUrl(url)) return null;
     final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
     return _Attachment(
-      switch (raw['file_type']) {
+      switch (raw.fileType) {
         'image' => _AttachmentKind.image,
         'audio' => _AttachmentKind.audio,
         _ => _AttachmentKind.file,
       },
       url,
       segments.isEmpty ? null : segments.last,
-      size is int ? size : null,
+      raw.fileSize,
     );
   }
 }

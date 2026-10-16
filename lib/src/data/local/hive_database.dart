@@ -71,8 +71,10 @@ abstract final class HiveDatabase {
   ) async {
     try {
       return await Hive.openBox<T>(name, encryptionCipher: cipher);
-    } on HiveError catch (e) {
-      sdkLog('box $name is unreadable, recreating it: ${e.message}');
+    } catch (e) {
+      // wrong/lost key, restored files, unknown (old) type ids: any failure
+      // to read the box means its cache is unusable
+      sdkLog('box $name is unreadable, recreating it: ${e.runtimeType}');
       _recreated.add(name);
       await Hive.deleteBoxFromDisk(name);
       return Hive.openBox<T>(name, encryptionCipher: cipher);
@@ -103,6 +105,7 @@ abstract final class HiveDatabase {
             key.startsWith('$baseKey|||h:'));
     for (final box in _boxes) {
       await box.deleteAll(box.keys.where(mine).toList());
+      await box.compact();
     }
   }
 }

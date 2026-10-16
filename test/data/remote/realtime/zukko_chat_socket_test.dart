@@ -117,7 +117,7 @@ void main() {
 
         expect(
           r.messages.single.message.event,
-          ZukkoChatEventMessageType.message_created,
+          ZukkoChatEventMessageType.messageCreated,
         );
         expect(r.messages.single.message.data!.id, 1);
       });
@@ -193,6 +193,20 @@ void main() {
           r.elapse(const Duration(milliseconds: 1));
           expect(r.hub.channels, hasLength(calls + 1), reason: 'at $delay');
         }
+      });
+    });
+
+    test('retryNow reconnects at once during a backoff, else does nothing', () {
+      run((r) {
+        r.socket.connect();
+        r.socket.retryNow(); // connecting: no-op
+        expect(r.hub.channels, hasLength(1));
+        r.hub.last.serverClose();
+        r.async.flushMicrotasks();
+        expect(r.socket.state, ZukkoChatConnectionState.backoff);
+        r.socket.retryNow();
+        expect(r.hub.channels, hasLength(2));
+        expect(r.socket.state, ZukkoChatConnectionState.connecting);
       });
     });
 
@@ -281,7 +295,7 @@ void main() {
         expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(
           r.failures.single.error.type,
-          ZukkoChatExceptionType.SOCKET_DISCONNECTED,
+          ZukkoChatExceptionType.socketDisconnected,
         );
       });
     });
@@ -461,7 +475,7 @@ void main() {
 
         expect(
           r.failures.single.error.type,
-          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.socketSubscriptionRejected,
         );
         expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(channel.presenceFrames, 0);
@@ -496,7 +510,7 @@ void main() {
 
         expect(
           r.failures.single.error.type,
-          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.socketSubscriptionRejected,
         );
         expect(r.socket.state, ZukkoChatConnectionState.closed);
         expect(r.hub.channels, hasLength(2));
@@ -583,8 +597,8 @@ void main() {
 
         final msgs = r.messages.map((m) => m.message).toList();
         expect(msgs.map((m) => m.event), [
-          ZukkoChatEventMessageType.conversation_created,
-          ZukkoChatEventMessageType.conversation_updated,
+          ZukkoChatEventMessageType.conversationCreated,
+          ZukkoChatEventMessageType.conversationUpdated,
         ]);
         final d = msgs.first.data!;
         expect([d.id, d.inboxId, d.status], [7, 3, 'open']);
@@ -689,14 +703,14 @@ void main() {
   group('send (S17)', () {
     test('returns false before connect, while connecting and in backoff', () {
       run((r) {
-        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.updatePresence), isFalse);
         r.socket.connect();
-        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.updatePresence), isFalse);
         r.hub.last.serverClose();
         r.async.flushMicrotasks();
 
         expect(r.socket.state, ZukkoChatConnectionState.backoff);
-        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.updatePresence), isFalse);
       });
     });
 
@@ -705,7 +719,7 @@ void main() {
         r.subscribe();
         final before = r.hub.last.sent.length;
 
-        expect(r.socket.send(ZukkoChatActionType.update_presence), isTrue);
+        expect(r.socket.send(ZukkoChatActionType.updatePresence), isTrue);
         expect(r.hub.last.sent.length, before + 1);
       });
     });
@@ -715,7 +729,7 @@ void main() {
         r.subscribe();
         r.hub.last.failOnAdd = true;
 
-        expect(r.socket.send(ZukkoChatActionType.update_presence), isFalse);
+        expect(r.socket.send(ZukkoChatActionType.updatePresence), isFalse);
       });
     });
   });
@@ -771,7 +785,7 @@ void main() {
       socket.connect();
 
       expect(hub.channels, isEmpty);
-      expect(socket.send(ZukkoChatActionType.update_presence), isFalse);
+      expect(socket.send(ZukkoChatActionType.updatePresence), isFalse);
     });
 
     test('the event stream completes', () async {

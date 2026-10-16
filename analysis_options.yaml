@@ -18,6 +18,3 @@ linter:
     prefer_final_fields: true
     use_build_context_synchronously: true
     depend_on_referenced_packages: true
-    # Public enum values (error types, wire names) keep their established
-    # UPPER_CASE / snake_case names; renaming them would break every caller.
-    constant_identifier_names: false

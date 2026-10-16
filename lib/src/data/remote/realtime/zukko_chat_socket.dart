@@ -107,6 +107,13 @@ class ZukkoChatSocket {
     if (token != null && token != _token) connect();
   }
 
+  /// Skips the wait of a pending reconnect (the network just came back).
+  /// A no-op in any other state.
+  void retryNow() {
+    if (_disposed || _state != ZukkoChatConnectionState.backoff) return;
+    _open();
+  }
+
   /// Sends [action] to the channel. Returns `false` (and never throws) when
   /// the socket is not subscribed.
   bool send(ZukkoChatActionType action) {
@@ -189,7 +196,7 @@ class ZukkoChatSocket {
           _stop(
             ZukkoChatException(
               'server closed the connection: ${reason ?? 'unknown reason'}',
-              ZukkoChatExceptionType.SOCKET_DISCONNECTED,
+              ZukkoChatExceptionType.socketDisconnected,
             ),
           );
         }
@@ -203,7 +210,7 @@ class ZukkoChatSocket {
   void _rejected() => _stop(
     ZukkoChatException(
       'subscription rejected: unknown or expired pubsub token',
-      ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+      ZukkoChatExceptionType.socketSubscriptionRejected,
     ),
   );
 
@@ -237,9 +244,9 @@ class ZukkoChatSocket {
 
   void _startPresence() {
     _presenceTimer?.cancel();
-    send(ZukkoChatActionType.update_presence);
+    send(ZukkoChatActionType.updatePresence);
     _presenceTimer = Timer.periodic(presenceEvery, (_) {
-      send(ZukkoChatActionType.update_presence);
+      send(ZukkoChatActionType.updatePresence);
     });
   }
 

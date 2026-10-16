@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
 
 import 'message_meta.dart';
@@ -15,6 +16,29 @@ class SendingOpacity extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Opacity(opacity: meta.sending ? kSendingOpacity : 1, child: child);
+}
+
+/// A small clock under an outgoing message that is still being sent; read
+/// out as [label] by screen readers.
+class SendingMark extends StatelessWidget {
+  final String label;
+  final TextStyle captionStyle;
+
+  const SendingMark({
+    super.key,
+    required this.label,
+    required this.captionStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: label,
+    child: Icon(
+      Icons.schedule_rounded,
+      size: (captionStyle.fontSize ?? 12) + 2,
+      color: captionStyle.color,
+    ),
+  );
 }
 
 /// The "failed to send" line under a message; announced to screen readers.

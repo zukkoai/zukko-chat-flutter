@@ -71,14 +71,14 @@ class ZukkoChatEventMessageData {
 
 /// Server events a contact receives, with their wire names.
 enum ZukkoChatEventMessageType {
-  presence_update('presence.update'),
-  message_created('message.created'),
-  message_updated('message.updated'),
-  conversation_typing_off('conversation.typing_off'),
-  conversation_typing_on('conversation.typing_on'),
-  conversation_status_changed('conversation.status_changed'),
-  conversation_created('conversation.created'),
-  conversation_updated('conversation.updated');
+  presenceUpdate('presence.update'),
+  messageCreated('message.created'),
+  messageUpdated('message.updated'),
+  conversationTypingOff('conversation.typing_off'),
+  conversationTypingOn('conversation.typing_on'),
+  conversationStatusChanged('conversation.status_changed'),
+  conversationCreated('conversation.created'),
+  conversationUpdated('conversation.updated');
 
   const ZukkoChatEventMessageType(this.wire);
 

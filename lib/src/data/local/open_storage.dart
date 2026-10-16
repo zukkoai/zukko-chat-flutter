@@ -21,7 +21,7 @@ Future<LocalStorage> openStorage({
       onError(
         ZukkoChatException(
           'local storage "$name" was unreadable and has been reset',
-          ZukkoChatExceptionType.STORAGE_FAILED,
+          ZukkoChatExceptionType.storageFailed,
         ),
       );
     }
@@ -34,7 +34,7 @@ Future<LocalStorage> openStorage({
           : ZukkoChatException(
               'local storage unavailable, continuing without persistence: '
               '${e.runtimeType}',
-              ZukkoChatExceptionType.STORAGE_FAILED,
+              ZukkoChatExceptionType.storageFailed,
               error: e,
               stackTrace: st,
             ),

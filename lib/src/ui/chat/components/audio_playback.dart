@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show File;
 
 import 'package:flutter/foundation.dart';
 
@@ -60,8 +61,23 @@ class AudioPlaybackController {
   /// Bumped by every load: a load that finished late is dropped.
   int _loadId = 0;
 
-  /// Only http(s) sources can be played (local previews cannot).
-  static bool canPlay(String source) => isHttpUrl(source);
+  /// http(s) sources, and (off the web) a local recording that still exists.
+  static bool canPlay(String source) =>
+      isHttpUrl(source) || (!kIsWeb && File(source).existsSync());
+
+  /// Stops [source] if it is the current one and drops its state. Called when
+  /// a bubble's source changes (local file -> server URL after the upload):
+  /// the note stops rather than playing on with no controls.
+  void release(String source) {
+    if (_disposed || _source != source) return;
+    _loadId++;
+    unawaited(_engine?.pause());
+    _source = null;
+    _playing = false;
+    _position = Duration.zero;
+    _duration = Duration.zero;
+    _publish();
+  }
 
   /// The state of [source], updated only when it changes.
   ValueListenable<AudioPlaybackView> watch(String source) =>
@@ -132,7 +148,9 @@ class AudioPlaybackController {
     _playing = false;
     _publish();
     try {
-      final length = await engine.setUrl(source);
+      final length = isHttpUrl(source)
+          ? await engine.setUrl(source)
+          : await engine.setFilePath(source);
       if (id != _loadId || _disposed) return false;
       if (length != null) {
         _duration = length;

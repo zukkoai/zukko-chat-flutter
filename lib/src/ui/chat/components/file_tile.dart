@@ -7,6 +7,7 @@ import '../../../shared/format.dart';
 class FileTile extends StatelessWidget {
   final String name;
   final int? size;
+  final List<String> sizeUnits;
   final Color iconFill;
   final Color iconColor;
   final TextStyle nameStyle;
@@ -21,6 +22,7 @@ class FileTile extends StatelessWidget {
     required this.nameStyle,
     required this.sizeStyle,
     this.size,
+    this.sizeUnits = const ['B', 'KB', 'MB', 'GB'],
     this.iconRadius = 10,
   });
 
@@ -55,7 +57,8 @@ class FileTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (bytes != null) Text(formatBytes(bytes), style: sizeStyle),
+              if (bytes != null)
+                Text(formatBytes(bytes, sizeUnits), style: sizeStyle),
             ],
           ),
         ),

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/chat_message_list.dart';
+import 'package:zukko_chat_flutter/src/ui/chat/components/link_preview_service.dart';
 import 'package:zukko_chat_flutter/src/ui/chat/zukko_chat_view.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/cupertino.dart'
@@ -58,6 +60,35 @@ void main() {
     client = FakeClient();
   });
 
+  group('link previews option', () {
+    Future<LinkPreviewService?> serviceFor(
+      WidgetTester tester,
+      ZukkoChatOptions o,
+    ) async {
+      await _pump(
+        tester,
+        _app(ZukkoChat(options: o, clientFactory: factory.call)),
+      );
+      // The scope sits inside the view, so look it up from a descendant.
+      return LinkPreviewScope.maybeOf(
+        tester.element(find.byType(ChatMessageList)),
+      );
+    }
+
+    testWidgets('on by default, off when disabled (no fetching)', (
+      tester,
+    ) async {
+      expect(await serviceFor(tester, _o), isNotNull);
+      await tester.pumpWidget(const SizedBox());
+      const off = ZukkoChatOptions(
+        baseUrl: 'https://x.test',
+        websiteToken: 'in',
+        enableLinkPreviews: false,
+      );
+      expect(await serviceFor(tester, off), isNull);
+    });
+  });
+
   group('page', () {
     testWidgets('typing and sending before the client exists is queued (U4)', (
       tester,
@@ -96,7 +127,7 @@ void main() {
       expect(client.typing, [true]);
 
       factory.callbacks!.onError!(
-        ZukkoChatException('x', ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        ZukkoChatException('x', ZukkoChatExceptionType.invalidIdentifierHash),
       );
       await tester.pump();
       expect(find.text(const ZukkoChatL10n().identityRejectedText), findsOne);
@@ -152,6 +183,39 @@ void main() {
       expect(find.text('assigned', findRichText: true), findsNothing);
     });
 
+    testWidgets('reaching the top of the list loads older messages once, '
+        'a short page stops it', (tester) async {
+      client.loadGate = Completer<void>();
+      client.older = (_) async => [msg(1), msg(2)]; // short: the start
+      factory.completer.complete(client);
+      await _pump(
+        tester,
+        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+      );
+      await tester.pump();
+      factory.callbacks!.onMessagesRetrieved!([
+        for (var i = 21; i <= 40; i++)
+          msg(i, content: 'm$i${'\n' * (i % 7 * 3)}x'),
+      ]);
+      client.loadGate!.complete();
+      await _settle(tester);
+      expect(client.olderRequests, isEmpty, reason: 'nothing before scrolling');
+
+      final list = find.byType(CustomScrollView).first;
+      for (var i = 0; i < 12; i++) {
+        await tester.drag(list, const Offset(0, 500));
+        await _settle(tester);
+      }
+
+      // flutter_chat_ui evaluates the threshold when the scroll metrics
+      // change (while scrolling on a device); a resize does that here.
+      tester.view.physicalSize = const Size(2400, 2100);
+      addTearDown(tester.view.resetPhysicalSize);
+      await _settle(tester);
+
+      expect(client.olderRequests, [21]);
+    });
+
     testWidgets('tapping a failed message resends it', (tester) async {
       factory.completer.complete(client);
       await _pump(
@@ -166,7 +230,7 @@ void main() {
       factory.callbacks!.onError!(
         ZukkoChatException(
           'x',
-          ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+          ZukkoChatExceptionType.sendMessageFailed,
           data: client.sent.single.echoId,
         ),
       );
@@ -246,7 +310,7 @@ void main() {
       factory.callbacks!.onError!(
         ZukkoChatException(
           'x',
-          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.socketSubscriptionRejected,
         ),
       );
 
@@ -326,6 +390,12 @@ void main() {
           ),
         ),
       );
+
+      // an `open` conversation with no agent online is the offline state
+      factory.callbacks!.onConversationUpdated!(
+        const ZukkoChatConversation(id: 1, inboxId: 1, status: 'open'),
+      );
+      await tester.pump();
 
       expect(find.text('ZZZ'), findsOneWidget);
       expect(find.text('OFFLINE!'), findsOneWidget);

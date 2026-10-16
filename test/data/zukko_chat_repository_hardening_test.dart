@@ -291,7 +291,7 @@ void main() {
         h.server.configStatus = 500;
         unawaited(h.repo.initialize());
         h.settle();
-        expect(h.errors.single.type, T.GET_CONFIG_FAILED);
+        expect(h.errors.single.type, T.getConfigFailed);
         expect(h.hub.channels, isEmpty); // no usable session, no socket
 
         h.server.configStatus = 200;
@@ -312,7 +312,7 @@ void main() {
         h.server.setUserStatus = 500;
         unawaited(h.repo.initialize());
         h.settle();
-        expect(h.errors.single.type, T.IDENTIFY_FAILED);
+        expect(h.errors.single.type, T.identifyFailed);
         expect(h.hub.channels, isEmpty);
 
         h.server.setUserStatus = 200;
@@ -368,7 +368,7 @@ void main() {
         live((h, async) {
           h.startAndReject();
           expect(h.server.count('/config'), 2); // start + the refresh
-          expect(h.errors.map((e) => e.type), [T.SOCKET_SUBSCRIPTION_REJECTED]);
+          expect(h.errors.map((e) => e.type), [T.socketSubscriptionRejected]);
 
           h.settle(const Duration(seconds: 30));
           expect(h.server.count('/config'), 2);
@@ -431,7 +431,7 @@ void main() {
         final configs = h.server.count('/config');
         h.settle(const Duration(minutes: 30));
 
-        expect(h.rig.session.failure?.type, T.INVALID_IDENTIFIER_HASH);
+        expect(h.rig.session.failure?.type, T.invalidIdentifierHash);
         expect(h.server.count('/config'), configs);
       });
     });

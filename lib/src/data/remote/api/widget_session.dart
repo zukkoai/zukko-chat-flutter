@@ -129,7 +129,7 @@ class WidgetSession {
       _startFailures = 0;
       _nextStartAt = _lastStartError = null;
     } on ZukkoChatException catch (e) {
-      if (e.type != ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH) {
+      if (e.type != ZukkoChatExceptionType.invalidIdentifierHash) {
         _lastStartError = e;
         if (_startFailures < _maxStartFailures) _startFailures++;
         _nextStartAt = _now().add(
@@ -199,7 +199,7 @@ class WidgetSession {
     } catch (e, st) {
       throw ZukkoChatException(
         'session setup failed: ${e.runtimeType}',
-        ZukkoChatExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.getConfigFailed,
         error: e,
         stackTrace: st,
       );
@@ -210,7 +210,7 @@ class WidgetSession {
     if (_budget.hasRoom) return;
     throw ZukkoChatException(
       'the session was rebuilt $maxRefreshes times within a minute',
-      ZukkoChatExceptionType.SESSION_EXPIRED,
+      ZukkoChatExceptionType.sessionExpired,
     );
   }
 
@@ -263,7 +263,7 @@ class WidgetSession {
     try {
       newToken = await _api.setUser(identity, authToken);
     } on ZukkoChatException catch (e) {
-      if (e.type == ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH) {
+      if (e.type == ZukkoChatExceptionType.invalidIdentifierHash) {
         _failure = e; // fail closed: never fall back to an anonymous session
         rethrow;
       }
@@ -306,7 +306,7 @@ class WidgetSession {
       listener.onError,
       ZukkoChatException(
         'user.identifier is set without identifierHash: the identity is not verified',
-        ZukkoChatExceptionType.IDENTITY_NOT_VERIFIED,
+        ZukkoChatExceptionType.identityNotVerified,
       ),
     );
   }

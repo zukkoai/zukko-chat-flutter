@@ -26,6 +26,7 @@ Builders buildMessageBuilders(ChatMessageEnv env, MessageStyleSpec spec) {
         isSentByMe: isSentByMe,
         part: part,
         failedHint: l10n.messageFailedHint,
+        sendingLabel: l10n.messageSendingLabel,
         authorName: env.authorName(message.authorId, isSentByMe),
         avatarUrl: author?.imageSource,
       ),
@@ -80,7 +81,12 @@ Builders buildMessageBuilders(ChatMessageEnv env, MessageStyleSpec spec) {
           groupStatus,
           isSentByMe,
           MessagePart.file,
-          ChatFileMessage(message: message, isSentByMe: isSentByMe, spec: spec),
+          ChatFileMessage(
+            message: message,
+            isSentByMe: isSentByMe,
+            spec: spec,
+            l10n: l10n,
+          ),
         ),
     audioMessageBuilder:
         (context, message, index, {required isSentByMe, groupStatus}) => wrap(
@@ -123,6 +129,14 @@ Builders buildMessageBuilders(ChatMessageEnv env, MessageStyleSpec spec) {
           verticalPadding: row.vertical,
           verticalGroupedPadding: row.verticalGrouped,
           child: child,
+        ),
+    unsupportedMessageBuilder:
+        (context, message, index, {required isSentByMe, groupStatus}) => wrap(
+          message,
+          groupStatus,
+          isSentByMe,
+          MessagePart.text,
+          Text(l10n.unsupportedMessageText, style: spec.tokens.body),
         ),
     emptyChatListBuilder: (context) => const SizedBox.shrink(),
   );

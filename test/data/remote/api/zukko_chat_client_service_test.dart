@@ -108,7 +108,7 @@ void main() {
           isA<ZukkoChatException>().having(
             (e) => e.type,
             'type',
-            ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+            ZukkoChatExceptionType.sendMessageFailed,
           ),
         ),
       );
@@ -219,17 +219,17 @@ void main() {
           )
         >{
           'createMessage': (
-            ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+            ZukkoChatExceptionType.sendMessageFailed,
             (s) => s.createMessage(
               ZukkoChatNewMessageRequest(content: 'a', echoId: 'b'),
             ),
           ),
           'getMessages': (
-            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+            ZukkoChatExceptionType.getMessagesFailed,
             (s) => s.getMessages(),
           ),
           'getConversation': (
-            ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
+            ZukkoChatExceptionType.getConversationFailed,
             (s) => s.getConversation(),
           ),
         };

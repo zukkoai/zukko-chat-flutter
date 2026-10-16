@@ -26,47 +26,52 @@ class ZukkoChatException implements Exception {
   });
 
   @override
-  String toString() => 'ZukkoChatException(${type.name}): $cause';
+  String toString() => 'ZukkoChatException(${type.wire}): $cause';
 }
 
 /// {@category FlutterClientSdk}
 enum ZukkoChatExceptionType {
-  CREATE_CLIENT_FAILED,
-  SEND_MESSAGE_FAILED,
-  GET_MESSAGES_FAILED,
-  GET_CONVERSATION_FAILED,
-  UPDATE_CONTACT_FAILED,
+  createClientFailed('CREATE_CLIENT_FAILED'),
+  sendMessageFailed('SEND_MESSAGE_FAILED'),
+  getMessagesFailed('GET_MESSAGES_FAILED'),
+  getConversationFailed('GET_CONVERSATION_FAILED'),
+  updateContactFailed('UPDATE_CONTACT_FAILED'),
 
   /// The server did not accept the realtime subscription (bad or stale token).
-  SOCKET_SUBSCRIPTION_REJECTED,
+  socketSubscriptionRejected('SOCKET_SUBSCRIPTION_REJECTED'),
 
   /// Local storage could not be opened or is in an unusable state (e.g. a
   /// foreign Hive adapter on the SDK's type ids). The client keeps working
   /// without persistence.
-  STORAGE_FAILED,
+  storageFailed('STORAGE_FAILED'),
 
   /// The server closed the realtime connection and asked not to reconnect.
-  SOCKET_DISCONNECTED,
+  socketDisconnected('SOCKET_DISCONNECTED'),
 
   /// The widget session could not be kept alive (the server keeps rejecting the
   /// token, or the widget is unavailable). Recovery is rate limited.
-  SESSION_EXPIRED,
+  sessionExpired('SESSION_EXPIRED'),
 
   /// The server rejected the user's `identifierHash` (HMAC). The client fails
   /// closed: no anonymous fallback, no realtime connection.
-  INVALID_IDENTIFIER_HASH,
+  invalidIdentifierHash('INVALID_IDENTIFIER_HASH'),
 
   /// `set_user` failed (5xx, timeout, 404, 422 ...) for a user with an
   /// identifier. Not terminal: the session is not usable (no sends, no
   /// realtime, never an anonymous fallback) and the next start retries it.
   /// For a user without an identifier it is only a warning.
-  IDENTIFY_FAILED,
+  identifyFailed('IDENTIFY_FAILED'),
 
   /// Warning: `user.identifier` was given without `identifierHash`. The
   /// session continues, but the identity is unverified; enable "Enforce
   /// identity validation" on the inbox.
-  IDENTITY_NOT_VERIFIED,
+  identityNotVerified('IDENTITY_NOT_VERIFIED'),
 
   /// `POST /config` failed or returned an unusable body.
-  GET_CONFIG_FAILED,
+  getConfigFailed('GET_CONFIG_FAILED');
+
+  const ZukkoChatExceptionType(this.wire);
+
+  /// Stable string code of the error; unchanged across releases.
+  final String wire;
 }

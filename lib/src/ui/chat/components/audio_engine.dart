@@ -16,6 +16,9 @@ abstract interface class AudioEngine {
   /// Loads [url]; the track length when known.
   Future<Duration?> setUrl(String url);
 
+  /// Loads the local file at [path]; the track length when known.
+  Future<Duration?> setFilePath(String path);
+
   /// Completes when playback stops, so callers must not await it.
   Future<void> play();
   Future<void> pause();
@@ -45,6 +48,9 @@ class JustAudioEngine implements AudioEngine {
 
   @override
   Future<Duration?> setUrl(String url) => _player.setUrl(url);
+
+  @override
+  Future<Duration?> setFilePath(String path) => _player.setFilePath(path);
 
   @override
   Future<void> play() => _player.play();

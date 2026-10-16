@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../data/local/hive_database.dart';
 import '../data/local/instance_key.dart';
 import '../data/models/zukko_chat_config.dart';
+import '../data/models/zukko_chat_message.dart';
 import '../data/models/zukko_chat_user.dart';
 import '../data/remote/api/requests/zukko_chat_new_message_request.dart';
 import '../data/remote/api/widget_session.dart';
@@ -45,6 +46,13 @@ class ZukkoChatClient {
     _repository.getPersistedMessages();
     await _repository.getMessages();
   }
+
+  /// Loads the page (up to 20) of messages just older than message id
+  /// [before], oldest first; fewer than 20 means there are no more. Used when
+  /// the user scrolls up; nothing is persisted. Returns null on failure
+  /// ([ZukkoChatCallbacks.onError] is triggered).
+  Future<List<ZukkoChatMessage>?> loadOlderMessages({required int before}) =>
+      _repository.getOlderMessages(before);
 
   /// Sends Zukko Chat message. The echoId is your temporary message id. When message sends successfully
   /// [ZukkoChatMessage] will be returned with the [echoId] on [ZukkoChatCallbacks.onMessageSent]. If

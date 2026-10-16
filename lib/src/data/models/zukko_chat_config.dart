@@ -59,6 +59,13 @@ class ZukkoChatConfig {
   /// `hold_to_record_mobile_only`.
   final String? audioRecordingMode;
 
+  /// Whether voice messages are on, from `audio_messaging_enabled`. Only an
+  /// explicit `false` turns it off; a missing or non-bool value keeps it on
+  /// (old backends). The backend must send it: in
+  /// `widget/configs/create.json.jbuilder`,
+  /// `json.audio_messaging_enabled @web_widget.inbox.account.feature_enabled?('web_widget_audio_messaging')`.
+  final bool audioMessagesEnabled;
+
   /// Brand name from the server's global config (for the "powered by" line).
   final String? brandName;
 
@@ -85,6 +92,7 @@ class ZukkoChatConfig {
     this.preChatFormEnabled = false,
     this.disableBranding = false,
     this.audioRecordingMode,
+    this.audioMessagesEnabled = true,
     this.brandName,
     this.brandUrl,
     this.raw = const {},
@@ -116,6 +124,7 @@ class ZukkoChatConfig {
       preChatFormEnabled: flag('pre_chat_form_enabled', false),
       disableBranding: flag('disable_branding', false),
       audioRecordingMode: str(channel, 'audio_recording_mode'),
+      audioMessagesEnabled: flag('audio_messaging_enabled', true),
       brandName: str(global, 'BRAND_NAME'),
       brandUrl: str(global, 'WIDGET_BRAND_URL'),
       raw: Map.unmodifiable({...channel}..remove('auth_token')),

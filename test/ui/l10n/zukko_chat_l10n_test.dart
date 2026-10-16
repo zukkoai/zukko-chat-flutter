@@ -11,7 +11,7 @@ void main() {
     'kaa': ZukkoChatL10n.kaa,
   };
   // the same word in these languages
-  const sameAsEnglish = {'botName', 'Bot'};
+  const sameAsEnglish = {'botName', 'Bot', 'B, KB, MB, GB'};
 
   test('every language translates every string', () {
     final base = english.allStrings;

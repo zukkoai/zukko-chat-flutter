@@ -52,7 +52,10 @@ class ChatMessageList extends StatelessWidget {
     final withList = builders.copyWith(
       chatAnimatedListBuilder: (context, itemBuilder) => ChatAnimatedList(
         itemBuilder: itemBuilder,
-        onEndReached: i.onEndReached,
+        onEndReached: () async {
+          await controller.loadOlder();
+          await i.onEndReached?.call();
+        },
         paginationThreshold:
             i.onEndReachedThreshold ?? _defaultPaginationThreshold,
         handleSafeArea: false,

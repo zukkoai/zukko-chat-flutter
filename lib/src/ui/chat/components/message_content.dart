@@ -58,7 +58,7 @@ class ChatTextMessage extends StatelessWidget {
         ChatText(text: message.text, spec: spec),
         if (links.isNotEmpty) ...[
           SizedBox(height: spec.linkGap),
-          LinkPreviewCard(
+          LoadedLinkPreviewCard(
             uri: links.first.uri,
             data: message.linkPreviewData,
             direction: spec.linkDirection,
@@ -254,18 +254,21 @@ class ChatFileMessage extends StatelessWidget {
   final FileMessage message;
   final bool isSentByMe;
   final MessageStyleSpec spec;
+  final ZukkoChatL10n l10n;
 
   const ChatFileMessage({
     super.key,
     required this.message,
     required this.isSentByMe,
     required this.spec,
+    required this.l10n,
   });
 
   @override
   Widget build(BuildContext context) => FileTile(
     name: message.name,
     size: message.size,
+    sizeUnits: l10n.sizeUnits,
     iconFill: spec.file.iconFill(isSentByMe),
     iconColor: spec.file.iconColor,
     nameStyle: spec.tokens.bodyStrong,
