@@ -11,6 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # DateFormat for ZukkoChatOptions.timeFormat (the SDK itself depends on intl).
+  intl: ^0.20.3
   zukko_chat_flutter:
     path: ../
 
