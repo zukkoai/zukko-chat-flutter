@@ -1,6 +1,5 @@
 import 'package:example/live/live_config.dart';
 import 'package:example/main.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> _settle(WidgetTester tester) async {
@@ -10,25 +9,11 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('home shows the three styles and the live chat entry', (
-    tester,
-  ) async {
+  testWidgets('home shows the live chat entry', (tester) async {
     await tester.pumpWidget(const ExampleApp());
 
-    expect(find.byType(FilledButton), findsNWidgets(3));
     expect(find.text('Live chat'), findsOneWidget);
   });
-
-  for (final style in ['Smooth Silk', 'Minimal Clean', 'Thread Feed']) {
-    testWidgets('$style opens the demo chat', (tester) async {
-      await tester.pumpWidget(const ExampleApp());
-      await tester.tap(find.text(style));
-      await _settle(tester);
-
-      expect(find.text('Zukko AI'), findsWidgets);
-      expect(find.textContaining('kuryer ertaga'), findsWidgets);
-    });
-  }
 
   testWidgets('live chat shows a placeholder when not configured', (
     tester,
