@@ -86,3 +86,6 @@ build/
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 /coverage/
+
+# Demo media (README only)
+assets/videos/
