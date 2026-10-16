@@ -21,6 +21,7 @@ export 'link_launcher.dart';
 export 'link_preview.dart';
 export 'link_preview_service.dart';
 export 'linkified_text.dart';
+export 'markdown_text.dart';
 export 'message_chrome.dart';
 export 'message_content.dart';
 export 'message_meta.dart';

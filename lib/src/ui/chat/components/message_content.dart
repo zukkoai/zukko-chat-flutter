@@ -25,14 +25,28 @@ class ChatText extends StatelessWidget {
   final String text;
   final MessageStyleSpec spec;
 
-  const ChatText({super.key, required this.text, required this.spec});
+  /// Render Markdown (incoming messages); the visitor's own text stays plain.
+  final bool markdown;
+
+  const ChatText({
+    super.key,
+    required this.text,
+    required this.spec,
+    this.markdown = false,
+  });
 
   @override
-  Widget build(BuildContext context) => LinkifiedText(
-    text: text,
-    style: spec.tokens.body,
-    linkStyle: spec.linkStyle,
-  );
+  Widget build(BuildContext context) => markdown
+      ? MarkdownText(
+          text: text,
+          style: spec.tokens.body,
+          linkStyle: spec.linkStyle,
+        )
+      : LinkifiedText(
+          text: text,
+          style: spec.tokens.body,
+          linkStyle: spec.linkStyle,
+        );
 }
 
 /// A text message: the text and, for the first link, a preview card.
@@ -55,7 +69,7 @@ class ChatTextMessage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ChatText(text: message.text, spec: spec),
+        ChatText(text: message.text, spec: spec, markdown: !isSentByMe),
         if (links.isNotEmpty) ...[
           SizedBox(height: spec.linkGap),
           LoadedLinkPreviewCard(
