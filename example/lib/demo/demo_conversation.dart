@@ -43,7 +43,9 @@ ZukkoChatMessage demoMessage(
       .subtract(Duration(minutes: minutesAgo))
       .toIso8601String(),
   conversationId: 1,
-  attachments: attachments,
+  attachments: attachments
+      ?.map((a) => ZukkoChatAttachment.fromJson(a as Map<String, dynamic>))
+      .toList(),
   sender: mine ? null : _agent,
 );
 
