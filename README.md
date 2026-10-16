@@ -1,8 +1,114 @@
+<p align="center">
+  <a href="https://flutter.dev"><img src="https://cdn.simpleicons.org/flutter" height="56" alt="Flutter"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://www.chatwoot.com"><img src="https://cdn.simpleicons.org/chatwoot" height="56" alt="Chatwoot"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://zukko.ai/en"><img src="https://zukko.ai/icons/android-chrome-192x192.png" height="56" alt="Zukko.AI"></a>
+</p>
+
 # Zukko Chat Flutter SDK
 
 A native Flutter chat screen for [Zukko Chat](https://zukko.ai/en). Drop in one widget and your users can talk to your support team or AI agent in real time, with text, photos, files and voice messages. iOS and Android.
 
-<!-- screenshots / demo video: to be added -->
+## Styles
+
+Pick a look with `ZukkoChatOptions.style`. Each style has light and dark variants.
+
+### Smooth Silk
+
+Tonal bubbles that blend into the background, floating composer (default).
+
+<p align="center"><img src="assets/videos/zukko-chat-smooth-silk.gif" width="260" alt="Smooth Silk chat style demo"></p>
+
+[Full-quality video](assets/videos/zukko-chat-smooth-silk.mp4)
+
+```dart
+class SmoothSilkScreen extends StatelessWidget {
+  const SmoothSilkScreen({super.key, required this.user});
+
+  final ZukkoChatUser user; // from your login, see "User identity"
+
+  @override
+  Widget build(BuildContext context) {
+    return ZukkoChat(
+      title: 'Support',
+      options: ZukkoChatOptions(
+        baseUrl: const String.fromEnvironment('ZUKKO_BASE_URL'),
+        websiteToken: const String.fromEnvironment('ZUKKO_WEBSITE_TOKEN'),
+        style: ZukkoChatStyle.smoothSilk,
+        l10n: ZukkoChatL10n.uzLatn,
+        user: user,
+        theme: ZukkoChatTheme(brightness: Theme.of(context).brightness),
+      ),
+      interactions: ZukkoChatInteractions(onMorePressed: () {}),
+    );
+  }
+}
+```
+
+### Minimal Clean
+
+Agent replies as plain text, only the user's messages in bubbles.
+
+<p align="center"><img src="assets/videos/zukko-chat-minimal-clean.gif" width="260" alt="Minimal Clean chat style demo"></p>
+
+[Full-quality video](assets/videos/zukko-chat-minimal-clean.mp4)
+
+```dart
+class MinimalCleanScreen extends StatelessWidget {
+  const MinimalCleanScreen({super.key, required this.user});
+
+  final ZukkoChatUser user; // from your login, see "User identity"
+
+  @override
+  Widget build(BuildContext context) {
+    return ZukkoChat(
+      title: 'Support',
+      options: ZukkoChatOptions(
+        baseUrl: const String.fromEnvironment('ZUKKO_BASE_URL'),
+        websiteToken: const String.fromEnvironment('ZUKKO_WEBSITE_TOKEN'),
+        style: ZukkoChatStyle.minimalClean,
+        l10n: ZukkoChatL10n.uzLatn,
+        user: user,
+        theme: ZukkoChatTheme(brightness: Theme.of(context).brightness),
+      ),
+      interactions: ZukkoChatInteractions(onMorePressed: () {}),
+    );
+  }
+}
+```
+
+### Thread Feed
+
+Full-width rows with avatar and name, no bubbles.
+
+<p align="center"><img src="assets/videos/zukko-chat-thread-feed.gif" width="260" alt="Thread Feed chat style demo"></p>
+
+[Full-quality video](assets/videos/zukko-chat-thread-feed.mp4)
+
+```dart
+class ThreadFeedScreen extends StatelessWidget {
+  const ThreadFeedScreen({super.key, required this.user});
+
+  final ZukkoChatUser user; // from your login, see "User identity"
+
+  @override
+  Widget build(BuildContext context) {
+    return ZukkoChat(
+      title: 'Support',
+      options: ZukkoChatOptions(
+        baseUrl: const String.fromEnvironment('ZUKKO_BASE_URL'),
+        websiteToken: const String.fromEnvironment('ZUKKO_WEBSITE_TOKEN'),
+        style: ZukkoChatStyle.threadFeed,
+        l10n: ZukkoChatL10n.uzLatn,
+        user: user,
+        theme: ZukkoChatTheme(brightness: Theme.of(context).brightness),
+      ),
+      interactions: ZukkoChatInteractions(onMorePressed: () {}),
+    );
+  }
+}
+```
 
 ## Features
 
@@ -19,20 +125,21 @@ A native Flutter chat screen for [Zukko Chat](https://zukko.ai/en). Drop in one 
 
 ## Contents
 
-1. [Requirements](#requirements)
-2. [Installation](#installation)
-3. [Platform setup](#platform-setup)
-4. [Get your baseUrl and websiteToken](#get-your-baseurl-and-websitetoken)
-5. [Quick start](#quick-start)
-6. [User identity (HMAC)](#user-identity-hmac)
-7. [Logout](#logout)
-8. [Configuration reference](#configuration-reference)
-9. [Callbacks and errors](#callbacks-and-errors)
-10. [Behavior details](#behavior-details)
-11. [Headless client](#headless-client)
-12. [Troubleshooting / FAQ](#troubleshooting--faq)
-13. [Example app](#example-app)
-14. [License](#license)
+1. [Styles](#styles)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Platform setup](#platform-setup)
+5. [Get your baseUrl and websiteToken](#get-your-baseurl-and-websitetoken)
+6. [Quick start](#quick-start)
+7. [User identity (HMAC)](#user-identity-hmac)
+8. [Logout](#logout)
+9. [Configuration reference](#configuration-reference)
+10. [Callbacks and errors](#callbacks-and-errors)
+11. [Behavior details](#behavior-details)
+12. [Headless client](#headless-client)
+13. [Troubleshooting / FAQ](#troubleshooting--faq)
+14. [Example app](#example-app)
+15. [License](#license)
 
 ## Requirements
 
@@ -201,6 +308,36 @@ Widget buildChat({required String userId, required String userHash}) {
 
 ## User identity (HMAC)
 
+> [!IMPORTANT]
+> **Identity validation (HMAC).** If "Enforce identity validation" is turned on for your inbox in Zukko Chat, every user you pass with an `identifier` also needs a correct `identifierHash`. Without it the chat does not open: the screen shows "Your account could not be verified", `onError` receives `INVALID_IDENTIFIER_HASH`, and the debug console prints exactly one line:
+>
+> ```
+> [zukko_chat] ERROR: Identity validation is enabled for this inbox, but identifierHash is missing for user.identifier. Compute HMAC-SHA256(<inbox HMAC token>, identifier) on your backend and pass it as ZukkoChatUser.identifierHash.
+> ```
+>
+> It says `wrong` instead of `missing` when a hash was sent but does not match. If the setting is off and you send no hash, the SDK stays silent and the chat works.
+>
+> **What you need to generate the hash**
+>
+> 1. The inbox **HMAC token**: Zukko Chat admin → Settings → Inboxes → your inbox → Configuration → "Identity validation". Use the inbox that `websiteToken` belongs to.
+> 2. The **exact** `identifier` string your app passes (same case, no spaces; `42` and `"42 "` are different).
+> 3. For a quick test: `openssl` (preinstalled on macOS and Linux; on Windows use Git Bash).
+>
+> **Generate it (testing only)**
+>
+> ```
+> printf '%s' 'user-42' | openssl dgst -sha256 -hmac 'YOUR_HMAC_TOKEN'
+> ```
+>
+> Copy only the 64-character hex value (ignore a `SHA2-256(stdin)=` or `(stdin)=` prefix) into `identifierHash`. Use `printf` or `echo -n`: a plain `echo` adds a newline and produces a different hash.
+>
+> **If you see the ERROR**
+>
+> - `missing`: pass `identifierHash` together with `identifier`.
+> - `wrong`: check that the hash was computed over the same `identifier`, with the HMAC token of the same inbox, as lowercase hex, without a trailing newline, and that the token was not regenerated in the admin (that invalidates all old hashes).
+>
+> **In production** compute the hash on your backend and return it with your login response (see [How to produce it](#how-to-produce-it)). Never put the HMAC token in the app.
+
 Without a user the visitor is anonymous. To tie the chat to one of your users, pass a `ZukkoChatUser`:
 
 | Field | Type | What it does |
@@ -217,7 +354,7 @@ Without a user the visitor is anonymous. To tie the chat to one of your users, p
 
 ### Why the hash matters
 
-1. It proves the user is who they say. Without it anyone could send someone else's `identifier` and read that person's conversation.
+1. It proves the user is who they say. Without it anyone could send someone else's `identifier`, appear as that customer to agents and the AI, and overwrite their name, email and phone.
 2. With a verified identity the same user sees the same history on a new phone, after reinstall, and after logout then login. Without a hash each device starts with an empty conversation.
 
 ### How to produce it
