@@ -335,9 +335,7 @@ void main() {
 
       await until(
         () => errors.any(
-          (e) =>
-              e.type ==
-              ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          (e) => e.type == ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
         ),
         seconds: 10,
       );

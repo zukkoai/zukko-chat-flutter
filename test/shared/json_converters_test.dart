@@ -1,4 +1,4 @@
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_message.dart';
 import 'package:zukko_chat_flutter/src/shared/json_converters.dart';
 import 'package:flutter_test/flutter_test.dart';
 

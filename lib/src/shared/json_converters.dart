@@ -5,6 +5,8 @@
 /// throws on missing, huge or non-finite values: it falls back instead.
 library;
 
+import 'sdk_log.dart';
+
 /// Largest integer a double represents exactly; anything beyond is garbage.
 const _maxSafeInt = 9007199254740992;
 
@@ -59,8 +61,8 @@ List<T> parseList<T>(Object? data, T Function(Map<String, dynamic>) parse) {
   for (final item in data) {
     try {
       result.add(parse(item as Map<String, dynamic>));
-    } catch (_) {
-      // skip the bad item
+    } catch (e) {
+      sdkLog('skipped a malformed item: ${e.runtimeType}');
     }
   }
   return result;

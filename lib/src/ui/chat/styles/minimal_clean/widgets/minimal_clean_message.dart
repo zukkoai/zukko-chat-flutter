@@ -1,56 +1,50 @@
 import 'package:flutter/widgets.dart';
 
-import '../../../components/message_meta.dart';
+import '../../../components/components.dart';
+import '../minimal_clean_metrics.dart';
 import '../minimal_clean_tokens.dart';
 
 /// The user's content in a soft bubble; the agent's sits on the background
-/// as plain text. No times: only a failure hint under a failed message.
+/// as plain text. The time (last message of a group) or the failure hint
+/// sits under it.
 class MinimalCleanMessage extends StatelessWidget {
   final MinimalCleanTokens tokens;
-  final bool isSentByMe;
-  final MessageMeta meta;
-  final String failedHint;
+  final MessageSlot slot;
   final Widget child;
-
-  /// False for media that brings its own shape (images).
-  final bool bubble;
-  final EdgeInsetsGeometry padding;
 
   const MinimalCleanMessage({
     super.key,
     required this.tokens,
-    required this.isSentByMe,
-    required this.meta,
-    required this.failedHint,
+    required this.slot,
     required this.child,
-    this.bubble = true,
-    this.padding = const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
   });
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final content = Opacity(opacity: meta.sending ? 0.6 : 1, child: child);
-    final Widget body = isSentByMe && bubble
-        ? Container(
-            constraints: BoxConstraints(maxWidth: width * 0.72),
-            padding: padding,
-            decoration: BoxDecoration(
-              color: tokens.outgoingBubble,
-              borderRadius: BorderRadius.circular(
-                MinimalCleanTokens.bubbleRadius,
-              ),
-            ),
+    final meta = slot.meta;
+    final sent = slot.isSentByMe;
+    final content = SendingOpacity(meta: meta, child: child);
+    // Media brings its own shape (and its caption its own bubble).
+    final Widget body = sent && slot.part != MessagePart.media
+        ? ChatBubble(
+            color: tokens.outgoingBubble,
+            radius: MinimalCleanMetrics.bubbleRadius,
+            maxWidthFactor: MinimalCleanMetrics.userMaxWidthFactor,
+            padding: _padding,
             child: content,
           )
         : ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: width * (isSentByMe ? 0.72 : 0.9),
+              maxWidth:
+                  MediaQuery.sizeOf(context).width *
+                  (sent
+                      ? MinimalCleanMetrics.userMaxWidthFactor
+                      : MinimalCleanMetrics.agentMaxWidthFactor),
             ),
             child: content,
           );
     return Column(
-      crossAxisAlignment: isSentByMe
+      crossAxisAlignment: sent
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -58,13 +52,26 @@ class MinimalCleanMessage extends StatelessWidget {
         body,
         if (meta.failed)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              failedHint,
-              style: tokens.caption.copyWith(color: tokens.error),
+            padding: const EdgeInsets.only(top: MinimalCleanMetrics.metaTop),
+            child: FailedHint(
+              text: slot.failedHint,
+              captionStyle: tokens.caption,
+              color: tokens.error,
             ),
+          )
+        else if (meta.isGroupEnd && meta.time.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: MinimalCleanMetrics.metaTop),
+            child: Text(meta.time, style: tokens.caption),
           ),
       ],
     );
   }
+
+  EdgeInsetsGeometry get _padding => switch (slot.part) {
+    MessagePart.text => MinimalCleanMetrics.bubblePadding,
+    MessagePart.media => EdgeInsets.zero,
+    MessagePart.file => MinimalCleanMetrics.filePadding,
+    MessagePart.audio => MinimalCleanMetrics.audioPadding,
+  };
 }

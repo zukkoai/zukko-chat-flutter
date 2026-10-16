@@ -2,22 +2,22 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
-import 'package:zukko_chat_flutter/src/core/chatwoot_upload.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_conversation.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_message.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_upload.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_conversation.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_message.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/zukko_chat_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/zukko_chat_new_message_request.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// Scriptable [ChatwootClientService]: set the `*Result`s, inspect the records.
-class FakeClientService extends Fake implements ChatwootClientService {
+/// Scriptable [ZukkoChatClientService]: set the `*Result`s, inspect the records.
+class FakeClientService extends Fake implements ZukkoChatClientService {
   Object? conversationResult; // ZukkoChatConversation?, or an exception
   Object? messagesResult = <ZukkoChatMessage>[];
   Object? createMessageResult; // ZukkoChatMessage or an exception
 
-  final createdMessageRequests = <ChatwootNewMessageRequest>[];
+  final createdMessageRequests = <ZukkoChatNewMessageRequest>[];
   final uploadedAttachments = <List<ZukkoChatUpload>>[];
   final typing = <bool>[];
   var getMessagesCalls = 0;
@@ -50,7 +50,7 @@ class FakeClientService extends Fake implements ChatwootClientService {
 
   @override
   Future<ZukkoChatMessage> createMessage(
-    ChatwootNewMessageRequest request, {
+    ZukkoChatNewMessageRequest request, {
     List<ZukkoChatUpload> attachments = const [],
   }) async {
     createdMessageRequests.add(request);
@@ -141,7 +141,7 @@ class FakeSink extends Fake implements WebSocketSink {
   }
 }
 
-/// Channel factory handed to `ChatwootSocket`: records urls, hands out
+/// Channel factory handed to `ZukkoChatSocket`: records urls, hands out
 /// [FakeChannel]s.
 class FakeSocketHub {
   final urls = <Uri>[];

@@ -2,8 +2,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
-import '../../../core/chatwoot_upload.dart';
-import '../../l10n/chatwoot_l10n.dart';
+import '../../../core/zukko_chat_upload.dart';
+import '../../l10n/zukko_chat_l10n.dart';
 
 /// What the attachment button picks.
 enum AttachmentSource { image, file }
@@ -18,33 +18,76 @@ Future<AttachmentSource?> showAttachmentSourceSheet(
   context: context,
   backgroundColor: background,
   showDragHandle: true,
-  builder: (context) {
-    Widget option(AttachmentSource source, IconData icon, String label) =>
-        ListTile(
-          leading: Icon(icon, color: foreground),
-          title: Text(label, style: TextStyle(color: foreground)),
-          onTap: () => Navigator.pop(context, source),
-        );
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          option(
-            AttachmentSource.image,
-            Icons.image_outlined,
-            l10n.attachImageLabel,
-          ),
-          option(
-            AttachmentSource.file,
-            Icons.insert_drive_file_outlined,
-            l10n.attachFileLabel,
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  },
+  builder: (context) => SafeArea(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AttachmentOption(
+          source: AttachmentSource.image,
+          icon: Icons.image_outlined,
+          label: l10n.attachImageLabel,
+          color: foreground,
+        ),
+        _AttachmentOption(
+          source: AttachmentSource.file,
+          icon: Icons.insert_drive_file_outlined,
+          label: l10n.attachFileLabel,
+          color: foreground,
+        ),
+        const SizedBox(height: 8),
+      ],
+    ),
+  ),
 );
+
+class _AttachmentOption extends StatelessWidget {
+  final AttachmentSource source;
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _AttachmentOption({
+    required this.source,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: Icon(icon, color: color),
+    title: Text(label, style: TextStyle(color: color)),
+    onTap: () => Navigator.pop(context, source),
+  );
+}
+
+/// What the user picked: the files that fit [ZukkoChatUpload.maxSize] and how
+/// many were left out for being too large.
+typedef AttachmentPick = ({List<ZukkoChatUpload> fitting, int tooLarge});
+
+/// The whole attachment flow: source sheet, system picker, size check. Empty
+/// when the user dismissed either step or [context] went away meanwhile.
+Future<AttachmentPick> pickWithSheet(
+  BuildContext context, {
+  required ZukkoChatL10n l10n,
+  required Color background,
+  required Color foreground,
+}) async {
+  const none = (fitting: <ZukkoChatUpload>[], tooLarge: 0);
+  final source = await showAttachmentSourceSheet(
+    context,
+    l10n: l10n,
+    background: background,
+    foreground: foreground,
+  );
+  if (source == null) return none;
+  final files = await pickAttachments(source);
+  final fitting = [
+    for (final f in files)
+      if (!f.isTooLarge) f,
+  ];
+  return (fitting: fitting, tooLarge: files.length - fitting.length);
+}
 
 /// Opens the system picker; empty when cancelled.
 Future<List<ZukkoChatUpload>> pickAttachments(AttachmentSource source) async {

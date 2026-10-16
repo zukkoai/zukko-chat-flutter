@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'chatwoot_event.dart';
+import '../../../shared/sdk_log.dart';
+import 'zukko_chat_event.dart';
 
 /// One decoded ActionCable frame.
 sealed class Frame {
@@ -30,10 +31,11 @@ sealed class Frame {
       }
       final message = json['message'];
       if (message is Map<String, dynamic>) {
-        return EventFrame(ChatwootEventMessage.fromJson(message));
+        return EventFrame(ZukkoChatEventMessage.fromJson(message));
       }
-    } catch (_) {
+    } catch (e) {
       // fall through: a malformed frame must never break the connection
+      sdkLog('malformed socket frame: ${e.runtimeType}');
     }
     return const UnknownFrame();
   }
@@ -67,7 +69,7 @@ class DisconnectFrame extends Frame {
 class EventFrame extends Frame {
   const EventFrame(this.message);
 
-  final ChatwootEventMessage message;
+  final ZukkoChatEventMessage message;
 }
 
 class UnknownFrame extends Frame {

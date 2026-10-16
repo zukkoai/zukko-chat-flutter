@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../../../core/chatwoot_client_exception.dart';
+import '../../../core/zukko_chat_client_exception.dart';
 
 /// Runs [request] and parses the response body with [parse].
 ///
@@ -9,8 +9,8 @@ import '../../../core/chatwoot_client_exception.dart';
 /// [ZukkoChatException] of type [failure].
 Future<T> apiCall<T>(
   ZukkoChatExceptionType failure,
-  Future<Response<dynamic>> Function() request,
-  T Function(dynamic data) parse,
+  Future<Response<Object?>> Function() request,
+  T Function(Object? data) parse,
 ) async {
   try {
     return parse((await request()).data);
@@ -19,14 +19,23 @@ Future<T> apiCall<T>(
     // a typed failure raised by the interceptor (session, HMAC, rate limit)
     // keeps its own type
     if (inner is ZukkoChatException) throw inner;
-    throw ZukkoChatException(e.message ?? '', failure);
+    throw ZukkoChatException(
+      e.message ?? '',
+      failure,
+      error: e.error,
+      stackTrace: e.stackTrace,
+    );
   } on ZukkoChatException {
     rethrow;
-  } on FormatException catch (e) {
-    throw ZukkoChatException('invalid response: ${e.message}', failure);
-  } catch (e) {
-    // untrusted input can fail in ways nobody listed (RangeError, ...); the
-    // caller only ever sees the typed exception
-    throw ZukkoChatException('invalid response: $e', failure);
+  } catch (e, st) {
+    // untrusted input can fail in ways nobody listed (FormatException,
+    // RangeError, ...); the caller only ever sees the typed exception. Only the
+    // type is reported: the text may echo response data.
+    throw ZukkoChatException(
+      'invalid response: ${e.runtimeType}',
+      failure,
+      error: e,
+      stackTrace: st,
+    );
   }
 }

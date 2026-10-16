@@ -9,7 +9,7 @@ import 'dart:convert';
 /// When the user comes with an [identifierHash], a short stable digest of it is
 /// appended, so the same identifier with another hash never reuses a stored
 /// contact. Without a hash the key is unchanged (keys of earlier versions).
-String chatwootInstanceKey({
+String zukkoChatInstanceKey({
   required String baseUrl,
   required String websiteToken,
   String? userIdentifier,
@@ -37,21 +37,4 @@ String _digest(String value) {
 
 const _sep = '|||';
 
-/// Whether [key] has the shape of [chatwootInstanceKey] (also matches the
-/// per-message keys derived from it).
-bool isInstanceKey(String key) => key.split(_sep).length >= 3;
-
 String _escape(String v) => v.replaceAll('%', '%25').replaceAll('|', '%7C');
-
-/// Converts a key written by SDK versions <= 0.0.9 (`base|||user|||inbox`, with
-/// the literal "null" for no user) to the current format. Returns `null` when
-/// the legacy key cannot be parsed unambiguously.
-String? chatwootInstanceKeyFromLegacy(String legacy) {
-  final parts = legacy.split(_sep);
-  if (parts.length != 3) return null;
-  return chatwootInstanceKey(
-    baseUrl: parts[0],
-    userIdentifier: parts[1] == 'null' ? null : parts[1],
-    websiteToken: parts[2],
-  );
-}

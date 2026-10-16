@@ -1,4 +1,4 @@
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/api_call.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,4 +45,21 @@ void main() {
   test('success returns the parsed value', () async {
     expect(await apiCall(type, ok, (d) => '$d!'), 'body!');
   });
+
+  test(
+    'the message never echoes the parser error text, the cause is kept',
+    () async {
+      final boom = StateError('secret response fragment');
+
+      await expectLater(
+        apiCall(type, ok, (_) => throw boom),
+        throwsA(
+          isA<ZukkoChatException>()
+              .having((e) => e.cause, 'cause', isNot(contains('secret')))
+              .having((e) => e.error, 'error', same(boom))
+              .having((e) => e.stackTrace, 'stackTrace', isNotNull),
+        ),
+      );
+    },
+  );
 }

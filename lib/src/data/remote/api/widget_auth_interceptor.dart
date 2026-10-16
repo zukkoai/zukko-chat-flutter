@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 
-import '../../../core/chatwoot_client_exception.dart';
+import '../../../core/zukko_chat_client_exception.dart';
 import 'widget_session.dart';
+import 'zukko_chat_paths.dart';
 
 /// Attaches `website_token` (query) and `X-Auth-Token` to every widget request
 /// and repairs a stale session.
@@ -12,11 +13,7 @@ import 'widget_session.dart';
 /// is adopted and the request replayed once, through [dio] itself so the fresh
 /// headers are attached. Requests marked [noRecover] never trigger recovery.
 class WidgetAuthInterceptor extends Interceptor {
-  WidgetAuthInterceptor({
-    required this.session,
-    required this.websiteToken,
-    required this.dio,
-  });
+  WidgetAuthInterceptor({required this.session, required this.dio});
 
   /// `extra` flag: a 404 for this request is final (typing, last seen).
   static const noRecover = 'noRecover';
@@ -24,7 +21,6 @@ class WidgetAuthInterceptor extends Interceptor {
   static const _generation = 'widgetGeneration';
 
   final WidgetSession session;
-  final String websiteToken;
 
   /// The authenticated Dio this interceptor is installed on.
   final Dio dio;
@@ -37,13 +33,12 @@ class WidgetAuthInterceptor extends Interceptor {
     try {
       await session.ensureReady();
     } on ZukkoChatException catch (e) {
-      return handler.reject(
-        DioException(requestOptions: options, error: e, message: e.cause),
-      );
+      return handler.reject(_reject(options, e));
     }
-    options.queryParameters['website_token'] = websiteToken;
+    options.queryParameters[ZukkoChatPaths.websiteTokenParam] =
+        session.websiteToken;
     final jwt = session.authToken;
-    if (jwt != null) options.headers['X-Auth-Token'] = jwt;
+    if (jwt != null) options.headers[ZukkoChatPaths.authTokenHeader] = jwt;
     options.extra[_generation] = session.generation;
     handler.next(options);
   }
@@ -62,14 +57,7 @@ class WidgetAuthInterceptor extends Interceptor {
         'the chat widget is unavailable (HTTP $status)',
         ZukkoChatExceptionType.SESSION_EXPIRED,
       );
-      return handler.reject(
-        DioException(
-          requestOptions: options,
-          response: err.response,
-          error: e,
-          message: e.cause,
-        ),
-      );
+      return handler.reject(_reject(options, e, response: err.response));
     }
     if (status != 404 ||
         options.extra[noRecover] == true ||
@@ -92,11 +80,22 @@ class WidgetAuthInterceptor extends Interceptor {
       );
       handler.resolve(await dio.fetch<dynamic>(retry));
     } on ZukkoChatException catch (e) {
-      handler.reject(
-        DioException(requestOptions: options, error: e, message: e.cause),
-      );
+      handler.reject(_reject(options, e));
     } on DioException catch (e) {
       handler.reject(e);
     }
   }
+
+  /// Fails the request with the typed [error] (found by `apiCall` in
+  /// [DioException.error]).
+  static DioException _reject(
+    RequestOptions options,
+    ZukkoChatException error, {
+    Response<dynamic>? response,
+  }) => DioException(
+    requestOptions: options,
+    response: response,
+    error: error,
+    message: error.cause,
+  );
 }

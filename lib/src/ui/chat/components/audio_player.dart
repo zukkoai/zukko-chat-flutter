@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
 
 import 'audio_playback.dart';
-import 'voice_recorder.dart' show formatDuration;
+import '../../../shared/format.dart';
 
 /// Colors of an [AudioPlayerBar].
 @immutable
@@ -58,67 +59,82 @@ class AudioPlayerBar extends StatelessWidget {
     this.buttonRadius,
   });
 
+  /// Tap target of the play button (the visual is [buttonSize]).
+  static const _tapSize = 48.0;
+  static const _gap = 10.0;
+
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: playback,
-    builder: (context, _) {
-      final playing = playback.isPlaying(source);
-      final length = playback.durationOf(source) ?? duration;
-      final radius = buttonRadius;
-      return Semantics(
-        label: '$semanticLabel, ${formatDuration(length)}',
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-              button: true,
-              label: playing ? pauseLabel : playLabel,
-              child: GestureDetector(
-                onTap: () => unawaited(playback.toggle(source)),
-                child: Container(
-                  width: buttonSize,
-                  height: buttonSize,
-                  decoration: BoxDecoration(
-                    color: colors.buttonFill,
-                    shape: radius == null
-                        ? BoxShape.circle
-                        : BoxShape.rectangle,
-                    borderRadius: radius == null
-                        ? null
-                        : BorderRadius.circular(radius),
-                  ),
-                  child: Icon(
-                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    size: buttonSize * 0.55,
-                    color: colors.buttonIcon,
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<AudioPlaybackView>(
+        valueListenable: playback.watch(source),
+        builder: (context, view, _) {
+          final playing = view.playing;
+          final length = view.length ?? duration;
+          final radius = buttonRadius;
+          return Semantics(
+            label: '$semanticLabel, ${formatDuration(length)}',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Semantics(
+                  button: true,
+                  label: playing ? pauseLabel : playLabel,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => unawaited(playback.toggle(source)),
+                    child: SizedBox.square(
+                      dimension: math.max(_tapSize, buttonSize),
+                      child: Center(
+                        child: Container(
+                          width: buttonSize,
+                          height: buttonSize,
+                          decoration: BoxDecoration(
+                            color: colors.buttonFill,
+                            shape: radius == null
+                                ? BoxShape.circle
+                                : BoxShape.rectangle,
+                            borderRadius: radius == null
+                                ? null
+                                : BorderRadius.circular(radius),
+                          ),
+                          child: Icon(
+                            playing
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            size: buttonSize * 0.55,
+                            color: colors.buttonIcon,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: _SeekableWaveform(
-                samples: waveform,
-                progress: playback.progressOf(source),
-                colors: colors,
-                onSeek: (fraction) =>
-                    unawaited(playback.seek(source, fraction)),
-              ),
-            ),
-            const SizedBox(width: 10),
-            ExcludeSemantics(
-              child: Text(
-                formatDuration(length),
-                style: durationStyle.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                const SizedBox(width: _gap),
+                Flexible(
+                  child: RepaintBoundary(
+                    child: _SeekableWaveform(
+                      samples: waveform,
+                      progress: view.progress,
+                      colors: colors,
+                      onSeek: (fraction) =>
+                          unawaited(playback.seek(source, fraction)),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: _gap),
+                ExcludeSemantics(
+                  child: Text(
+                    formatDuration(length),
+                    style: durationStyle.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
-    },
-  );
 }
 
 /// The waveform as a scrubber: tap or drag to jump. While dragging it
@@ -141,7 +157,9 @@ class _SeekableWaveform extends StatefulWidget {
 }
 
 class _SeekableWaveformState extends State<_SeekableWaveform> {
+  /// Drawn width when there is room; it shrinks in a narrow bubble.
   static const _width = 140.0;
+  static const _height = 26.0;
   static const _step = 0.1;
 
   /// Finger position while dragging, else null.
@@ -180,7 +198,7 @@ class _SeekableWaveformState extends State<_SeekableWaveform> {
         },
         onHorizontalDragCancel: () => setState(() => _dragging = null),
         child: SizedBox(
-          height: 26,
+          height: _height,
           width: _width,
           child: CustomPaint(
             painter: _WaveformPainter(
@@ -241,11 +259,21 @@ class _WaveformPainter extends CustomPainter {
       old.inactive != inactive;
 }
 
+final _waveforms = <String, List<double>>{};
+const _waveformCacheSize = 256;
+
 /// Stable pseudo-waveform for a message without one (same [seed], same bars).
+/// Cached: the same list instance comes back, so the painter sees no change.
 List<double> placeholderWaveform(String seed, {int count = 32}) {
+  final key = '$count|$seed';
+  final cached = _waveforms[key];
+  if (cached != null) return cached;
+  if (_waveforms.length >= _waveformCacheSize) _waveforms.clear();
   var h = seed.codeUnits.fold<int>(17, (a, c) => (a * 31 + c) & 0x7fffffff);
-  return List<double>.generate(count, (_) {
-    h = (h * 1103515245 + 12345) & 0x7fffffff;
-    return 0.25 + (h % 1000) / 1000 * 0.75;
-  });
+  return _waveforms[key] = List<double>.unmodifiable(
+    List<double>.generate(count, (_) {
+      h = (h * 1103515245 + 12345) & 0x7fffffff;
+      return 0.25 + (h % 1000) / 1000 * 0.75;
+    }),
+  );
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'voice_recorder.dart';
+import 'voice_recorder_controller.dart';
 
 /// What a style's composer draws with; owned by [ComposerShell].
 class ComposerHandle {
@@ -58,6 +58,7 @@ class _ComposerShellState extends State<ComposerShell> {
   final _focus = FocusNode();
   VoiceRecorderController? _recorder;
   bool _canSend = false;
+  String _lastText = '';
 
   @override
   void initState() {
@@ -96,8 +97,12 @@ class _ComposerShellState extends State<ComposerShell> {
   void _rebuild() => setState(() {});
 
   void _onTextChanged() {
-    final canSend = _text.text.trim().isNotEmpty;
-    if (canSend) widget.onTyping?.call();
+    final text = _text.text;
+    final canSend = text.trim().isNotEmpty;
+    // The controller also notifies on caret / selection moves: only an edit
+    // counts as typing.
+    if (canSend && text != _lastText) widget.onTyping?.call();
+    _lastText = text;
     if (canSend != _canSend) setState(() => _canSend = canSend);
   }
 

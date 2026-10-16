@@ -1,10 +1,11 @@
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
 import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
-import 'package:zukko_chat_flutter/src/data/models/chatwoot_user.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/chatwoot_client_service.dart';
-import 'package:zukko_chat_flutter/src/data/remote/api/requests/chatwoot_new_message_request.dart';
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_user.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/zukko_chat_client_service.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/requests/zukko_chat_new_message_request.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/widget_auth_interceptor.dart';
 import 'package:zukko_chat_flutter/src/data/remote/api/widget_session.dart';
+import 'package:zukko_chat_flutter/src/data/remote/api/widget_session_api.dart';
 import 'package:dio/dio.dart';
 
 import 'fake_http.dart';
@@ -96,38 +97,37 @@ class WidgetRig {
     DateTime Function()? now,
   }) : storage = storage ?? LocalStorage.inMemory() {
     session = WidgetSession(
-      dio: dioWith(server.http),
-      websiteToken: 'site',
+      api: WidgetSessionApi(dioWith(server.http), 'site'),
       storage: this.storage,
       user: user,
-      onSessionReset: () {
-        resets++;
-        onReset?.call();
-      },
-      onReady: onReady,
-      onError: (e) {
-        reported.add(e);
-        onError?.call(e);
-      },
+      listener: SessionListener(
+        onReset: () {
+          resets++;
+          onReset?.call();
+        },
+        onReady: onReady,
+        onError: (e) {
+          reported.add(e);
+          onError?.call(e);
+        },
+      ),
       now: now ?? () => clock,
     );
     dio = dioWith(server.http);
-    dio.interceptors.add(
-      WidgetAuthInterceptor(session: session, websiteToken: 'site', dio: dio),
-    );
-    service = ChatwootClientServiceImpl(dio: dio);
+    dio.interceptors.add(WidgetAuthInterceptor(session: session, dio: dio));
+    service = ZukkoChatClientServiceImpl(dio: dio);
   }
 
   final ScriptedWidget server;
   final LocalStorage storage;
   late final WidgetSession session;
   late final Dio dio;
-  late final ChatwootClientService service;
+  late final ZukkoChatClientService service;
   DateTime clock = DateTime(2026);
   int resets = 0;
   final reported = <ZukkoChatException>[];
 
-  final sendRequest = ChatwootNewMessageRequest(content: 'hi', echoId: 'e1');
+  final sendRequest = ZukkoChatNewMessageRequest(content: 'hi', echoId: 'e1');
 
   void advance(Duration d) => clock = clock.add(d);
 }

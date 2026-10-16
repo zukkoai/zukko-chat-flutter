@@ -1,6 +1,6 @@
-import 'package:zukko_chat_flutter/src/core/chatwoot_client_exception.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_client_exception.dart';
 import 'package:zukko_chat_flutter/src/data/local/hive_type_ids.dart';
-import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 
@@ -10,7 +10,7 @@ class _Foreign {}
 
 class _ForeignAdapter extends TypeAdapter<_Foreign> {
   @override
-  int get typeId => chatwootContactHiveTypeId;
+  int get typeId => zukkoChatContactHiveTypeId;
 
   @override
   _Foreign read(BinaryReader reader) => _Foreign();
@@ -32,7 +32,7 @@ void main() {
     Hive.registerAdapter(_ForeignAdapter());
 
     await expectLater(
-      LocalStorage.openDB(),
+      HiveDatabase.openDB(),
       throwsA(
         isA<ZukkoChatException>()
             .having(

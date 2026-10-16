@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:zukko_chat_flutter/src/ui/chat/styles/minimal_clean/minimal_clean_tokens.dart';
 import 'package:zukko_chat_flutter/src/ui/chat/styles/smooth_silk/smooth_silk_tokens.dart';
 import 'package:zukko_chat_flutter/src/ui/chat/styles/thread_feed/thread_feed_tokens.dart';
-import 'package:zukko_chat_flutter/src/ui/theme/chatwoot_chat_theme.dart';
+import 'package:zukko_chat_flutter/src/ui/theme/zukko_chat_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

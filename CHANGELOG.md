@@ -114,6 +114,7 @@ The package is now `zukko_chat_flutter` (was `chatwoot_sdk`): `flutter pub add z
 | 22 | Upgraded google_fonts, record, hive_ce, material_ui | [2026-10-15_upgrade-dependencies.md](CHANGELOGS/2026-10-15_upgrade-dependencies.md) |
 | 23 | Moved from Public Client API to the Widget API | [2026-10-15_widget-api-migration.md](CHANGELOGS/2026-10-15_widget-api-migration.md) |
 | 24 | Bundle style fonts in the package, drop google_fonts | [2026-10-15_bundle-fonts.md](CHANGELOGS/2026-10-15_bundle-fonts.md) |
+| 25 | CI tests on every branch, tag and publish to pub.dev from main | [2026-10-15_ci-cd-pubdev-release.md](CHANGELOGS/2026-10-15_ci-cd-pubdev-release.md) |
 ## Upstream history (Nartey Ephraim, 2021)
 
 Versions below were released by the original author before the Zukko fork.

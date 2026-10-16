@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:zukko_chat_flutter/src/core/zukko_chat_upload.dart';
 
 /// One request the [FakeChatServer] received.
 class ServerCall {
@@ -427,7 +428,7 @@ class FakeChatServer {
       if (!media && !_acceptable.contains(t)) {
         return (422, {'message': 'File type not supported'});
       }
-      if (f.bytes.length > 40 * 1024 * 1024) {
+      if (f.bytes.length > ZukkoChatUpload.maxSize) {
         return (422, {'message': 'File size is too big'});
       }
     }

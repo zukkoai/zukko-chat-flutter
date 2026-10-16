@@ -1,6 +1,7 @@
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../shared/sdk_log.dart';
+import '../../../shared/url_policy.dart';
 
 final _linkPattern = RegExp(
   r'(?:https?://|www\.)[^\s<>"]+',
@@ -39,14 +40,12 @@ Uri? parseLink(String raw) {
       : raw;
   final uri = Uri.tryParse(withScheme);
   if (uri == null || uri.host.isEmpty) return null;
-  final scheme = uri.scheme.toLowerCase();
-  return scheme == 'https' || scheme == 'http' ? uri : null;
+  return isHttpUrl(uri.toString()) ? uri : null;
 }
 
 /// Opens [uri] in the OS browser; only http(s), failures are logged.
 Future<void> openExternalLink(Uri uri) async {
-  final scheme = uri.scheme.toLowerCase();
-  if (scheme != 'https' && scheme != 'http') return;
+  if (!isHttpUrl(uri.toString())) return;
   try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (e) {

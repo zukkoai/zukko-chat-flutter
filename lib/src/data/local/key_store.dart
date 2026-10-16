@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Where the 256-bit key of the encrypted Hive boxes lives. A seam so tests do
 /// not need the platform keystore.
-abstract interface class ChatwootKeyStore {
+abstract interface class ZukkoChatKeyStore {
   /// The stored key, or `null` when none was stored yet.
   Future<List<int>?> read();
 
@@ -12,8 +12,8 @@ abstract interface class ChatwootKeyStore {
 }
 
 /// Keychain (iOS) / Keystore-backed storage (Android) via flutter_secure_storage.
-class SecureChatwootKeyStore implements ChatwootKeyStore {
-  SecureChatwootKeyStore([FlutterSecureStorage? storage])
+class SecureZukkoChatKeyStore implements ZukkoChatKeyStore {
+  SecureZukkoChatKeyStore([FlutterSecureStorage? storage])
     : _storage =
           storage ??
           const FlutterSecureStorage(

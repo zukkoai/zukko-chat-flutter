@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:zukko_chat_flutter/src/data/local/key_store.dart';
-import 'package:zukko_chat_flutter/src/data/local/local_storage.dart';
+import 'package:zukko_chat_flutter/src/data/local/hive_database.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -23,7 +23,7 @@ class _FakePathProvider extends PathProviderPlatform
 /// tearDown(env.tearDown);
 /// tearDownAll(env.tearDownAll);
 /// ```
-/// Tests then call `LocalStorage.openDB()` themselves (or let the SDK do it).
+/// Tests then call `HiveDatabase.openDB()` themselves (or let the SDK do it).
 class HiveTestEnv {
   late final Directory dir;
 
@@ -32,7 +32,7 @@ class HiveTestEnv {
   final keys = FakeKeyStore();
 
   void setUpAll() {
-    LocalStorage.keyStore = keys;
+    HiveDatabase.keyStore = keys;
     dir = Directory.systemTemp.createTempSync('chatwoot_sdk_hive_');
     PathProviderPlatform.instance = _FakePathProvider(dir.path);
   }
@@ -56,11 +56,11 @@ class HiveTestEnv {
   }
 
   /// Convenience: open the SDK boxes.
-  Future<void> open() => LocalStorage.openDB();
+  Future<void> open() => HiveDatabase.openDB();
 }
 
-/// [ChatwootKeyStore] without the platform channel.
-class FakeKeyStore implements ChatwootKeyStore {
+/// [ZukkoChatKeyStore] without the platform channel.
+class FakeKeyStore implements ZukkoChatKeyStore {
   List<int>? key;
   var writes = 0;
 
