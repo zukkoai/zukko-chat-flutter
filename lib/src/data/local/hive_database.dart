@@ -105,6 +105,7 @@ abstract final class HiveDatabase {
             key.startsWith('$baseKey|||h:'));
     for (final box in _boxes) {
       await box.deleteAll(box.keys.where(mine).toList());
+      await box.compact();
     }
   }
 }
