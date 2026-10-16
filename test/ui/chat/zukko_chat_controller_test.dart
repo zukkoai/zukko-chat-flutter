@@ -597,6 +597,38 @@ void main() {
     );
   });
 
+  test(
+    'a sent voice message keeps the recorded length after the upload',
+    () async {
+      await ready();
+      final voice = ZukkoChatUpload.bytes(
+        name: 'voice.wav',
+        bytes: Uint8List.fromList([1, 2]),
+      );
+      controller.sendAttachments([
+        voice,
+      ], audioDuration: const Duration(seconds: 3));
+      await pumpEventQueue();
+
+      factory.callbacks!.onMessageSent!(
+        msg(
+          6,
+          content: null,
+          type: 0,
+          attachments: [
+            {'file_type': 'audio', 'data_url': 'https://cdn.test/v.wav'},
+          ],
+        ),
+        client.sent.single.echoId,
+      );
+      await pumpEventQueue();
+
+      final sent = chat.messages.single as AudioMessage;
+      expect(sent.source, 'https://cdn.test/v.wav');
+      expect(sent.duration, const Duration(seconds: 3));
+    },
+  );
+
   group('status and callbacks', () {
     ZukkoChatConversation conv(String? status) =>
         ZukkoChatConversation(id: 1, inboxId: 1, status: status);

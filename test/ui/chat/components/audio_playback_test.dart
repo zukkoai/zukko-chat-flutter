@@ -158,4 +158,43 @@ void main() {
       expect(engine.log, isEmpty);
     });
   });
+
+  group('length before play', () {
+    test(
+      'a known length is shown at once and beats the engine after play',
+      () async {
+        final engine = _FakeEngine();
+        final c = AudioPlaybackController(engine: () => engine);
+        addTearDown(c.dispose);
+        const url = 'https://cdn.test/v.wav';
+
+        c.prime(url, const Duration(seconds: 3));
+        expect(c.watch(url).value.length, const Duration(seconds: 3));
+
+        final toggle = c.toggle(url);
+        engine.loads[url]!.complete(const Duration(minutes: 5));
+        await toggle;
+        engine.duration.add(const Duration(minutes: 5));
+        engine.position.add(const Duration(milliseconds: 1500));
+
+        expect(c.watch(url).value.length, const Duration(seconds: 3));
+        expect(c.watch(url).value.progress, 0.5);
+      },
+    );
+
+    test('an unknown length is read from the remote file head', () async {
+      final c = AudioPlaybackController(
+        engine: _FakeEngine.new,
+        lengthProbe: (_) async => const Duration(seconds: 9),
+      );
+      addTearDown(c.dispose);
+      const url = 'https://cdn.test/v.wav';
+      final seen = c.watch(url);
+
+      c.prime(url, Duration.zero);
+      await pumpEventQueue();
+
+      expect(seen.value.length, const Duration(seconds: 9));
+    });
+  });
 }

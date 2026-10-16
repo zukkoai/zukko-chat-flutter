@@ -116,7 +116,9 @@ void main() {
     test('no script mixing', () {
       final latin = RegExp(r'[A-Za-z]');
       final cyrillic = RegExp(r'[Ѐ-ӿ]');
-      String all(ZukkoChatL10n l) => _noPlaceholders(l.allStrings.join(' '));
+      // "PDF" is the file format's name in every script (no native form).
+      String all(ZukkoChatL10n l) =>
+          _noPlaceholders(l.allStrings.join(' ')).replaceAll('PDF', '');
       expect(all(ZukkoChatL10n.ru), isNot(contains(latin)));
       expect(all(ZukkoChatL10n.uzCyrl), isNot(contains(latin)));
       for (final l in [

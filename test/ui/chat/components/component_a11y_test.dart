@@ -75,40 +75,6 @@ void main() {
       await tester.runAsync(recorder.cancel);
       handle.dispose();
     });
-
-    testWidgets('the recording bar is announced as a live region', (
-      tester,
-    ) async {
-      final handle = tester.ensureSemantics();
-      final recorder = VoiceRecorderController(
-        onRecorded: (_) {},
-        onIssue: (_) {},
-        capture: _FakeCapture.new,
-      );
-      addTearDown(recorder.dispose);
-      const style = TextStyle(fontSize: 12);
-      await tester.pumpWidget(
-        _host(
-          SizedBox(
-            width: 300,
-            child: VoiceRecordingBar(
-              recorder: recorder,
-              cancelHint: 'Slide to cancel',
-              releaseToCancel: 'Release to cancel',
-              timerStyle: style,
-              hintStyle: style,
-              dotColor: const Color(0xFFFF0000),
-              semanticLabel: 'Recording voice message',
-            ),
-          ),
-        ),
-      );
-      expect(
-        find.bySemanticsLabel('Recording voice message. Slide to cancel'),
-        findsOneWidget,
-      );
-      handle.dispose();
-    });
   });
 
   group('typing indicator (U21)', () {

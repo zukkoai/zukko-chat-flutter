@@ -1,4 +1,3 @@
-
 import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -286,7 +285,10 @@ void main() {
       debugPrint = (m, {wrapWidth}) => logs.add(m ?? '');
       addTearDown(() => debugPrint = previous);
       final errors = <ZukkoChatException>[];
-      await connect(errors: errors, user: ZukkoChatUser(identifier: 'u1'));
+      await connect(
+        errors: errors,
+        user: ZukkoChatUser(identifier: 'u1'),
+      );
       expect(
         errors.map((e) => e.type),
         contains(ZukkoChatExceptionType.invalidIdentifierHash),

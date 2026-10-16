@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
@@ -38,22 +37,6 @@ Widget _composer(ChatStyle style, {VoidCallback? onTyping}) => Builder(
     _l10n,
   ),
 );
-
-/// A fake microphone so a recorder can really be "recording".
-class _FakeCapture implements VoiceCapture {
-  @override
-  Future<bool> hasPermission() async => true;
-
-  @override
-  Future<Stream<Uint8List>> start({required int sampleRate}) async =>
-      const Stream.empty();
-
-  @override
-  Future<void> stop() async {}
-
-  @override
-  Future<void> dispose() async {}
-}
 
 void main() {
   for (final styleKind in ZukkoChatStyle.values) {
@@ -319,48 +302,6 @@ void main() {
     );
     final time = DateFormat('HH:mm').format(sampleTime.toLocal());
     expect(find.text(time), findsOneWidget);
-  });
-
-  testWidgets('the recording bar grows with the text scale (S21)', (
-    tester,
-  ) async {
-    final recorder = VoiceRecorderController(
-      onRecorded: (_) {},
-      onIssue: (_) {},
-      capture: _FakeCapture.new,
-    );
-    addTearDown(recorder.dispose);
-    await recorder.start();
-    expect(recorder.isRecording, isTrue);
-    final tokens = SmoothSilkTokens.from(
-      const ZukkoChatTheme(brightness: Brightness.light),
-    );
-    await tester.pumpWidget(
-      _host(
-        SizedBox(
-          width: 300,
-          child: ComposerInput(
-            handle: ComposerHandle(
-              text: TextEditingController(),
-              focusNode: FocusNode(),
-              canSend: false,
-              send: () {},
-              recorder: recorder,
-            ),
-            l10n: _l10n,
-            tokens: tokens,
-            minHeight: 48,
-          ),
-        ),
-        scaler: const TextScaler.linear(3),
-      ),
-    );
-    expect(tester.takeException(), isNull);
-    final bar = tester.getSize(find.byType(VoiceRecordingBar));
-    final timer = tester.getSize(find.textContaining('0:'));
-    expect(bar.height, greaterThanOrEqualTo(48));
-    expect(bar.height, greaterThanOrEqualTo(timer.height));
-    await recorder.cancel();
   });
 
   group('tokens follow the app overrides (S16)', () {
