@@ -27,7 +27,10 @@ Future<LocalStorage> openStorage({
     }
     return LocalStorage.persisted(instanceKey);
   } catch (e, st) {
-    sdkLog('persistence unavailable: ${e.runtimeType}');
+    sdkLog(
+      'persistence unavailable: ${e.runtimeType}',
+      level: SdkLogLevel.warning,
+    );
     onError(
       e is ZukkoChatException
           ? e

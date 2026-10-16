@@ -49,6 +49,6 @@ Future<void> openExternalLink(Uri uri) async {
   try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (e) {
-    sdkLog('could not open link: $e');
+    sdkLog('could not open link: $e', level: SdkLogLevel.warning);
   }
 }

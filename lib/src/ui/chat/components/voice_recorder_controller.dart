@@ -88,7 +88,7 @@ class VoiceRecorderController extends ChangeNotifier {
       _timer = Timer.periodic(_tick, (_) => _onTick());
       notifyListeners();
     } catch (e) {
-      sdkLog('voice recording failed: $e');
+      sdkLog('voice recording failed: $e', level: SdkLogLevel.warning);
       _starting = false;
       if (!_disposed) onIssue(VoiceRecorderIssue.failed);
     }
@@ -155,7 +155,7 @@ class VoiceRecorderController extends ChangeNotifier {
     try {
       await _capture?.stop();
     } catch (e) {
-      sdkLog('voice recording stop failed: $e');
+      sdkLog('voice recording stop failed: $e', level: SdkLogLevel.warning);
     }
     // Not awaited: `stop` already ended the stream, and the cancel future of
     // a finished subscription can stay pending (it blocked finish under

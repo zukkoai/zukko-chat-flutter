@@ -151,7 +151,10 @@ class ZukkoChatSocket {
     try {
       channel = _connect(url);
     } catch (e) {
-      sdkLog('socket connect failed: ${e.runtimeType}');
+      sdkLog(
+        'socket connect failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
       _scheduleRetry();
       return;
     }
@@ -264,7 +267,10 @@ class ZukkoChatSocket {
       channel.sink.add(jsonEncode(frame));
       return true;
     } catch (e) {
-      sdkLog('socket send failed: ${e.runtimeType}');
+      sdkLog(
+        'socket send failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
       return false;
     }
   }
@@ -284,7 +290,10 @@ class ZukkoChatSocket {
     try {
       channel.sink.close(_closeNormal).ignore();
     } catch (e) {
-      sdkLog('socket close failed: ${e.runtimeType}');
+      sdkLog(
+        'socket close failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
   }
 

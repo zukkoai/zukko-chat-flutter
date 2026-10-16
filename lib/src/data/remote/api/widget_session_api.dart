@@ -69,7 +69,10 @@ class WidgetSessionApi {
         ),
       );
     } on DioException catch (e) {
-      sdkLog('config failed: ${e.type.name} ${e.response?.statusCode}');
+      sdkLog(
+        'config failed: ${e.type.name} ${e.response?.statusCode}',
+        level: SdkLogLevel.warning,
+      );
       throw ZukkoChatException(
         'config failed (${_status(e)})',
         ZukkoChatExceptionType.getConfigFailed,
@@ -103,13 +106,16 @@ class WidgetSessionApi {
       final token = body is Map ? body['widget_auth_token'] : null;
       return token is String && token.isNotEmpty ? token : null;
     } on DioException catch (e) {
-      sdkLog('set_user failed: ${e.type.name} ${e.response?.statusCode}');
       if (e.response?.statusCode == 401) {
         throw ZukkoChatException(
           'the server rejected the identifier hash',
           ZukkoChatExceptionType.invalidIdentifierHash,
         );
       }
+      sdkLog(
+        'set_user failed: ${e.type.name} ${e.response?.statusCode}',
+        level: SdkLogLevel.warning,
+      );
       throw ZukkoChatException(
         'set_user failed (${_status(e)})',
         ZukkoChatExceptionType.identifyFailed,
@@ -134,7 +140,10 @@ class WidgetSessionApi {
       final body = response.data;
       return body is Map ? intFromJson(body['id']) : null;
     } catch (e, st) {
-      sdkLog('contact check failed: ${e.runtimeType}');
+      sdkLog(
+        'contact check failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
       throw ZukkoChatException(
         'could not verify the contact after set_user: ${e.runtimeType}',
         ZukkoChatExceptionType.identifyFailed,

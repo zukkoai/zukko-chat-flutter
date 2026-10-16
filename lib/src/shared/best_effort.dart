@@ -6,6 +6,6 @@ Future<void> bestEffort(Future<void> Function() action, String what) async {
   try {
     await action();
   } catch (e) {
-    sdkLog('$what failed: ${e.runtimeType}');
+    sdkLog('$what failed: ${e.runtimeType}', level: SdkLogLevel.warning);
   }
 }

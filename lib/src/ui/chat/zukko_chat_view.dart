@@ -43,7 +43,6 @@ class ZukkoChatView extends StatefulWidget {
 
   final ZukkoChatInteractions interactions;
 
-
   const ZukkoChatView({
     super.key,
     required this.options,
@@ -147,7 +146,10 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
       allows = client.config?.audioMessagesEnabled ?? true;
     } catch (e) {
       // a custom client (demo, test) may not implement config
-      sdkLog('client config unavailable: ${e.runtimeType}');
+      sdkLog(
+        'client config unavailable: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
     if (allows != _serverAllowsAudio) {
       setState(() => _serverAllowsAudio = allows);

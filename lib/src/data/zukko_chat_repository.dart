@@ -228,7 +228,13 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
     ZukkoChatExceptionType fallback, {
     Object? data,
   }) {
-    sdkLog('$fallback: ${error.runtimeType}');
+    // A rejected identity hash already got its one ERROR line in the session.
+    final loggedAsError =
+        error is ZukkoChatException &&
+        error.type == ZukkoChatExceptionType.invalidIdentifierHash;
+    if (!loggedAsError) {
+      sdkLog('$fallback: ${error.runtimeType}', level: SdkLogLevel.warning);
+    }
     final cb = _callbacks.onError;
     if (cb == null || _disposed) return;
     final typed = error is ZukkoChatException

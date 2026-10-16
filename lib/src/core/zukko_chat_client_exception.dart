@@ -62,9 +62,9 @@ enum ZukkoChatExceptionType {
   /// For a user without an identifier it is only a warning.
   identifyFailed('IDENTIFY_FAILED'),
 
-  /// Warning: `user.identifier` was given without `identifierHash`. The
-  /// session continues, but the identity is unverified; enable "Enforce
-  /// identity validation" on the inbox.
+  /// No longer emitted by the SDK (an identifier without a hash is accepted
+  /// silently while the inbox does not enforce identity validation). Kept so
+  /// existing code that switches on it still compiles.
   identityNotVerified('IDENTITY_NOT_VERIFIED'),
 
   /// `POST /config` failed or returned an unusable body.

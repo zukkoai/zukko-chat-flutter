@@ -6,6 +6,6 @@ void safeInvoke(void Function() call, String label) {
   try {
     call();
   } catch (e) {
-    sdkLog('$label callback threw: ${e.runtimeType}');
+    sdkLog('$label callback threw: ${e.runtimeType}', level: SdkLogLevel.error);
   }
 }

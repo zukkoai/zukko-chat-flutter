@@ -93,8 +93,11 @@ class RealtimeEvents {
       }
     } catch (e, st) {
       // a bad event must never stop the following ones
-      sdkLog('socket event failed: ${e.runtimeType}');
-      sdkLog('$st');
+      sdkLog(
+        'socket event failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
+      sdkLog('$st', level: SdkLogLevel.warning);
     }
   }
 

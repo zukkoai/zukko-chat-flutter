@@ -4,7 +4,7 @@
 /// Requires `https`; plain `http` is always rejected (also for localhost). User info (`https://user:pw@host`) and fragments are rejected: the
 /// base URL ends up in persisted keys and logs. Throws [ArgumentError]
 /// otherwise.
-Uri validateBaseUrl(String url, ) {
+Uri validateBaseUrl(String url) {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || uri.host.isEmpty) {
     throw ArgumentError.value(url, 'baseUrl', 'must be an absolute URL');
@@ -24,10 +24,7 @@ Uri validateBaseUrl(String url, ) {
 /// [validateBaseUrl] (so its scheme is https).
 Uri zukkoChatCableUri(Uri base) {
   final segments = base.pathSegments.where((s) => s.isNotEmpty).toList();
-  return base.replace(
-    scheme: 'wss',
-    pathSegments: [...segments, 'cable'],
-  );
+  return base.replace(scheme: 'wss', pathSegments: [...segments, 'cable']);
 }
 
 /// Whether [url] has an `http` or `https` scheme (case-insensitive).

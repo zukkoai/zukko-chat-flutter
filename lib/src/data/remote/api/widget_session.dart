@@ -4,6 +4,7 @@ import '../../../core/zukko_chat_client_exception.dart';
 import '../../../shared/backoff.dart';
 import '../../../shared/rate_budget.dart';
 import '../../../shared/safe_invoke.dart';
+import '../../../shared/sdk_log.dart';
 import '../../local/local_storage.dart';
 import '../../models/zukko_chat_config.dart';
 import '../../models/zukko_chat_user.dart';
@@ -29,10 +30,18 @@ class SessionListener {
   /// [WidgetSession.start] succeeded (the session became usable).
   final void Function()? onReady;
 
-  /// Non-fatal problems (`IDENTITY_NOT_VERIFIED`, and `IDENTIFY_FAILED` for a
-  /// user without an identifier).
+  /// Non-fatal problems (`IDENTIFY_FAILED` for a user without an identifier).
   final void Function(ZukkoChatException)? onError;
 }
+
+/// The one developer-facing text for a rejected identifier hash (401 on
+/// `set_user`): [hashSent] tells "missing" from "wrong". Append a
+/// documentation link here when there is one.
+String identityValidationMessage({required bool hashSent}) =>
+    'Identity validation is enabled for this inbox, but identifierHash is '
+    '${hashSent ? 'wrong' : 'missing'} for user.identifier. Compute '
+    'HMAC-SHA256(<inbox HMAC token>, identifier) on your backend and pass it '
+    'as ZukkoChatUser.identifierHash.';
 
 /// The widget session: JWT + contact + pubsub token.
 ///
@@ -74,7 +83,6 @@ class WidgetSession {
   final _lock = Lock();
 
   bool _ready = false;
-  bool _warnedUnverified = false;
   ZukkoChatException? _failure;
   ZukkoChatException? _lastStartError;
   DateTime? _nextStartAt;
@@ -258,12 +266,17 @@ class WidgetSession {
   /// `set_user`, then whatever it requires to end up with the right contact.
   Future<void> _identifyAndAdopt(ZukkoChatUser identity) async {
     final strict = identity.identifier?.isNotEmpty ?? false;
-    if (strict && (identity.identifierHash?.isEmpty ?? true)) _warnUnverified();
     final String? newToken;
     try {
       newToken = await _api.setUser(identity, authToken);
     } on ZukkoChatException catch (e) {
       if (e.type == ZukkoChatExceptionType.invalidIdentifierHash) {
+        sdkLog(
+          identityValidationMessage(
+            hashSent: identity.identifierHash?.isNotEmpty ?? false,
+          ),
+          level: SdkLogLevel.error,
+        );
         _failure = e; // fail closed: never fall back to an anonymous session
         rethrow;
       }
@@ -295,20 +308,6 @@ class WidgetSession {
       if (strict) rethrow;
       return true;
     }
-  }
-
-  /// An identifier without a hash only works while the inbox does not enforce
-  /// identity validation, which lets anyone claim any identifier.
-  void _warnUnverified() {
-    if (_warnedUnverified) return;
-    _warnedUnverified = true;
-    _notifyError(
-      listener.onError,
-      ZukkoChatException(
-        'user.identifier is set without identifierHash: the identity is not verified',
-        ZukkoChatExceptionType.identityNotVerified,
-      ),
-    );
   }
 
   /// Stores the contact; a different contact than before takes the old

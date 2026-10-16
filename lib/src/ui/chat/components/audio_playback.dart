@@ -158,7 +158,7 @@ class AudioPlaybackController {
       }
       return true;
     } catch (e) {
-      sdkLog('audio playback failed: $e');
+      sdkLog('audio playback failed: $e', level: SdkLogLevel.warning);
       if (id == _loadId && !_disposed) {
         _source = null;
         _playing = false;

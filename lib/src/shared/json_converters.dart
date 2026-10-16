@@ -62,7 +62,10 @@ List<T> parseList<T>(Object? data, T Function(Map<String, dynamic>) parse) {
     try {
       result.add(parse(item as Map<String, dynamic>));
     } catch (e) {
-      sdkLog('skipped a malformed item: ${e.runtimeType}');
+      sdkLog(
+        'skipped a malformed item: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
   }
   return result;

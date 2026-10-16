@@ -143,7 +143,7 @@ class ZukkoChatController extends ChangeNotifier {
       try {
         _client?.resume(); // realtime may have stopped while in background
       } catch (e) {
-        sdkLog('resume failed: ${e.runtimeType}');
+        sdkLog('resume failed: ${e.runtimeType}', level: SdkLogLevel.warning);
       }
     }
   }
@@ -172,7 +172,7 @@ class ZukkoChatController extends ChangeNotifier {
         callbacks: _wrapCallbacks(generation),
       );
     } catch (e, st) {
-      sdkLog('client failed with error $e: $st');
+      sdkLog('client failed with error $e: $st', level: SdkLogLevel.error);
       if (_disposed || generation != _generation) return;
       _error = ZukkoChatException(
         e.toString(),
@@ -200,7 +200,7 @@ class ZukkoChatController extends ChangeNotifier {
     try {
       await client.loadMessages();
     } catch (e) {
-      sdkLog('loadMessages failed: $e');
+      sdkLog('loadMessages failed: $e', level: SdkLogLevel.warning);
     }
     if (generation != _generation) return; // replaced by retry meanwhile
     _awaitingLatest = false;
@@ -231,7 +231,7 @@ class ZukkoChatController extends ChangeNotifier {
       _noteOldest(page);
       _hasMore = page.length >= MessageSync.pageSize;
     } catch (e) {
-      sdkLog('loadOlder failed: ${e.runtimeType}');
+      sdkLog('loadOlder failed: ${e.runtimeType}', level: SdkLogLevel.warning);
     } finally {
       _loadingOlder = false;
     }
@@ -254,7 +254,10 @@ class ZukkoChatController extends ChangeNotifier {
     try {
       await call;
     } catch (e) {
-      sdkLog('best-effort call failed: ${e.runtimeType}');
+      sdkLog(
+        'best-effort call failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
   }
 
@@ -334,7 +337,7 @@ class ZukkoChatController extends ChangeNotifier {
         attachments: outgoing.attachments,
       );
     } catch (e) {
-      sdkLog('send failed: $e');
+      sdkLog('send failed: $e', level: SdkLogLevel.warning);
       _fail(echoId);
     }
   }
@@ -456,7 +459,6 @@ class ZukkoChatController extends ChangeNotifier {
         // any typed failure of a send (INVALID_IDENTIFIER_HASH, SESSION_EXPIRED,
         // SEND_MESSAGE_FAILED, ...) carries the echoId of its bubble
         if (data is String && _outbox.containsKey(data)) _fail(data);
-        sdkLog('error: ${e.cause}');
         callbacks?.onError?.call(e);
       },
     );

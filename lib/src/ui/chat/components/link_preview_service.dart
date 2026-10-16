@@ -54,7 +54,10 @@ class LinkPreviewService {
     try {
       data = await _fetch(uri);
     } catch (e) {
-      sdkLog('link preview failed: ${e.runtimeType}');
+      sdkLog(
+        'link preview failed: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
     unawaited(_inflight.remove(key));
     _cache[key] = data;

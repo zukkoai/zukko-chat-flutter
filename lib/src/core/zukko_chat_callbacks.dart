@@ -62,12 +62,13 @@ class ZukkoChatCallbacks {
   ///Triggered when an agent resolves the current conversation
   final void Function()? onConversationResolved;
 
-  /// Triggered over the realtime connection when the contact's conversation is
-  /// created or changes (for example an agent resolves it): carries the
-  /// current [ZukkoChatConversation] (its ids and `status`). It also fires
-  /// together with [onConversationResolved] when the status becomes `resolved`.
-  /// Not triggered by the initial fetch at start, only by later server events
-  /// of the contact's own inbox.
+  /// Triggered with the current [ZukkoChatConversation] (its ids and `status`)
+  /// once the contact's conversation has been fetched at start (also after a
+  /// session reset or a start that succeeded late; not when the contact has no
+  /// conversation yet), and over the realtime connection when it is created or
+  /// changes (for example an agent resolves it; events of the contact's own
+  /// inbox only). It also fires together with [onConversationResolved] when the
+  /// status becomes `resolved`.
   final void Function(ZukkoChatConversation)? onConversationUpdated;
 
   /// Triggered when the visitor's session was replaced (the server no longer

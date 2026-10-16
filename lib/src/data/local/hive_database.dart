@@ -74,7 +74,10 @@ abstract final class HiveDatabase {
     } catch (e) {
       // wrong/lost key, restored files, unknown (old) type ids: any failure
       // to read the box means its cache is unusable
-      sdkLog('box $name is unreadable, recreating it: ${e.runtimeType}');
+      sdkLog(
+        'box $name is unreadable, recreating it: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
       _recreated.add(name);
       await Hive.deleteBoxFromDisk(name);
       return Hive.openBox<T>(name, encryptionCipher: cipher);

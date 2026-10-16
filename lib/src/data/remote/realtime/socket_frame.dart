@@ -35,7 +35,10 @@ sealed class Frame {
       }
     } catch (e) {
       // fall through: a malformed frame must never break the connection
-      sdkLog('malformed socket frame: ${e.runtimeType}');
+      sdkLog(
+        'malformed socket frame: ${e.runtimeType}',
+        level: SdkLogLevel.warning,
+      );
     }
     return const UnknownFrame();
   }
