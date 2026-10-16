@@ -50,7 +50,7 @@ void main() {
     );
     await storage.contact.save(contact());
 
-    expect(errors.map((e) => e.type), [ZukkoChatExceptionType.STORAGE_FAILED]);
+    expect(errors.map((e) => e.type), [ZukkoChatExceptionType.storageFailed]);
     expect(storage.contact.get(), contact());
   });
 
@@ -64,7 +64,7 @@ void main() {
 
     await openStorage(persist: true, instanceKey: 'k', onError: errors.add);
 
-    expect(errors.map((e) => e.type), [ZukkoChatExceptionType.STORAGE_FAILED]);
+    expect(errors.map((e) => e.type), [ZukkoChatExceptionType.storageFailed]);
     expect(errors.single.cause, contains('reset'));
   });
 }

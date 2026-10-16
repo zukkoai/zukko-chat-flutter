@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('types used in public signatures are exported', () {
     // ZukkoChatClient.sendAction(ZukkoChatActionType)
-    const ZukkoChatActionType action = ZukkoChatActionType.update_presence;
+    const ZukkoChatActionType action = ZukkoChatActionType.updatePresence;
     // ZukkoChatMessage.sender
     final sender = ZukkoChatEventMessageUser(name: 'agent');
     final message = ZukkoChatMessage(
@@ -24,7 +24,7 @@ void main() {
     const l10n = ZukkoChatL10n();
     const ZukkoChatTheme? theme = null; // type must be reachable
 
-    expect(action.name, 'update_presence');
+    expect(action.wire, 'update_presence');
     expect(message.sender?.name, 'agent');
     expect(l10n, isNotNull);
     expect(theme, isNull);
@@ -58,7 +58,7 @@ void main() {
   });
 
   test('the only public action is the presence heartbeat (no "subscribe")', () {
-    expect(ZukkoChatActionType.values.map((a) => a.name), ['update_presence']);
+    expect(ZukkoChatActionType.values.map((a) => a.wire), ['update_presence']);
   });
 
   test('the instance key separates users, hashes and inboxes', () {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:zukko_chat_flutter/src/data/models/zukko_chat_attachment.dart';
 import 'package:zukko_chat_flutter/zukko_chat_flutter.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,11 +15,28 @@ class FakeClient extends Fake implements ZukkoChatClient {
   int seen = 0;
   final typing = <bool>[];
 
+  /// When set, [loadMessages] completes only after it (the real one answers
+  /// through the callbacks first).
+  Completer<void>? loadGate;
+
   @override
-  Future<void> loadMessages() async => loads++;
+  Future<void> loadMessages() async {
+    loads++;
+    await loadGate?.future;
+  }
 
   @override
   Future<void> markSeen() async => seen++;
+
+  /// `before` of every [loadOlderMessages] call; [older] answers it.
+  final olderRequests = <int>[];
+  Future<List<ZukkoChatMessage>?> Function(int before) older = (_) async => [];
+
+  @override
+  Future<List<ZukkoChatMessage>?> loadOlderMessages({required int before}) {
+    olderRequests.add(before);
+    return older(before);
+  }
 
   int resumes = 0;
 
@@ -105,6 +123,6 @@ ZukkoChatMessage msg(
       createdAt ??
       '2024-01-01 10:${(id ~/ 60).toString().padLeft(2, '0')}:${(id % 60).toString().padLeft(2, '0')}',
   conversationId: 7,
-  attachments: attachments,
+  attachments: attachmentsFromJson(attachments),
   sender: sender,
 );

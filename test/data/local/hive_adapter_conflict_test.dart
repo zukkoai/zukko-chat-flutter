@@ -35,12 +35,8 @@ void main() {
       HiveDatabase.openDB(),
       throwsA(
         isA<ZukkoChatException>()
-            .having(
-              (e) => e.type,
-              'type',
-              ZukkoChatExceptionType.STORAGE_FAILED,
-            )
-            .having((e) => e.cause, 'cause', contains('typeId 0')),
+            .having((e) => e.type, 'type', ZukkoChatExceptionType.storageFailed)
+            .having((e) => e.cause, 'cause', contains('typeId 210')),
       ),
     );
   });

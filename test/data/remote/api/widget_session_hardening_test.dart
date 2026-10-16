@@ -51,15 +51,15 @@ void main() {
         server.setUserStatus = status;
         final rig = WidgetRig(server, user: identified);
 
-        await expectLater(rig.session.start(), typed(T.IDENTIFY_FAILED));
+        await expectLater(rig.session.start(), typed(T.identifyFailed));
 
         expect(rig.session.isReady, isFalse);
         expect(rig.session.failure, isNull); // retryable, not terminal
         server.http.requests.clear();
-        await expectLater(rig.service.getMessages(), typed(T.IDENTIFY_FAILED));
+        await expectLater(rig.service.getMessages(), typed(T.identifyFailed));
         await expectLater(
           rig.service.createMessage(rig.sendRequest),
-          typed(T.IDENTIFY_FAILED),
+          typed(T.identifyFailed),
         );
         expect(server.count('/messages'), 0);
       });
@@ -69,18 +69,18 @@ void main() {
       server.setUserStatus = 401;
       final rig = WidgetRig(server, user: identified);
 
-      await expectLater(rig.session.start(), typed(T.INVALID_IDENTIFIER_HASH));
+      await expectLater(rig.session.start(), typed(T.invalidIdentifierHash));
       rig.advance(const Duration(minutes: 5));
 
-      expect(rig.session.failure?.type, T.INVALID_IDENTIFIER_HASH);
-      await expectLater(rig.session.start(), typed(T.INVALID_IDENTIFIER_HASH));
+      expect(rig.session.failure?.type, T.invalidIdentifierHash);
+      await expectLater(rig.session.start(), typed(T.invalidIdentifierHash));
       expect(server.count('/set_user'), 1);
     });
 
     test('a later start can succeed (retry allowed)', () async {
       server.setUserStatus = 500;
       final rig = WidgetRig(server, user: identified);
-      await expectLater(rig.session.start(), typed(T.IDENTIFY_FAILED));
+      await expectLater(rig.session.start(), typed(T.identifyFailed));
 
       server.setUserStatus = 200;
       rig.advance(const Duration(seconds: 10));
@@ -93,7 +93,7 @@ void main() {
       server.contactStatus = 500;
       final rig = WidgetRig(server, user: identified);
 
-      await expectLater(rig.session.start(), typed(T.IDENTIFY_FAILED));
+      await expectLater(rig.session.start(), typed(T.identifyFailed));
 
       expect(rig.session.isReady, isFalse);
     });
@@ -105,7 +105,7 @@ void main() {
       await rig.session.start();
 
       expect(rig.session.isReady, isTrue);
-      expect(rig.reported.single.type, T.IDENTIFY_FAILED);
+      expect(rig.reported.single.type, T.identifyFailed);
     });
   });
 
@@ -117,19 +117,19 @@ void main() {
         final rig = WidgetRig(server);
 
         for (var i = 0; i < 20; i++) {
-          await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+          await expectLater(rig.session.start(), typed(T.getConfigFailed));
         }
         expect(server.count('/config'), 1);
 
         rig.advance(const Duration(seconds: 3)); // 2 s pause elapsed
-        await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+        await expectLater(rig.session.start(), typed(T.getConfigFailed));
         expect(server.count('/config'), 2);
 
         rig.advance(const Duration(seconds: 3)); // the pause doubled to 4 s
-        await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+        await expectLater(rig.session.start(), typed(T.getConfigFailed));
         expect(server.count('/config'), 2);
         rig.advance(const Duration(seconds: 2));
-        await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+        await expectLater(rig.session.start(), typed(T.getConfigFailed));
         expect(server.count('/config'), 3);
       },
     );
@@ -139,10 +139,7 @@ void main() {
       final rig = WidgetRig(server);
 
       for (var i = 0; i < 10; i++) {
-        await expectLater(
-          rig.service.getMessages(),
-          typed(T.GET_CONFIG_FAILED),
-        );
+        await expectLater(rig.service.getMessages(), typed(T.getConfigFailed));
       }
 
       expect(server.count('/config'), 1);
@@ -170,7 +167,7 @@ void main() {
           isA<ZukkoChatException>().having(
             (e) => e.type,
             'type',
-            T.GET_CONFIG_FAILED,
+            T.getConfigFailed,
           ),
         );
 
@@ -203,7 +200,7 @@ void main() {
             ? (500, {'error': 'x'})
             : original(o);
 
-        await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+        await expectLater(rig.session.start(), typed(T.getConfigFailed));
 
         expect(rig.storage.contact.get()!.id, 9);
         expect(rig.resets, 1);
@@ -238,7 +235,7 @@ void main() {
           ? (500, {'error': 'x'})
           : original(o);
 
-      await expectLater(rig.session.start(), typed(T.GET_CONFIG_FAILED));
+      await expectLater(rig.session.start(), typed(T.getConfigFailed));
 
       expect(rig.storage.contact.get()!.authToken, isNot('NEW'));
     });
@@ -283,7 +280,7 @@ void main() {
             isA<ZukkoChatException>().having(
               (e) => e.type,
               'type',
-              anyOf(T.GET_CONFIG_FAILED, T.SESSION_EXPIRED),
+              anyOf(T.getConfigFailed, T.sessionExpired),
             ),
           ),
         );
@@ -355,7 +352,7 @@ void main() {
         await rig.session.refresh(SessionRefreshReason.socketRejected);
 
         expect(rig.session.isReady, isTrue);
-        expect(rig.reported.map((e) => e.type), [T.IDENTITY_NOT_VERIFIED]);
+        expect(rig.reported.map((e) => e.type), [T.identityNotVerified]);
       },
     );
 
@@ -435,7 +432,7 @@ void main() {
           storage: WidgetRig(server).storage,
         );
 
-        await expectLater(session.start(), typed(T.GET_CONFIG_FAILED));
+        await expectLater(session.start(), typed(T.getConfigFailed));
 
         expect(otherHits, 0);
       },
@@ -469,7 +466,7 @@ void main() {
     test('a path upload of unknown size over 40 MB is rejected', () async {
       final big = await sparse(ZukkoChatUpload.maxSize + 1);
 
-      await expectLater(validateUpload(big), typed(T.SEND_MESSAGE_FAILED));
+      await expectLater(validateUpload(big), typed(T.sendMessageFailed));
     });
 
     test('exactly 40 MB passes', () async {
@@ -484,7 +481,7 @@ void main() {
 
       await expectLater(
         rig.service.createMessage(rig.sendRequest, attachments: [big]),
-        typed(T.SEND_MESSAGE_FAILED),
+        typed(T.sendMessageFailed),
       );
       expect(server.count('/messages'), 0);
     });

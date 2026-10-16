@@ -363,7 +363,7 @@ void main() {
 
         expect(
           h.errors.single.type,
-          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.socketSubscriptionRejected,
         );
         expect(h.channel.presenceFrames, 0);
         expect(h.hub.channels, hasLength(1));
@@ -398,7 +398,7 @@ void main() {
     test('a refetch failure is reported, not thrown', () {
       run((h) {
         h.service.messagesResult = failure(
-          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.getMessagesFailed,
         );
         h.subscribe();
 
@@ -410,7 +410,7 @@ void main() {
         h.flush();
 
         expect(h.errors.map((e) => e.type).toSet(), {
-          ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+          ZukkoChatExceptionType.getMessagesFailed,
         });
       });
     });
@@ -741,7 +741,7 @@ void main() {
         expect(h.http.calls, ['POST /api/v1/widget/config']);
         expect(
           h.errors.single.type,
-          ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          ZukkoChatExceptionType.socketSubscriptionRejected,
         );
         expect(h.socket.state, ZukkoChatConnectionState.closed);
         expect(h.hub.channels, hasLength(1));
@@ -771,7 +771,7 @@ void main() {
 
         expect(
           h.errors.map((e) => e.type),
-          contains(ZukkoChatExceptionType.SESSION_EXPIRED),
+          contains(ZukkoChatExceptionType.sessionExpired),
         );
         expect(h.http.requests.length, WidgetSession.maxRefreshes);
       });
@@ -802,7 +802,7 @@ void main() {
         h.subscribe();
         final before = h.channel.sent.length;
 
-        h.repo.sendAction(ZukkoChatActionType.update_presence);
+        h.repo.sendAction(ZukkoChatActionType.updatePresence);
 
         expect(h.channel.sent.length, before + 1);
       });
@@ -811,7 +811,7 @@ void main() {
     test('is a silent no-op without a connection', () {
       run((h) {
         expect(
-          () => h.repo.sendAction(ZukkoChatActionType.update_presence),
+          () => h.repo.sendAction(ZukkoChatActionType.updatePresence),
           returnsNormally,
         );
       });
@@ -1117,7 +1117,7 @@ void main() {
 
           expect(
             h.errors.single.type,
-            ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+            ZukkoChatExceptionType.getMessagesFailed,
           );
         });
       }, (e, s) => errors.add(e));

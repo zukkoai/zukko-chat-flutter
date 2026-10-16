@@ -274,7 +274,7 @@ void main() {
         user: ZukkoChatUser(identifier: 'u1', identifierHash: 'bad'),
       );
       expect(errors.map((e) => e.type), [
-        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.invalidIdentifierHash,
       ]);
     });
 
@@ -289,7 +289,7 @@ void main() {
       // the SDK also warns up front that the identity is unverified
       expect(
         errors.map((e) => e.type),
-        contains(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        contains(ZukkoChatExceptionType.invalidIdentifierHash),
       );
 
       final ok = <ZukkoChatException>[];
@@ -335,7 +335,7 @@ void main() {
 
       await until(
         () => errors.any(
-          (e) => e.type == ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED,
+          (e) => e.type == ZukkoChatExceptionType.socketSubscriptionRejected,
         ),
         seconds: 10,
       );
@@ -343,5 +343,25 @@ void main() {
       expect(subscribed, isEmpty);
       expect(server.subscribeIdentifiers, hasLength(2)); // one retry
     }, timeout: const Timeout(Duration(seconds: 20)));
+  });
+
+  test('the latest page is 20 messages; before= pages back, 20 at a time, '
+      'until a short page', () async {
+    server
+      ..hasConversation = true
+      ..messageIds = [for (var i = 1; i <= 50; i++) i];
+    final errors = <ZukkoChatException>[];
+    final retrieved = <ZukkoChatMessage>[];
+    final client = await connect(errors: errors, retrieved: retrieved);
+
+    await client.loadMessages();
+    expect(retrieved.map((m) => m.id), [for (var i = 31; i <= 50; i++) i]);
+
+    final p2 = await client.loadOlderMessages(before: 31);
+    expect(p2!.map((m) => m.id), [for (var i = 11; i <= 30; i++) i]);
+
+    final p3 = await client.loadOlderMessages(before: 11);
+    expect(p3!.map((m) => m.id), [for (var i = 1; i <= 10; i++) i]);
+    expect(errors, isEmpty);
   });
 }

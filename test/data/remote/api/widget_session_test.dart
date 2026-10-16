@@ -192,18 +192,18 @@ void main() {
 
       await expectLater(
         session.start(),
-        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.invalidIdentifierHash),
       );
       expect(session.failure, isNotNull);
       server.calls.clear();
 
       await expectLater(
         service.getMessages(),
-        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.invalidIdentifierHash),
       );
       await expectLater(
         session.ensureReady(),
-        typed(ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH),
+        typed(ZukkoChatExceptionType.invalidIdentifierHash),
       );
       expect(server.calls, isEmpty);
     });
@@ -215,7 +215,7 @@ void main() {
 
       await expectLater(
         session.start(),
-        typed(ZukkoChatExceptionType.IDENTIFY_FAILED),
+        typed(ZukkoChatExceptionType.identifyFailed),
       );
 
       expect(session.isReady, isFalse);
@@ -223,7 +223,7 @@ void main() {
       server.calls.clear();
       await expectLater(
         service.getMessages(),
-        typed(ZukkoChatExceptionType.IDENTIFY_FAILED),
+        typed(ZukkoChatExceptionType.identifyFailed),
       );
       expect(server.requests, isEmpty);
     });
@@ -234,7 +234,7 @@ void main() {
 
       await session.start();
 
-      expect(reported.single.type, ZukkoChatExceptionType.IDENTIFY_FAILED);
+      expect(reported.single.type, ZukkoChatExceptionType.identifyFailed);
       expect(await service.getMessages(), isNotEmpty);
     });
 
@@ -244,7 +244,7 @@ void main() {
 
       await expectLater(
         session.start(),
-        typed(ZukkoChatExceptionType.GET_CONFIG_FAILED),
+        typed(ZukkoChatExceptionType.getConfigFailed),
       );
 
       server.forceStatus = null;
@@ -286,7 +286,7 @@ void main() {
 
       await expectLater(
         service.getMessages(),
-        typed(ZukkoChatExceptionType.SESSION_EXPIRED),
+        typed(ZukkoChatExceptionType.sessionExpired),
       );
       expect(server.requests, ['GET /api/v1/widget/messages']);
     });
@@ -414,7 +414,7 @@ void main() {
 
       await expectLater(
         service.getMessages(),
-        typed(ZukkoChatExceptionType.SESSION_EXPIRED),
+        typed(ZukkoChatExceptionType.sessionExpired),
       );
       expect(server.requests, ['GET /api/v1/widget/messages']); // no loop
 

@@ -61,6 +61,29 @@ void main() {
       const theme = ZukkoChatTheme(brightness: Brightness.light);
       final style = styleKind.resolve(theme);
 
+      testWidgets('the unsupported-message text uses the style body look', (
+        tester,
+      ) async {
+        final b = style.messageBuilders(chatEnv());
+        await tester.pumpWidget(
+          _host(
+            Builder(
+              builder: (c) => b.unsupportedMessageBuilder!(
+                c,
+                UnsupportedMessage(id: 'u', authorId: 'agent'),
+                0,
+                isSentByMe: false,
+              ),
+            ),
+          ),
+        );
+        final text = tester.widget<Text>(
+          find.text(_l10n.unsupportedMessageText),
+        );
+        expect(text.style, isNotNull);
+        expect(text.style!.fontSize, isNotNull);
+      });
+
       testWidgets('media never overflows a 320 dp screen (S14)', (
         tester,
       ) async {
@@ -195,6 +218,61 @@ void main() {
         expect(typing, 1);
         await tester.enterText(find.byType(TextField), 'hello!');
         expect(typing, 2);
+      });
+
+      testWidgets('sending shows a clock with a label; sent does not', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        final b = style.messageBuilders(chatEnv());
+        Future<void> show(MessageStatus? status) => tester.pumpWidget(
+          _host(
+            messageOf(
+              b,
+              TextMessage(
+                id: 's',
+                authorId: 'me',
+                text: 'wait',
+                createdAt: sampleTime,
+                status: status,
+              ),
+              true,
+            ),
+          ),
+        );
+        await show(MessageStatus.sending);
+        expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(_l10n.messageSendingLabel),
+          findsOneWidget,
+        );
+        await show(MessageStatus.sent);
+        expect(find.byIcon(Icons.schedule_rounded), findsNothing);
+        await show(MessageStatus.delivered);
+        expect(find.byIcon(Icons.schedule_rounded), findsNothing);
+        handle.dispose();
+      });
+
+      testWidgets('a failed message reads "Not sent. Tap to retry"', (
+        tester,
+      ) async {
+        final b = style.messageBuilders(chatEnv());
+        await tester.pumpWidget(
+          _host(
+            messageOf(
+              b,
+              TextMessage(
+                id: 'f',
+                authorId: 'me',
+                text: 'x',
+                status: MessageStatus.error,
+              ),
+              true,
+            ),
+          ),
+        );
+        expect(find.text('Not sent. Tap to retry'), findsOneWidget);
+        expect(find.byIcon(Icons.schedule_rounded), findsNothing);
       });
 
       testWidgets('the sending message is dimmed', (tester) async {

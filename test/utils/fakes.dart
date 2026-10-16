@@ -14,6 +14,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// Scriptable [ZukkoChatClientService]: set the `*Result`s, inspect the records.
 class FakeClientService extends Fake implements ZukkoChatClientService {
   Object? conversationResult; // ZukkoChatConversation?, or an exception
+  /// When set, [getConversation] waits for it to complete.
+  Completer<void>? conversationGate;
   Object? messagesResult = <ZukkoChatMessage>[];
   Object? createMessageResult; // ZukkoChatMessage or an exception
 
@@ -36,8 +38,10 @@ class FakeClientService extends Fake implements ZukkoChatClientService {
   }
 
   @override
-  Future<ZukkoChatConversation?> getConversation() async =>
-      _unwrap(conversationResult);
+  Future<ZukkoChatConversation?> getConversation() async {
+    await conversationGate?.future;
+    return _unwrap(conversationResult);
+  }
 
   @override
   Future<List<ZukkoChatMessage>> getMessages({int? before, int? after}) async {

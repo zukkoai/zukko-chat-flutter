@@ -91,7 +91,7 @@ void main() {
       await client.sendMessage(content: 'hi', echoId: 'e', replyTo: 5);
       await client.setTyping(true);
       await client.markSeen();
-      await client.sendAction(ZukkoChatActionType.update_presence);
+      await client.sendAction(ZukkoChatActionType.updatePresence);
       await client.clearClientData();
 
       expect(client.config, isNull);
@@ -99,7 +99,7 @@ void main() {
         'sendMessage hi e 0',
         'setTyping true',
         'markSeen',
-        'sendAction ZukkoChatActionType.update_presence',
+        'sendAction ZukkoChatActionType.updatePresence',
         'clear keepUser=true',
       ]);
     });
@@ -245,14 +245,14 @@ void main() {
       );
 
       expect(errors.map((e) => e.type), [
-        ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
+        ZukkoChatExceptionType.invalidIdentifierHash,
       ]);
       expect(server.requests, [
         'POST /api/v1/widget/config',
         'PATCH /api/v1/widget/contact/set_user',
       ]);
       await client.loadMessages();
-      expect(errors.last.type, ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH);
+      expect(errors.last.type, ZukkoChatExceptionType.invalidIdentifierHash);
       expect(server.to('/messages'), isEmpty);
       await client.dispose();
     });
@@ -324,7 +324,7 @@ void main() {
     );
 
     expect(
-      await client.sendAction(ZukkoChatActionType.update_presence),
+      await client.sendAction(ZukkoChatActionType.updatePresence),
       isFalse,
     );
     await client.dispose();
@@ -346,9 +346,7 @@ void main() {
         callbacks: ZukkoChatCallbacks(onError: errors.add),
       );
 
-      expect(errors.map((e) => e.type), [
-        ZukkoChatExceptionType.STORAGE_FAILED,
-      ]);
+      expect(errors.map((e) => e.type), [ZukkoChatExceptionType.storageFailed]);
       expect(server.to('/config'), hasLength(1)); // still talks to the server
       await client.dispose();
     });

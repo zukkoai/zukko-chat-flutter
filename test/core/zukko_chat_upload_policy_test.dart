@@ -12,7 +12,7 @@ void main() {
     isA<ZukkoChatException>().having(
       (e) => e.type,
       'type',
-      ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+      ZukkoChatExceptionType.sendMessageFailed,
     ),
   );
 
