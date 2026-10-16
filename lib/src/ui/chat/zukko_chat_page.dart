@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/zukko_chat_callbacks.dart';
+import '../theme/zukko_chat_theme.dart';
 import 'zukko_chat_options.dart';
 import 'zukko_chat_view.dart';
 
@@ -26,9 +27,14 @@ class ZukkoChat extends StatelessWidget {
     this.interactions = const ZukkoChatInteractions(),
   });
 
-  // The view paints its own background and header over the whole body.
+  // The view paints its own background and header over the whole body; the
+  // Scaffold gets the same color so the area behind the keyboard (visible
+  // through its rounded top corners) matches the chat.
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: options.style
+        .resolve(ZukkoChatTheme.resolve(context, options.theme))
+        .backgroundColor,
     body: ZukkoChatView(
       options: options,
       callbacks: callbacks,
