@@ -23,8 +23,8 @@ void registerZukkoChatAdapters() {
     } on HiveError catch (e) {
       throw ZukkoChatException(
         'Hive typeId $typeId is already used by another adapter of the host '
-        'app; the SDK needs ids 0-4 (${e.message})',
-        ZukkoChatExceptionType.STORAGE_FAILED,
+        'app; the SDK needs ids 210-214 (${e.message})',
+        ZukkoChatExceptionType.storageFailed,
       );
     }
     _registered.add(typeId);

@@ -55,7 +55,7 @@ class WidgetAuthInterceptor extends Interceptor {
       // the widget (account or inbox) is unavailable; nothing to recover
       final e = ZukkoChatException(
         'the chat widget is unavailable (HTTP $status)',
-        ZukkoChatExceptionType.SESSION_EXPIRED,
+        ZukkoChatExceptionType.sessionExpired,
       );
       return handler.reject(_reject(options, e, response: err.response));
     }

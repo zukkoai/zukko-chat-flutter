@@ -33,7 +33,7 @@ class RealtimeEvents {
       socket: _socket,
       session: session,
       report: (e) =>
-          _reportError(e, ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED),
+          _reportError(e, ZukkoChatExceptionType.socketSubscriptionRejected),
     );
   }
 
@@ -83,11 +83,10 @@ class RealtimeEvents {
         case SocketPing():
           _callbacks.onPing?.call();
         case SocketFailure(:final error):
-          if (error.type ==
-              ZukkoChatExceptionType.SOCKET_SUBSCRIPTION_REJECTED) {
+          if (error.type == ZukkoChatExceptionType.socketSubscriptionRejected) {
             unawaited(_recovery.onRejected(error));
           } else {
-            _reportError(error, ZukkoChatExceptionType.SOCKET_DISCONNECTED);
+            _reportError(error, ZukkoChatExceptionType.socketDisconnected);
           }
         case SocketMessage(:final message):
           _onMessage(message);
@@ -126,19 +125,19 @@ class RealtimeEvents {
       return;
     }
     switch (type) {
-      case ZukkoChatEventMessageType.message_created:
+      case ZukkoChatEventMessageType.messageCreated:
         _onMessageCreated(data);
-      case ZukkoChatEventMessageType.message_updated:
+      case ZukkoChatEventMessageType.messageUpdated:
         _onMessageUpdated(data);
-      case ZukkoChatEventMessageType.conversation_typing_on:
+      case ZukkoChatEventMessageType.conversationTypingOn:
         if (data.isPrivate != true) _startTyping();
-      case ZukkoChatEventMessageType.conversation_typing_off:
+      case ZukkoChatEventMessageType.conversationTypingOff:
         if (data.isPrivate != true) _stopTyping();
-      case ZukkoChatEventMessageType.conversation_created:
-      case ZukkoChatEventMessageType.conversation_updated:
-      case ZukkoChatEventMessageType.conversation_status_changed:
+      case ZukkoChatEventMessageType.conversationCreated:
+      case ZukkoChatEventMessageType.conversationUpdated:
+      case ZukkoChatEventMessageType.conversationStatusChanged:
         _onConversation(type, data);
-      case ZukkoChatEventMessageType.presence_update:
+      case ZukkoChatEventMessageType.presenceUpdate:
         _onPresence(data.users);
     }
   }
@@ -196,7 +195,7 @@ class RealtimeEvents {
     final adopt =
         stored == null ||
         (stored.id != id &&
-            type == ZukkoChatEventMessageType.conversation_created);
+            type == ZukkoChatEventMessageType.conversationCreated);
     if (!adopt && stored.id != id) return;
     final status = data.status ?? (stored?.id == id ? stored?.status : null);
     final conversation = ZukkoChatConversation(

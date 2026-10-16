@@ -5,9 +5,11 @@ String formatDuration(Duration d) {
   return '$minutes:$seconds';
 }
 
-/// `512 B`, `1.4 KB`, `12 MB`.
-String formatBytes(int bytes) {
-  const units = ['B', 'KB', 'MB', 'GB'];
+/// `512 B`, `1.4 KB`, `12 MB`; [units] are the four unit names, localized.
+String formatBytes(
+  int bytes, [
+  List<String> units = const ['B', 'KB', 'MB', 'GB'],
+]) {
   var value = bytes.toDouble();
   var unit = 0;
   while (value >= 1024 && unit < units.length - 1) {

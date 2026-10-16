@@ -20,6 +20,9 @@ class MessageSync {
   /// answers for them).
   static const _knownCap = 2000;
 
+  /// Messages in a latest / `before` page (server side, `MessageFinder`).
+  static const pageSize = 20;
+
   /// The server caps a page at 100 messages.
   static const _afterPageSize = 100;
 
@@ -76,6 +79,16 @@ class MessageSync {
   void reset() {
     _known.clear();
     _cursor = null;
+  }
+
+  /// Fetches the page of messages just older than message id [before]
+  /// (oldest first). Remembers them but neither persists them nor moves the
+  /// cursor: older pages live in memory only, so they can never push newer
+  /// messages out of the stored newest 500 (`PersistedZukkoChatMessagesDao.maxStored`).
+  Future<List<ZukkoChatMessage>> fetchBefore(int before) async {
+    final page = await _service.getMessages(before: before);
+    page.forEach(remember);
+    return page;
   }
 
   /// Fetches the latest messages, or with [after] everything newer than that

@@ -2,7 +2,7 @@
 ///
 /// {@category FlutterClientSdk}
 enum ZukkoChatActionType {
-  update_presence('update_presence');
+  updatePresence('update_presence');
 
   const ZukkoChatActionType(this.wire);
 

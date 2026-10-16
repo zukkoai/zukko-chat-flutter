@@ -27,7 +27,14 @@ abstract interface class ZukkoChatRepository {
   /// realtime link. Never throws: failures go to `onError`.
   Future<void> initialize();
 
+  /// Reports the newest persisted messages (one page, not the whole cache).
   void getPersistedMessages();
+
+  /// The page of messages just older than message id [before], oldest first;
+  /// fewer than a page means there are no more. Not persisted, not reported
+  /// through the callbacks. Returns null on failure (reported through
+  /// `onError`). Never throws.
+  Future<List<ZukkoChatMessage>?> getOlderMessages(int before);
 
   /// Fetches messages: the latest page, or with [after] everything newer than
   /// that message id. Never throws.
@@ -118,16 +125,30 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
       final messages = await _sync.fetch(after: after);
       if (!_disposed) _callbacks.onMessagesRetrieved?.call(messages);
     } catch (e) {
-      _emitError(e, ZukkoChatExceptionType.GET_MESSAGES_FAILED);
+      _emitError(e, ZukkoChatExceptionType.getMessagesFailed);
     }
   }
 
-  /// Fetches persisted messages.
+  @override
+  Future<List<ZukkoChatMessage>?> getOlderMessages(int before) async {
+    try {
+      return await _sync.fetchBefore(before);
+    } catch (e) {
+      _emitError(e, ZukkoChatExceptionType.getMessagesFailed);
+      return null;
+    }
+  }
+
+  /// Fetches the newest persisted messages (one page: older ones are loaded
+  /// on demand, rendering a full cache of 500 would be slow).
   ///
   /// Calls [ZukkoChatCallbacks.onPersistedMessagesRetrieved] if persisted messages are found
   @override
   void getPersistedMessages() {
-    final persisted = _storage.messages.getMessages();
+    final all = _storage.messages.getMessages(); // oldest first
+    final persisted = all.length > MessageSync.pageSize
+        ? all.sublist(all.length - MessageSync.pageSize)
+        : all;
     if (persisted.isNotEmpty) {
       _callbacks.onPersistedMessagesRetrieved?.call(persisted);
     }
@@ -145,7 +166,7 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
       await _session?.start();
       await _syncConversation();
     } catch (e) {
-      _emitError(e, ZukkoChatExceptionType.CREATE_CLIENT_FAILED);
+      _emitError(e, ZukkoChatExceptionType.createClientFailed);
     }
     _initializing = false;
 
@@ -186,6 +207,7 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
       await _storage.messages.clear();
     }
     await _storage.conversation.save(conversation);
+    if (!_disposed) _callbacks.onConversationUpdated?.call(conversation);
   }
 
   /// [_syncConversation] for callers that go on regardless: a failure is
@@ -194,7 +216,7 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
     try {
       await _syncConversation();
     } catch (e) {
-      _emitError(e, ZukkoChatExceptionType.GET_CONVERSATION_FAILED);
+      _emitError(e, ZukkoChatExceptionType.getConversationFailed);
     }
   }
 
@@ -240,7 +262,7 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
       // anything may fail here; the UI bubble waits for this echoId
       _emitError(
         e,
-        ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
+        ZukkoChatExceptionType.sendMessageFailed,
         data: request.echoId,
       );
       return;
@@ -279,6 +301,10 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
   @override
   void resume() {
     if (_disposed || _initializing) return;
+    if (_socket.state == ZukkoChatConnectionState.backoff) {
+      _socket.retryNow(); // do not wait out the backoff
+      return;
+    }
     if (_socket.state != ZukkoChatConnectionState.closed) return;
     if (_session?.isReady == false || _session?.failure != null) return;
     _realtime.resume();

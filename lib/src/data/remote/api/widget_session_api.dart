@@ -72,7 +72,7 @@ class WidgetSessionApi {
       sdkLog('config failed: ${e.type.name} ${e.response?.statusCode}');
       throw ZukkoChatException(
         'config failed (${_status(e)})',
-        ZukkoChatExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.getConfigFailed,
         error: e.error,
         stackTrace: e.stackTrace,
       );
@@ -81,7 +81,7 @@ class WidgetSessionApi {
     } catch (e, st) {
       throw ZukkoChatException(
         'invalid config response: ${e.runtimeType}',
-        ZukkoChatExceptionType.GET_CONFIG_FAILED,
+        ZukkoChatExceptionType.getConfigFailed,
         error: e,
         stackTrace: st,
       );
@@ -107,19 +107,19 @@ class WidgetSessionApi {
       if (e.response?.statusCode == 401) {
         throw ZukkoChatException(
           'the server rejected the identifier hash',
-          ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH,
+          ZukkoChatExceptionType.invalidIdentifierHash,
         );
       }
       throw ZukkoChatException(
         'set_user failed (${_status(e)})',
-        ZukkoChatExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.identifyFailed,
         error: e.error,
         stackTrace: e.stackTrace,
       );
     } catch (e, st) {
       throw ZukkoChatException(
         'set_user failed: ${e.runtimeType}',
-        ZukkoChatExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.identifyFailed,
         error: e,
         stackTrace: st,
       );
@@ -137,7 +137,7 @@ class WidgetSessionApi {
       sdkLog('contact check failed: ${e.runtimeType}');
       throw ZukkoChatException(
         'could not verify the contact after set_user: ${e.runtimeType}',
-        ZukkoChatExceptionType.IDENTIFY_FAILED,
+        ZukkoChatExceptionType.identifyFailed,
         error: e is DioException ? e.error : e,
         stackTrace: st,
       );

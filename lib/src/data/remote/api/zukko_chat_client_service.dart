@@ -54,7 +54,7 @@ class ZukkoChatClientServiceImpl implements ZukkoChatClientService {
   @override
   Future<List<ZukkoChatMessage>> getMessages({int? before, int? after}) =>
       apiCall(
-        ZukkoChatExceptionType.GET_MESSAGES_FAILED,
+        ZukkoChatExceptionType.getMessagesFailed,
         () => _dio.get(
           ZukkoChatPaths.messages,
           queryParameters: {'before': ?before, 'after': ?after},
@@ -64,7 +64,7 @@ class ZukkoChatClientServiceImpl implements ZukkoChatClientService {
 
   @override
   Future<ZukkoChatConversation?> getConversation() => apiCall(
-    ZukkoChatExceptionType.GET_CONVERSATION_FAILED,
+    ZukkoChatExceptionType.getConversationFailed,
     () => _dio.get(ZukkoChatPaths.conversations),
     (data) {
       final conversation = ZukkoChatConversation.fromJson(
@@ -78,7 +78,7 @@ class ZukkoChatClientServiceImpl implements ZukkoChatClientService {
   Future<ZukkoChatMessage> createMessage(
     ZukkoChatNewMessageRequest request, {
     List<ZukkoChatUpload> attachments = const [],
-  }) => apiCall(ZukkoChatExceptionType.SEND_MESSAGE_FAILED, () async {
+  }) => apiCall(ZukkoChatExceptionType.sendMessageFailed, () async {
     for (final file in attachments) {
       await validateUpload(file);
     }
@@ -105,7 +105,7 @@ class ZukkoChatClientServiceImpl implements ZukkoChatClientService {
 
   @override
   Future<void> toggleTyping(bool on) => apiCall(
-    ZukkoChatExceptionType.UPDATE_CONTACT_FAILED,
+    ZukkoChatExceptionType.updateContactFailed,
     () => _dio.post(
       ZukkoChatPaths.toggleTyping,
       queryParameters: {'typing_status': on ? 'on' : 'off'},
@@ -116,7 +116,7 @@ class ZukkoChatClientServiceImpl implements ZukkoChatClientService {
 
   @override
   Future<void> updateLastSeen() => apiCall(
-    ZukkoChatExceptionType.UPDATE_CONTACT_FAILED,
+    ZukkoChatExceptionType.updateContactFailed,
     () => _dio.post(ZukkoChatPaths.updateLastSeen, options: _noRecover),
     (_) {},
   );

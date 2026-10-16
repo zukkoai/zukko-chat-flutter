@@ -41,7 +41,5 @@ Future<void> validateUpload(ZukkoChatUpload f) async {
   }
 }
 
-Never _reject(String message) => throw ZukkoChatException(
-  message,
-  ZukkoChatExceptionType.SEND_MESSAGE_FAILED,
-);
+Never _reject(String message) =>
+    throw ZukkoChatException(message, ZukkoChatExceptionType.sendMessageFailed);

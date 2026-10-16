@@ -3,6 +3,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import '../local/hive_type_ids.dart';
+import 'zukko_chat_attachment.dart' show jsonMapFromJson;
 
 part 'zukko_chat_user.g.dart';
 
@@ -38,9 +39,9 @@ class ZukkoChatUser extends Equatable {
   final String? avatarUrl;
 
   ///any other custom attributes to be linked to the user
-  @JsonKey(name: "custom_attributes")
+  @JsonKey(name: "custom_attributes", fromJson: jsonMapFromJson)
   @HiveField(5)
-  final dynamic customAttributes;
+  final Map<String, dynamic>? customAttributes;
 
   ///phone number of user (E.164, e.g. `+998901234567`)
   @JsonKey(name: "phone_number")

@@ -7,6 +7,7 @@ export 'src/core/zukko_chat_client.dart';
 export 'src/core/zukko_chat_client_exception.dart';
 export 'src/core/zukko_chat_upload.dart';
 export 'src/core/zukko_chat_connection_state.dart';
+export 'src/data/models/zukko_chat_attachment.dart' show ZukkoChatAttachment;
 export 'src/data/models/zukko_chat_config.dart';
 export 'src/data/models/zukko_chat_conversation.dart';
 export 'src/data/models/zukko_chat_event_message_user.dart';
