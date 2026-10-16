@@ -21,6 +21,7 @@ First release of the Zukko fork: a native chat UI on the Zukko Chat Widget API, 
 - Realtime over ActionCable with reconnect and catch-up of missed messages.
 - Older history loads 20 messages at a time on scroll.
 - Link previews (`enableLinkPreviews`).
+- Markdown in incoming messages (bold, italic, code, lists, headings, links, quotes, tables); your own messages stay plain.
 - Connection banner (no internet / connecting).
 - Send limits with warnings (150 000 characters, 15 files, 40 MB).
 - `zukkoChatSignOut` clears a user's local data in one call.
