@@ -83,7 +83,7 @@ If you want to check the correctness of the code try running the commands below.
 
 ```
 dart run build_runner clean
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 flutter test
 flutter analyze --fatal-infos
 ```

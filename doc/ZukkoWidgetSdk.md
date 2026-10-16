@@ -50,6 +50,7 @@ No conversation-by-id routes: the widget always acts on `conversations.last`.
 
 Response (`app/views/api/v1/widget/configs/create.json.jbuilder`):
 - `website_channel_config{allow_messages_after_resolved, api_host, auth_token, avatar_url, csat_survey_enabled, disable_branding, enabled_features, enabled_languages, locale, out_of_office_message, audio_recording_mode (Zukko: default|hold_to_record|hold_to_record_mobile_only), portal, pre_chat_form_enabled, pre_chat_form_options, reply_time, timezone, utc_off_set, website_name, website_token, welcome_tagline, welcome_title, widget_color, launcher_icon_url (Zukko), working_hours, working_hours_enabled}`
+  - The SDK also reads optional `audio_messaging_enabled` (bool): `false` hides the mic; missing or non-bool = on.
 - `contact{email, id, identifier, name, phone_number, pubsub_token}` (name/email may be null)
 - `global_config{LOGO_THUMBNAIL, BRAND_NAME, WIDGET_BRAND_URL}`
 
