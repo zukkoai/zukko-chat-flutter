@@ -28,6 +28,7 @@ class ThreadFeedComposer extends StatelessWidget {
     onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
+    onTooLong: data.onTooLong,
     builder: (context, handle) => DecoratedBox(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: tokens.divider)),

@@ -86,6 +86,16 @@ class ThreadFeedRow extends StatelessWidget {
                   ),
                 ),
               SendingOpacity(meta: meta, child: _content),
+              if (meta.sending)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: ThreadFeedMetrics.failedHintTop,
+                  ),
+                  child: SendingMark(
+                    label: slot.sendingLabel,
+                    captionStyle: tokens.caption,
+                  ),
+                ),
               if (meta.failed)
                 Padding(
                   padding: const EdgeInsets.only(

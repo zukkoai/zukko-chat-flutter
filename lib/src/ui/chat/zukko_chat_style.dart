@@ -111,12 +111,16 @@ class ChatComposerData {
   /// The text changed (the user is typing).
   final VoidCallback? onTyping;
 
+  /// The text went over the server limit (sending is off until shortened).
+  final VoidCallback? onTooLong;
+
   const ChatComposerData({
     required this.onSend,
     this.onTyping,
     this.onAttach,
     this.onVoiceRecorded,
     this.onVoiceIssue,
+    this.onTooLong,
   });
 }
 

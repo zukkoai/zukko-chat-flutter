@@ -10,10 +10,12 @@ import '../../core/zukko_chat_client_exception.dart';
 import '../../core/zukko_chat_upload.dart';
 import '../../data/models/zukko_chat_message.dart';
 import '../../data/models/zukko_chat_user.dart';
+import '../../data/message_sync.dart';
 import '../../data/models/message_order.dart';
 import '../../shared/sdk_log.dart';
 import '../../shared/url_policy.dart';
 import '../l10n/zukko_chat_l10n.dart';
+import 'chat_connection_monitor.dart';
 import 'chat_message_mapper.dart';
 import 'chat_message_store.dart';
 import 'chat_typing.dart';
@@ -43,6 +45,7 @@ class ZukkoChatController extends ChangeNotifier {
     this.callbacks,
     ZukkoChatClientFactory clientFactory = ZukkoChatClient.create,
     InMemoryChatController? chat,
+    this._probe = resolvesHost,
   }) : _factory = clientFactory,
        _store = ChatMessageStore(chat ?? InMemoryChatController()),
        _mapper = ChatMessageMapper(options.l10n ?? const ZukkoChatL10n()) {
@@ -57,8 +60,17 @@ class ZukkoChatController extends ChangeNotifier {
 
   final ZukkoChatOptions options;
   final ZukkoChatClientFactory _factory;
+  final Future<bool> Function(String host) _probe;
   final ChatMessageStore _store;
   final ChatMessageMapper _mapper;
+
+  /// Drives the "no internet / connecting" banner; a drop shorter than two
+  /// seconds never shows.
+  late final ChatConnectionMonitor connection = ChatConnectionMonitor(
+    host: Uri.tryParse(options.baseUrl)?.host ?? '',
+    onBackOnline: () => _client?.resume(),
+    probe: _probe,
+  );
   late final OutgoingTyping _typing;
 
   /// Consumer callbacks; the view keeps them current across rebuilds.
@@ -86,9 +98,26 @@ class ZukkoChatController extends ChangeNotifier {
   bool _visible = true;
   int _resolvedCount = 0;
 
+  // ---- older history (paged on demand) ----
+
+  /// Id of the oldest server message loaded so far: the `before` cursor.
+  int? _oldestId;
+
+  /// False once a page came back short: the start of the conversation.
+  bool _hasMore = true;
+  bool _loadingOlder = false;
+
+  /// The next `onMessagesRetrieved` is the latest page (not a catch-up): a
+  /// short one means the conversation has no older messages.
+  bool _awaitingLatest = false;
+
   /// Bumped by [retry]: callbacks of an earlier client are dropped.
   int _generation = 0;
-  ZukkoChatStatus _status = ZukkoChatStatus.offline;
+  // Header status inputs. No conversation yet counts as one the AI answers.
+  ZukkoChatStatus _status = ZukkoChatStatus.online;
+  String? _conversationStatus;
+  bool _agentOnline = false;
+  bool _agentTyping = false;
   ZukkoChatException? _error;
 
   String get currentUserId => chatMeId;
@@ -149,7 +178,7 @@ class ZukkoChatController extends ChangeNotifier {
       if (_disposed || generation != _generation) return;
       _error = ZukkoChatException(
         e.toString(),
-        ZukkoChatExceptionType.CREATE_CLIENT_FAILED,
+        ZukkoChatExceptionType.createClientFailed,
       );
       // Nothing will ever send these: show them as failed (tap to retry).
       _queued.toList().forEach(_store.markFailed);
@@ -169,12 +198,51 @@ class ZukkoChatController extends ChangeNotifier {
     for (final echoId in queued) {
       unawaited(_dispatch(echoId));
     }
+    _awaitingLatest = true;
     try {
       await client.loadMessages();
     } catch (e) {
       sdkLog('loadMessages failed: $e');
     }
+    if (generation != _generation) return; // replaced by retry meanwhile
+    _awaitingLatest = false;
     if (_error == null) _markSeen();
+  }
+
+  /// Loads the next page of older messages (the user reached the top of the
+  /// list). One request at a time; a failure keeps the list and the next call
+  /// retries. Never throws.
+  Future<void> loadOlder() async {
+    final client = _client;
+    final before = _oldestId;
+    if (_disposed ||
+        _loadingOlder ||
+        !_hasMore ||
+        client == null ||
+        before == null) {
+      return;
+    }
+    _loadingOlder = true;
+    final generation = _generation;
+    try {
+      final page = await client.loadOlderMessages(before: before);
+      // dropped: disposed, retried, or the session reset meanwhile
+      if (_disposed || generation != _generation || _oldestId != before) return;
+      if (page == null) return; // failed: the next scroll to the top retries
+      _bulkUpsert(page);
+      _noteOldest(page);
+      _hasMore = page.length >= MessageSync.pageSize;
+    } catch (e) {
+      sdkLog('loadOlder failed: ${e.runtimeType}');
+    } finally {
+      _loadingOlder = false;
+    }
+  }
+
+  void _noteOldest(List<ZukkoChatMessage> page) {
+    for (final m in page) {
+      if (_oldestId == null || m.id < _oldestId!) _oldestId = m.id;
+    }
   }
 
   /// Best effort: the client never throws here, a fake might.
@@ -288,12 +356,6 @@ class ZukkoChatController extends ChangeNotifier {
           final c = callbacks;
           if (live() && c != null) pick(c)?.call();
         };
-    void Function(A) pass1<A>(
-      void Function(A)? Function(ZukkoChatCallbacks) pick,
-    ) => (a) {
-      final c = callbacks;
-      if (live() && c != null) pick(c)?.call(a);
-    };
     // State change first, then the consumer's callback.
     void Function() react(
       void Function() change,
@@ -309,33 +371,45 @@ class ZukkoChatController extends ChangeNotifier {
       onWelcome: pass((c) => c.onWelcome),
       onPing: pass((c) => c.onPing),
       onConfirmedSubscription: pass((c) => c.onConfirmedSubscription),
-      onConnectionStateChanged: pass1((c) => c.onConnectionStateChanged),
-      onConversationUpdated: pass1((c) => c.onConversationUpdated),
-      onConversationIsOnline: react(
-        () => _setStatus(ZukkoChatStatus.online),
-        (c) => c.onConversationIsOnline,
-      ),
-      onConversationIsOffline: react(
-        () => _setStatus(ZukkoChatStatus.offline),
-        (c) => c.onConversationIsOffline,
-      ),
-      onConversationStartedTyping: react(
-        () => _setStatus(ZukkoChatStatus.typing),
-        (c) => c.onConversationStartedTyping,
-      ),
+      onConnectionStateChanged: (state) {
+        if (!live()) return;
+        connection.onState(state);
+        callbacks?.onConnectionStateChanged?.call(state);
+      },
+      onConversationUpdated: (conversation) {
+        if (!live()) return;
+        _conversationStatus = conversation.status;
+        _refreshStatus();
+        callbacks?.onConversationUpdated?.call(conversation);
+      },
+      onConversationIsOnline: react(() {
+        _agentOnline = true;
+        _refreshStatus();
+      }, (c) => c.onConversationIsOnline),
+      onConversationIsOffline: react(() {
+        _agentOnline = false;
+        _refreshStatus();
+      }, (c) => c.onConversationIsOffline),
+      onConversationStartedTyping: react(() {
+        _agentTyping = true;
+        _refreshStatus();
+      }, (c) => c.onConversationStartedTyping),
       onConversationStoppedTyping: react(() {
-        if (_status == ZukkoChatStatus.typing) {
-          _setStatus(ZukkoChatStatus.online);
-        }
+        _agentTyping = false;
+        _refreshStatus();
       }, (c) => c.onConversationStoppedTyping),
       onConversationResolved: react(
         _addResolved,
         (c) => c.onConversationResolved,
       ),
-      onSessionReset: react(
-        () => _store.keepOnly(_outbox.containsKey),
-        (c) => c.onSessionReset,
-      ),
+      onSessionReset: react(() {
+        _store.keepOnly(_outbox.containsKey);
+        _oldestId = null;
+        _hasMore = true;
+        _awaitingLatest = true; // the new contact's latest page follows
+        _conversationStatus = null;
+        _refreshStatus();
+      }, (c) => c.onSessionReset),
       onPersistedMessagesRetrieved: (list) {
         if (!live()) return;
         if (options.enablePersistence) _bulkUpsert(list);
@@ -344,6 +418,11 @@ class ZukkoChatController extends ChangeNotifier {
       onMessagesRetrieved: (list) {
         if (!live()) return;
         _bulkUpsert(list);
+        _noteOldest(list);
+        if (_awaitingLatest) {
+          _awaitingLatest = false;
+          _hasMore = list.length >= MessageSync.pageSize;
+        }
         callbacks?.onMessagesRetrieved?.call(list);
       },
       onMessageReceived: (m) {
@@ -369,9 +448,9 @@ class ZukkoChatController extends ChangeNotifier {
       },
       onError: (e) {
         if (!live()) return;
-        if (e.type == ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH ||
-            e.type == ZukkoChatExceptionType.IDENTIFY_FAILED ||
-            e.type == ZukkoChatExceptionType.SESSION_EXPIRED) {
+        if (e.type == ZukkoChatExceptionType.invalidIdentifierHash ||
+            e.type == ZukkoChatExceptionType.identifyFailed ||
+            e.type == ZukkoChatExceptionType.sessionExpired) {
           _error = e;
           notifyListeners();
         }
@@ -382,6 +461,23 @@ class ZukkoChatController extends ChangeNotifier {
         sdkLog('error: ${e.cause}');
         callbacks?.onError?.call(e);
       },
+    );
+  }
+
+  /// Header status: typing wins; otherwise online when the AI answers
+  /// (conversation `pending`/`resolved`, or none yet) or an agent is online,
+  /// offline for `open`/`snoozed` without an online agent.
+  void _refreshStatus() {
+    final aiAnswers = switch (_conversationStatus) {
+      null || 'pending' || 'resolved' => true,
+      _ => false,
+    };
+    _setStatus(
+      _agentTyping
+          ? ZukkoChatStatus.typing
+          : aiAnswers || _agentOnline
+          ? ZukkoChatStatus.online
+          : ZukkoChatStatus.offline,
     );
   }
 
@@ -474,6 +570,7 @@ class ZukkoChatController extends ChangeNotifier {
         unawaited(client.dispose());
       }
     }
+    connection.dispose();
     chat.dispose();
     super.dispose();
   }

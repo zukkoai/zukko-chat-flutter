@@ -7,8 +7,8 @@ import '../l10n/zukko_chat_l10n.dart';
 import 'components/components.dart';
 import 'zukko_chat_controller.dart';
 
-/// Photo or file sheet, system picker, size check, send. A file over the
-/// limit is left out and the user is told. Call only while [context] is
+/// Photo or file sheet, system picker, limit checks, send. A file over a
+/// server limit is left out (never cut) and the user is told why. Call only while [context] is
 /// mounted; it is not used again after the first await.
 Future<void> attachToChat(
   BuildContext context, {
@@ -26,10 +26,19 @@ Future<void> attachToChat(
     foreground: foreground,
   );
   if (!isMounted()) return;
-  if (pick.tooLarge > 0) {
-    notify(l10n.fileTooLarge(ZukkoChatUpload.maxSizeMb));
+  final warning = attachmentWarning(l10n, pick);
+  if (warning != null) notify(warning);
+  if (pick.fitting.isNotEmpty) controller.sendAttachments(pick.fitting);
+}
+
+/// The reason files were left out of [pick]; null when none were.
+String? attachmentWarning(ZukkoChatL10n l10n, AttachmentPick pick) {
+  if (pick.tooLarge > 0) return l10n.fileTooLarge(ZukkoChatUpload.maxSizeMb);
+  if (pick.badType > 0) return l10n.fileTypeNotSupportedText;
+  if (pick.overCount > 0) {
+    return l10n.tooManyFiles(ZukkoChatUpload.maxAttachments);
   }
-  controller.sendAttachments(pick.fitting);
+  return null;
 }
 
 /// The text for a microphone problem.

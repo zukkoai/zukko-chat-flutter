@@ -82,6 +82,17 @@ class ZukkoChatL10n {
   /// by the limit, see [fileTooLarge]
   final String fileTooLargeText;
 
+  /// Shown when the message text is over the server limit; `{maxChars}` is
+  /// replaced by the limit, see [messageTooLong]
+  final String messageTooLongText;
+
+  /// Shown when more files than the server accepts per message were picked;
+  /// `{maxFiles}` is replaced by the limit, see [tooManyFiles]
+  final String tooManyFilesText;
+
+  /// Shown when a picked file is of a type the server rejects
+  final String fileTypeNotSupportedText;
+
   /// Text of a message that only has attachments
   final String attachmentLabel;
 
@@ -101,6 +112,15 @@ class ZukkoChatL10n {
   /// Screen reader hint on a message that failed to send
   final String messageFailedHint;
 
+  /// Screen reader label on a message that is still being sent
+  final String messageSendingLabel;
+
+  /// Shown instead of a message of a kind this SDK version cannot display
+  final String unsupportedMessageText;
+
+  /// File size units `B, KB, MB, GB`, comma separated, see [sizeUnits]
+  final String fileSizeUnits;
+
   /// Shown when the chat could not be started
   final String connectionErrorText;
 
@@ -113,15 +133,21 @@ class ZukkoChatL10n {
   /// Label of the button that tries to start the chat again
   final String retryLabel;
 
+  /// Banner while the device has no connection to the chat server
+  final String noInternetText;
+
+  /// Banner while the device is online but the chat is reconnecting
+  final String connectingText;
+
   /// English.
   const ZukkoChatL10n({
     this.inputPlaceholder = 'Type your message',
     this.headerTitle = 'Support',
     this.onlineText = 'Online',
     this.offlineText = "We're away at the moment",
-    this.typingText = 'typing...',
+    this.typingText = 'typing…',
     this.conversationResolvedMessage =
-        'Your ticket has been marked as resolved',
+        'Conversation closed. You can write again anytime',
     this.botName = 'Bot',
     this.youLabel = 'You',
     this.poweredByText = 'Powered by',
@@ -141,16 +167,26 @@ class ZukkoChatL10n {
         'Allow microphone access to send voice messages',
     this.voiceRecordFailedText = 'Could not record the voice message',
     this.fileTooLargeText = 'The file is larger than {maxMb} MB',
+    this.messageTooLongText =
+        'The message is too long (max {maxChars} characters)',
+    this.tooManyFilesText = 'You can send up to {maxFiles} files at once',
+    this.fileTypeNotSupportedText = 'This file type is not supported',
     this.attachmentLabel = 'Attachment',
     this.imageLabel = 'Image',
     this.imageIndexLabel = 'Image {i} / {n}',
     this.voiceRecordingLabel = 'Recording voice message',
     this.closeLabel = 'Close',
-    this.messageFailedHint = 'Failed to send. Tap to retry',
+    this.messageFailedHint = 'Not sent. Tap to retry',
+    this.messageSendingLabel = 'Sending',
+    this.unsupportedMessageText =
+        'This message is not supported. Please update the app',
+    this.fileSizeUnits = 'B, KB, MB, GB',
     this.connectionErrorText = 'Could not connect to the chat',
     this.identityRejectedText = 'Your account could not be verified',
     this.sessionExpiredText = 'The chat session has expired',
     this.retryLabel = 'Retry',
+    this.noInternetText = 'No internet connection',
+    this.connectingText = 'Connecting…',
   });
 
   /// Russian.
@@ -159,8 +195,9 @@ class ZukkoChatL10n {
     headerTitle: 'Поддержка',
     onlineText: 'В сети',
     offlineText: 'Сейчас нас нет на месте',
-    typingText: 'печатает...',
-    conversationResolvedMessage: 'Ваше обращение отмечено как решённое',
+    typingText: 'печатает…',
+    conversationResolvedMessage:
+        'Диалог закрыт. Вы можете написать снова в любое время',
     botName: 'Бот',
     youLabel: 'Вы',
     poweredByText: 'Работает на',
@@ -180,16 +217,26 @@ class ZukkoChatL10n {
         'Разрешите доступ к микрофону, чтобы отправлять голосовые сообщения',
     voiceRecordFailedText: 'Не удалось записать голосовое сообщение',
     fileTooLargeText: 'Файл больше {maxMb} МБ',
+    messageTooLongText:
+        'Сообщение слишком длинное (максимум {maxChars} символов)',
+    tooManyFilesText: 'Можно отправить не более {maxFiles} файлов за раз',
+    fileTypeNotSupportedText: 'Этот тип файла не поддерживается',
     attachmentLabel: 'Вложение',
     imageLabel: 'Изображение',
     imageIndexLabel: 'Изображение {i} / {n}',
     voiceRecordingLabel: 'Идёт запись голосового сообщения',
     closeLabel: 'Закрыть',
     messageFailedHint: 'Не отправлено. Нажмите, чтобы повторить',
+    messageSendingLabel: 'Отправляется',
+    unsupportedMessageText:
+        'Это сообщение не поддерживается. Обновите приложение',
+    fileSizeUnits: 'Б, КБ, МБ, ГБ',
     connectionErrorText: 'Не удалось подключиться к чату',
     identityRejectedText: 'Не удалось подтвердить ваш аккаунт',
     sessionExpiredText: 'Сессия чата истекла',
     retryLabel: 'Повторить',
+    noInternetText: 'Нет подключения к интернету',
+    connectingText: 'Подключение…',
   );
 
   /// Uzbek, Latin script.
@@ -198,8 +245,9 @@ class ZukkoChatL10n {
     headerTitle: 'Yordam',
     onlineText: 'Onlayn',
     offlineText: 'Hozir aloqada emasmiz',
-    typingText: 'yozmoqda...',
-    conversationResolvedMessage: 'Murojaatingiz hal qilingan deb belgilandi',
+    typingText: 'yozmoqda…',
+    conversationResolvedMessage:
+        'Suhbat yopildi. Istalgan vaqtda yana yozishingiz mumkin',
     botName: 'Bot',
     youLabel: 'Siz',
     poweredByText: 'Taqdim etuvchi',
@@ -219,16 +267,26 @@ class ZukkoChatL10n {
         'Ovozli xabar yuborish uchun mikrofonga ruxsat bering',
     voiceRecordFailedText: 'Ovozli xabarni yozib boʻlmadi',
     fileTooLargeText: 'Fayl hajmi {maxMb} MB dan katta',
+    messageTooLongText: 'Xabar juda uzun (eng koʻpi bilan {maxChars} belgi)',
+    tooManyFilesText:
+        'Bir vaqtda koʻpi bilan {maxFiles} ta fayl yuborish mumkin',
+    fileTypeNotSupportedText: 'Bu fayl turi qoʻllab-quvvatlanmaydi',
     attachmentLabel: 'Biriktirma',
     imageLabel: 'Rasm',
     imageIndexLabel: 'Rasm {i} / {n}',
     voiceRecordingLabel: 'Ovozli xabar yozilmoqda',
     closeLabel: 'Yopish',
     messageFailedHint: 'Yuborilmadi. Qayta yuborish uchun bosing',
+    messageSendingLabel: 'Yuborilmoqda',
+    unsupportedMessageText:
+        'Bu xabar qoʻllab-quvvatlanmaydi. Ilovani yangilang',
+    fileSizeUnits: 'B, KB, MB, GB',
     connectionErrorText: 'Chatga ulanib boʻlmadi',
     identityRejectedText: 'Hisobingizni tasdiqlab boʻlmadi',
     sessionExpiredText: 'Chat seansi muddati tugadi',
     retryLabel: 'Qayta urinish',
+    noInternetText: 'Internet aloqasi yoʻq',
+    connectingText: 'Ulanmoqda…',
   );
 
   /// Uzbek, Cyrillic script.
@@ -237,8 +295,9 @@ class ZukkoChatL10n {
     headerTitle: 'Ёрдам',
     onlineText: 'Онлайн',
     offlineText: 'Ҳозир алоқада эмасмиз',
-    typingText: 'ёзмоқда...',
-    conversationResolvedMessage: 'Мурожаатингиз ҳал қилинган деб белгиланди',
+    typingText: 'ёзмоқда…',
+    conversationResolvedMessage:
+        'Суҳбат ёпилди. Исталган вақтда яна ёзишингиз мумкин',
     botName: 'Бот',
     youLabel: 'Сиз',
     poweredByText: 'Тақдим этувчи',
@@ -256,17 +315,25 @@ class ZukkoChatL10n {
     pauseLabel: 'Пауза',
     microphoneDeniedText: 'Овозли хабар юбориш учун микрофонга рухсат беринг',
     voiceRecordFailedText: 'Овозли хабарни ёзиб бўлмади',
-    fileTooLargeText: 'Файл ҳажми {maxMb} MB дан катта',
+    fileTooLargeText: 'Файл ҳажми {maxMb} МБ дан катта',
+    messageTooLongText: 'Хабар жуда узун (энг кўпи билан {maxChars} белги)',
+    tooManyFilesText: 'Бир вақтда кўпи билан {maxFiles} та файл юбориш мумкин',
+    fileTypeNotSupportedText: 'Бу файл тури қўллаб-қувватланмайди',
     attachmentLabel: 'Бириктирма',
     imageLabel: 'Расм',
     imageIndexLabel: 'Расм {i} / {n}',
     voiceRecordingLabel: 'Овозли хабар ёзилмоқда',
     closeLabel: 'Ёпиш',
     messageFailedHint: 'Юборилмади. Қайта юбориш учун босинг',
+    messageSendingLabel: 'Юборилмоқда',
+    unsupportedMessageText: 'Бу хабар қўллаб-қувватланмайди. Иловани янгиланг',
+    fileSizeUnits: 'Б, КБ, МБ, ГБ',
     connectionErrorText: 'Чатга уланиб бўлмади',
     identityRejectedText: 'Ҳисобингизни тасдиқлаб бўлмади',
     sessionExpiredText: 'Чат сеанси муддати тугади',
     retryLabel: 'Қайта уриниш',
+    noInternetText: 'Интернет алоқаси йўқ',
+    connectingText: 'Уланмоқда…',
   );
 
   /// Turkish.
@@ -275,8 +342,9 @@ class ZukkoChatL10n {
     headerTitle: 'Destek',
     onlineText: 'Çevrimiçi',
     offlineText: 'Şu anda müsait değiliz',
-    typingText: 'yazıyor...',
-    conversationResolvedMessage: 'Talebiniz çözüldü olarak işaretlendi',
+    typingText: 'yazıyor…',
+    conversationResolvedMessage:
+        'Sohbet kapatıldı. İstediğiniz zaman yeniden yazabilirsiniz',
     botName: 'Bot',
     youLabel: 'Siz',
     poweredByText: 'Sağlayan',
@@ -295,16 +363,25 @@ class ZukkoChatL10n {
     microphoneDeniedText: 'Sesli mesaj göndermek için mikrofon izni verin',
     voiceRecordFailedText: 'Sesli mesaj kaydedilemedi',
     fileTooLargeText: "Dosya {maxMb} MB'tan büyük",
+    messageTooLongText: 'Mesaj çok uzun (en fazla {maxChars} karakter)',
+    tooManyFilesText: 'Tek seferde en fazla {maxFiles} dosya gönderebilirsiniz',
+    fileTypeNotSupportedText: 'Bu dosya türü desteklenmiyor',
     attachmentLabel: 'Ek',
     imageLabel: 'Görsel',
     imageIndexLabel: 'Görsel {i} / {n}',
     voiceRecordingLabel: 'Sesli mesaj kaydediliyor',
     closeLabel: 'Kapat',
     messageFailedHint: 'Gönderilemedi. Tekrar denemek için dokunun',
+    messageSendingLabel: 'Gönderiliyor',
+    unsupportedMessageText:
+        'Bu mesaj desteklenmiyor. Lütfen uygulamayı güncelleyin',
+    fileSizeUnits: 'B, KB, MB, GB',
     connectionErrorText: 'Sohbete bağlanılamadı',
     identityRejectedText: 'Hesabınız doğrulanamadı',
     sessionExpiredText: 'Sohbet oturumunun süresi doldu',
     retryLabel: 'Tekrar dene',
+    noInternetText: 'İnternet bağlantısı yok',
+    connectingText: 'Bağlanıyor…',
   );
 
   /// Karakalpak, Latin script.
@@ -313,8 +390,9 @@ class ZukkoChatL10n {
     headerTitle: 'Járdem',
     onlineText: 'Onlayn',
     offlineText: 'Házir baylanısta emespiz',
-    typingText: 'jazıp atır...',
-    conversationResolvedMessage: 'Múrájatıńız sheshildi dep belgilendi',
+    typingText: 'jazıp atır…',
+    conversationResolvedMessage:
+        'Sáwbet jabıldı. Qálegen waqıtta qayta jaza alasız',
     botName: 'Bot',
     youLabel: 'Siz',
     poweredByText: 'Usınıwshı',
@@ -333,16 +411,26 @@ class ZukkoChatL10n {
     microphoneDeniedText: 'Dawıslı xabar jiberiw ushın mikrofonǵa ruqsat beriń',
     voiceRecordFailedText: 'Dawıslı xabardı jazıp bolmadı',
     fileTooLargeText: 'Fayl kólemi {maxMb} MB dan úlken',
+    messageTooLongText: 'Xabar júdá uzın (eń kóbi menen {maxChars} belgi)',
+    tooManyFilesText:
+        'Bir waqıtta eń kóbi menen {maxFiles} fayl jiberiw múmkin',
+    fileTypeNotSupportedText: 'Bul fayl túri qollap-quwatlanbaydı',
     attachmentLabel: 'Biriktirme',
     imageLabel: 'Súwret',
     imageIndexLabel: 'Súwret {i} / {n}',
     voiceRecordingLabel: 'Dawıslı xabar jazılmaqta',
     closeLabel: 'Jabıw',
     messageFailedHint: 'Jiberilmedi. Qayta jiberiw ushın basıń',
+    messageSendingLabel: 'Jiberilmekte',
+    unsupportedMessageText:
+        'Bul xabar qollap-quwatlanbaydı. Qosımshanı jańalań',
+    fileSizeUnits: 'B, KB, MB, GB',
     connectionErrorText: 'Chatqa jalǵanıw múmkin bolmadı',
     identityRejectedText: 'Akkauntıńızdı tastıyıqlaw múmkin bolmadı',
     sessionExpiredText: 'Chat seansınıń waqtı pitti',
     retryLabel: 'Qayta urınıw',
+    noInternetText: 'Internet baylanısı joq',
+    connectingText: 'Jalǵanıp atır…',
   );
 
   /// The built-in translation for [locale]; English when there is none.
@@ -361,9 +449,23 @@ class ZukkoChatL10n {
   String fileTooLarge(int maxMb) =>
       fileTooLargeText.replaceAll('{maxMb}', '$maxMb');
 
+  /// [messageTooLongText] for a limit of [maxChars] characters.
+  String messageTooLong(int maxChars) =>
+      messageTooLongText.replaceAll('{maxChars}', '$maxChars');
+
+  /// [tooManyFilesText] for a limit of [maxFiles] files.
+  String tooManyFiles(int maxFiles) =>
+      tooManyFilesText.replaceAll('{maxFiles}', '$maxFiles');
+
   /// [imageIndexLabel] for image [i] (1-based) of [n].
   String imageIndex(int i, int n) =>
       imageIndexLabel.replaceAll('{i}', '$i').replaceAll('{n}', '$n');
+
+  /// [fileSizeUnits] as a list; English units when the host gave fewer than 4.
+  List<String> get sizeUnits {
+    final u = fileSizeUnits.split(',').map((e) => e.trim()).toList();
+    return u.length >= 4 ? u : const ['B', 'KB', 'MB', 'GB'];
+  }
 
   /// Every string, for the translation completeness test.
   @visibleForTesting
@@ -394,16 +496,24 @@ class ZukkoChatL10n {
     microphoneDeniedText,
     voiceRecordFailedText,
     fileTooLargeText,
+    messageTooLongText,
+    tooManyFilesText,
+    fileTypeNotSupportedText,
     attachmentLabel,
     imageLabel,
     imageIndexLabel,
     voiceRecordingLabel,
     closeLabel,
     messageFailedHint,
+    messageSendingLabel,
+    unsupportedMessageText,
+    fileSizeUnits,
     connectionErrorText,
     identityRejectedText,
     sessionExpiredText,
     retryLabel,
+    noInternetText,
+    connectingText,
   ];
 
   @override

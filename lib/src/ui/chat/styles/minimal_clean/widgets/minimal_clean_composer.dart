@@ -28,6 +28,7 @@ class MinimalCleanComposer extends StatelessWidget {
     onTyping: data.onTyping,
     onVoiceRecorded: data.onVoiceRecorded,
     onVoiceIssue: data.onVoiceIssue,
+    onTooLong: data.onTooLong,
     builder: (context, handle) => Padding(
       padding: composerInsets(
         horizontalPadding,

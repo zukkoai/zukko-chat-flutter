@@ -53,6 +53,12 @@ class ZukkoChatOptions {
   /// The app needs the microphone permission entries (see README).
   final bool enableVoiceMessages;
 
+  /// Fetch a preview card (title, description, image) for the first link of a
+  /// message. Fetching contacts the linked site directly from the device, which
+  /// reveals the device IP to it; turn off for privacy. Without it a link still
+  /// shows its domain and address.
+  final bool enableLinkPreviews;
+
   const ZukkoChatOptions({
     required this.baseUrl,
     required this.websiteToken,
@@ -66,6 +72,7 @@ class ZukkoChatOptions {
     this.showBranding = true,
     this.enableAttachments = true,
     this.enableVoiceMessages = true,
+    this.enableLinkPreviews = true,
   });
 
   /// True when [other] talks to the same server, inbox and user, i.e. the
@@ -87,7 +94,8 @@ class ZukkoChatOptions {
       timeFormat == other.timeFormat &&
       showBranding == other.showBranding &&
       enableAttachments == other.enableAttachments &&
-      enableVoiceMessages == other.enableVoiceMessages;
+      enableVoiceMessages == other.enableVoiceMessages &&
+      enableLinkPreviews == other.enableLinkPreviews;
 
   @override
   int get hashCode => Object.hash(
@@ -103,6 +111,7 @@ class ZukkoChatOptions {
     showBranding,
     enableAttachments,
     enableVoiceMessages,
+    enableLinkPreviews,
   );
 }
 

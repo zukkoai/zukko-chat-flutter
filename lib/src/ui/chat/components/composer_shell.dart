@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/zukko_chat_upload.dart';
 import 'voice_recorder_controller.dart';
+
+/// The server counts code points (Ruby `String#length`), not UTF-16 units.
+bool _overLimit(String s) =>
+    s.length > ZukkoChatUpload.maxMessageLength &&
+    s.runes.length > ZukkoChatUpload.maxMessageLength;
 
 /// What a style's composer draws with; owned by [ComposerShell].
 class ComposerHandle {
   final TextEditingController text;
   final FocusNode focusNode;
 
-  /// There is text to send.
+  /// There is text to send, and it is within the server limit.
   final bool canSend;
 
   /// Sends the trimmed text and clears the field.
@@ -38,6 +44,10 @@ class ComposerShell extends StatefulWidget {
   /// Null turns voice messages off.
   final ValueChanged<VoiceRecording>? onVoiceRecorded;
   final ValueChanged<VoiceRecorderIssue>? onVoiceIssue;
+
+  /// Called when an edit takes the text over
+  /// [ZukkoChatUpload.maxMessageLength]; sending stays off until it is shorter.
+  final VoidCallback? onTooLong;
   final Widget Function(BuildContext context, ComposerHandle handle) builder;
 
   const ComposerShell({
@@ -47,6 +57,7 @@ class ComposerShell extends StatefulWidget {
     this.onTyping,
     this.onVoiceRecorded,
     this.onVoiceIssue,
+    this.onTooLong,
   });
 
   @override
@@ -58,6 +69,7 @@ class _ComposerShellState extends State<ComposerShell> {
   final _focus = FocusNode();
   VoiceRecorderController? _recorder;
   bool _canSend = false;
+  bool _tooLong = false;
   String _lastText = '';
 
   @override
@@ -98,17 +110,21 @@ class _ComposerShellState extends State<ComposerShell> {
 
   void _onTextChanged() {
     final text = _text.text;
-    final canSend = text.trim().isNotEmpty;
+    final trimmed = text.trim();
+    final tooLong = _overLimit(trimmed);
+    final canSend = trimmed.isNotEmpty && !tooLong;
+    if (tooLong && !_tooLong) widget.onTooLong?.call();
+    _tooLong = tooLong;
     // The controller also notifies on caret / selection moves: only an edit
     // counts as typing.
-    if (canSend && text != _lastText) widget.onTyping?.call();
+    if (trimmed.isNotEmpty && text != _lastText) widget.onTyping?.call();
     _lastText = text;
     if (canSend != _canSend) setState(() => _canSend = canSend);
   }
 
   void _send() {
     final text = _text.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _overLimit(text)) return;
     widget.onSend(text);
     _text.clear();
   }

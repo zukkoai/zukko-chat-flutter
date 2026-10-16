@@ -25,7 +25,7 @@ class AudioPlayerColors {
 
 /// Voice message: play / pause button, waveform with progress, duration.
 /// Playback state comes from the chat's [AudioPlaybackController].
-class AudioPlayerBar extends StatelessWidget {
+class AudioPlayerBar extends StatefulWidget {
   final AudioPlaybackController playback;
   final String source;
 
@@ -59,82 +59,100 @@ class AudioPlayerBar extends StatelessWidget {
     this.buttonRadius,
   });
 
+  @override
+  State<AudioPlayerBar> createState() => _AudioPlayerBarState();
+}
+
+class _AudioPlayerBarState extends State<AudioPlayerBar> {
   /// Tap target of the play button (the visual is [buttonSize]).
   static const _tapSize = 48.0;
   static const _gap = 10.0;
 
   @override
-  Widget build(BuildContext context) =>
-      ValueListenableBuilder<AudioPlaybackView>(
-        valueListenable: playback.watch(source),
-        builder: (context, view, _) {
-          final playing = view.playing;
-          final length = view.length ?? duration;
-          final radius = buttonRadius;
-          return Semantics(
-            label: '$semanticLabel, ${formatDuration(length)}',
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Semantics(
-                  button: true,
-                  label: playing ? pauseLabel : playLabel,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => unawaited(playback.toggle(source)),
-                    child: SizedBox.square(
-                      dimension: math.max(_tapSize, buttonSize),
-                      child: Center(
-                        child: Container(
-                          width: buttonSize,
-                          height: buttonSize,
-                          decoration: BoxDecoration(
-                            color: colors.buttonFill,
-                            shape: radius == null
-                                ? BoxShape.circle
-                                : BoxShape.rectangle,
-                            borderRadius: radius == null
-                                ? null
-                                : BorderRadius.circular(radius),
-                          ),
-                          child: Icon(
-                            playing
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            size: buttonSize * 0.55,
-                            color: colors.buttonIcon,
-                          ),
+  void didUpdateWidget(AudioPlayerBar old) {
+    super.didUpdateWidget(old);
+    if (old.source != widget.source) old.playback.release(old.source);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final playback = widget.playback;
+    final source = widget.source;
+    final duration = widget.duration;
+    final colors = widget.colors;
+    final buttonSize = widget.buttonSize;
+    final buttonRadius = widget.buttonRadius;
+    return ValueListenableBuilder<AudioPlaybackView>(
+      valueListenable: playback.watch(source),
+      builder: (context, view, _) {
+        final playing = view.playing;
+        final length = view.length ?? duration;
+        final radius = buttonRadius;
+        return Semantics(
+          label: '${widget.semanticLabel}, ${formatDuration(length)}',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                button: true,
+                label: playing ? widget.pauseLabel : widget.playLabel,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => unawaited(playback.toggle(source)),
+                  child: SizedBox.square(
+                    dimension: math.max(_tapSize, buttonSize),
+                    child: Center(
+                      child: Container(
+                        width: buttonSize,
+                        height: buttonSize,
+                        decoration: BoxDecoration(
+                          color: colors.buttonFill,
+                          shape: radius == null
+                              ? BoxShape.circle
+                              : BoxShape.rectangle,
+                          borderRadius: radius == null
+                              ? null
+                              : BorderRadius.circular(radius),
+                        ),
+                        child: Icon(
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: buttonSize * 0.55,
+                          color: colors.buttonIcon,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: _gap),
-                Flexible(
-                  child: RepaintBoundary(
-                    child: _SeekableWaveform(
-                      samples: waveform,
-                      progress: view.progress,
-                      colors: colors,
-                      onSeek: (fraction) =>
-                          unawaited(playback.seek(source, fraction)),
-                    ),
+              ),
+              const SizedBox(width: _gap),
+              Flexible(
+                child: RepaintBoundary(
+                  child: _SeekableWaveform(
+                    samples: widget.waveform,
+                    progress: view.progress,
+                    colors: colors,
+                    onSeek: (fraction) =>
+                        unawaited(playback.seek(source, fraction)),
                   ),
                 ),
-                const SizedBox(width: _gap),
-                ExcludeSemantics(
-                  child: Text(
-                    formatDuration(length),
-                    style: durationStyle.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+              ),
+              const SizedBox(width: _gap),
+              ExcludeSemantics(
+                child: Text(
+                  formatDuration(length),
+                  style: widget.durationStyle.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      );
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// The waveform as a scrubber: tap or drag to jump. While dragging it

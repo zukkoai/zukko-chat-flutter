@@ -7,8 +7,8 @@ import 'zukko_chat_controller.dart';
 /// The user-facing text of a chat start / session failure.
 extension ZukkoChatExceptionText on ZukkoChatException {
   String message(ZukkoChatL10n l10n) => switch (type) {
-    ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH => l10n.identityRejectedText,
-    ZukkoChatExceptionType.SESSION_EXPIRED => l10n.sessionExpiredText,
+    ZukkoChatExceptionType.invalidIdentifierHash => l10n.identityRejectedText,
+    ZukkoChatExceptionType.sessionExpired => l10n.sessionExpiredText,
     _ => l10n.connectionErrorText,
   };
 }
@@ -37,7 +37,7 @@ class ChatErrorBanner extends StatelessWidget {
       final error = controller.error;
       if (error == null) return const SizedBox.shrink();
       final rejected =
-          error.type == ZukkoChatExceptionType.INVALID_IDENTIFIER_HASH;
+          error.type == ZukkoChatExceptionType.invalidIdentifierHash;
       return Semantics(
         liveRegion: true,
         child: Padding(

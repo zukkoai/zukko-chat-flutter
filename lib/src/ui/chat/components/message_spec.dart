@@ -30,6 +30,7 @@ class MessageSlot {
   final bool isSentByMe;
   final MessagePart part;
   final String failedHint;
+  final String sendingLabel;
 
   /// Who wrote it ("You" for the user, else the agent), and their avatar.
   final String authorName;
@@ -41,6 +42,7 @@ class MessageSlot {
     required this.isSentByMe,
     required this.part,
     required this.failedHint,
+    required this.sendingLabel,
     required this.authorName,
     required this.avatarUrl,
   });
