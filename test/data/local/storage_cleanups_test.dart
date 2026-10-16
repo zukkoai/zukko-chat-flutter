@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hive_ce/src/binary/binary_reader_impl.dart';
@@ -335,6 +337,30 @@ void main() {
       const c = ZukkoChatConversation(id: 1, inboxId: 1);
       await storage.conversation.save(c);
       expect(storage.conversation.get(), c);
+    });
+  });
+
+  group('wipes leave no old frames on disk', () {
+    Future<int> fillContacts() async {
+      final storage = LocalStorage.persisted('k');
+      for (var i = 0; i < 20; i++) {
+        await storage.contact.save(contact());
+      }
+      return File(Hive.box<ZukkoChatContact>(ZukkoChatBoxNames.contacts).path!)
+          .lengthSync();
+    }
+
+    int contactsFileSize() =>
+        File(Hive.box<ZukkoChatContact>(ZukkoChatBoxNames.contacts).path!)
+            .lengthSync();
+
+    test('clearInstanceFamily compacts the box file', () async {
+      await env.open();
+      final before = await fillContacts();
+
+      await HiveDatabase.clearInstanceFamily('k');
+
+      expect(contactsFileSize(), lessThan(before ~/ 10));
     });
   });
 }
