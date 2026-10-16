@@ -22,13 +22,12 @@ import 'chat_typing.dart';
 import 'zukko_chat_options.dart';
 
 /// Signature of [ZukkoChatClient.create]; a custom client (offline demo,
-/// tests) is supplied through `ZukkoChat.clientFactory`.
+/// tests) is injected through [debugClientFactory]; it is not public API.
 typedef ZukkoChatClientFactory = Future<ZukkoChatClient> Function({
   required String baseUrl,
   required String websiteToken,
   ZukkoChatUser? user,
   bool enablePersistence,
-  bool allowInsecure,
   ZukkoChatCallbacks? callbacks,
 });
 
@@ -170,7 +169,6 @@ class ZukkoChatController extends ChangeNotifier {
         websiteToken: options.websiteToken,
         user: options.user,
         enablePersistence: options.enablePersistence,
-        allowInsecure: options.allowInsecure,
         callbacks: _wrapCallbacks(generation),
       );
     } catch (e, st) {

@@ -20,7 +20,6 @@ export 'src/data/remote/realtime/zukko_chat_action_data.dart'
 export 'package:flutter_chat_core/flutter_chat_core.dart' show Message;
 
 export 'src/ui/chat/zukko_chat_style.dart' show ZukkoChatStyle;
-export 'src/ui/chat/zukko_chat_controller.dart' show ZukkoChatClientFactory;
 export 'src/ui/chat/zukko_chat_options.dart';
 export 'src/ui/chat/zukko_chat_page.dart';
 export 'src/ui/l10n/zukko_chat_l10n.dart';

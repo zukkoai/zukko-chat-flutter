@@ -30,11 +30,10 @@ Future<ZukkoChatWiring> wireZukkoChat({
   required String websiteToken,
   required ZukkoChatUser? user,
   required bool enablePersistence,
-  required bool allowInsecure,
   required ZukkoChatCallbacks? callbacks,
   Duration? socketSubscribeTimeout,
 }) async {
-  final base = validateBaseUrl(baseUrl, allowInsecure: allowInsecure);
+  final base = validateBaseUrl(baseUrl);
   final url = baseUrl.trim(); // the one form used for Dio and the storage key
 
   final storage = await openStorage(

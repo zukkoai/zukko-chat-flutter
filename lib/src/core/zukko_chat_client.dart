@@ -113,8 +113,7 @@ class ZukkoChatClient {
   /// [websiteToken] of the web widget inbox. Specify custom user details using [user] and [callbacks] for
   /// handling Zukko Chat events. By default persistence is enabled, to disable persistence set [enablePersistence] as false.
   ///
-  /// [baseUrl] must be https; plain http is only accepted for localhost /
-  /// 10.0.2.2, or for any host when [allowInsecure] is true (development only).
+  /// [baseUrl] must be https (the socket uses wss); plain http is rejected.
   /// An invalid [baseUrl] throws an [ArgumentError].
   ///
   /// Completes once the session (`/config`, `set_user`) and the conversation
@@ -133,7 +132,6 @@ class ZukkoChatClient {
     required String websiteToken,
     ZukkoChatUser? user,
     bool enablePersistence = true,
-    bool allowInsecure = false,
     ZukkoChatCallbacks? callbacks,
     @visibleForTesting Duration? socketSubscribeTimeout,
   }) async {
@@ -142,7 +140,6 @@ class ZukkoChatClient {
       websiteToken: websiteToken,
       user: user,
       enablePersistence: enablePersistence,
-      allowInsecure: allowInsecure,
       callbacks: callbacks,
       socketSubscribeTimeout: socketSubscribeTimeout,
     );

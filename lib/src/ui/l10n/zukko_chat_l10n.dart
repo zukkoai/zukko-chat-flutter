@@ -33,7 +33,7 @@ class ZukkoChatL10n {
   /// Name shown for the user's own messages (styles that show names)
   final String youLabel;
 
-  /// Footer text before the brand link, see `ZukkoChatOptions.showBranding`
+  /// Footer text before the brand link
   final String poweredByText;
 
   /// Tooltip / semantics label of the back button

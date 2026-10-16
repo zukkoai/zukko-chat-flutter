@@ -22,9 +22,6 @@ class ZukkoChatOptions {
   /// everything is held in memory and dropped with the client.
   final bool enablePersistence;
 
-  /// Allow a plain `http://` [baseUrl] that is not loopback. Development only.
-  final bool allowInsecure;
-
   /// Custom user details to be attached to the Zukko Chat contact
   final ZukkoChatUser? user;
 
@@ -43,9 +40,6 @@ class ZukkoChatOptions {
   /// Message time format, defaults to `DateFormat.Hm()`
   final DateFormat? timeFormat;
 
-  /// Show the "Powered by zukko.ai" footer.
-  final bool showBranding;
-
   /// Attachment button: send photos and files (up to [ZukkoChatUpload.maxSizeMb] MB each).
   final bool enableAttachments;
 
@@ -63,13 +57,11 @@ class ZukkoChatOptions {
     required this.baseUrl,
     required this.websiteToken,
     this.enablePersistence = true,
-    this.allowInsecure = false,
     this.user,
     this.style = ZukkoChatStyle.smoothSilk,
     this.theme,
     this.l10n,
     this.timeFormat,
-    this.showBranding = true,
     this.enableAttachments = true,
     this.enableVoiceMessages = true,
     this.enableLinkPreviews = true,
@@ -81,7 +73,6 @@ class ZukkoChatOptions {
       baseUrl == other.baseUrl &&
       websiteToken == other.websiteToken &&
       enablePersistence == other.enablePersistence &&
-      allowInsecure == other.allowInsecure &&
       user == other.user;
 
   @override
@@ -92,7 +83,6 @@ class ZukkoChatOptions {
       theme == other.theme &&
       l10n == other.l10n &&
       timeFormat == other.timeFormat &&
-      showBranding == other.showBranding &&
       enableAttachments == other.enableAttachments &&
       enableVoiceMessages == other.enableVoiceMessages &&
       enableLinkPreviews == other.enableLinkPreviews;
@@ -102,13 +92,11 @@ class ZukkoChatOptions {
     baseUrl,
     websiteToken,
     enablePersistence,
-    allowInsecure,
     user,
     style,
     theme,
     l10n,
     timeFormat,
-    showBranding,
     enableAttachments,
     enableVoiceMessages,
     enableLinkPreviews,

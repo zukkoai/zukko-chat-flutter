@@ -1,16 +1,10 @@
-/// Hosts for which plain http is acceptable: the local machine and the Android
-/// emulator's alias for it.
-const _loopbackHosts = {'localhost', '127.0.0.1', '::1', '10.0.2.2'};
-
 /// Parses and validates the base URL of a ZukkoChat server. The URL is trimmed:
 /// use the returned [Uri] (not the raw string) everywhere afterwards.
 ///
-/// Requires `https`. Plain `http` is only accepted for loopback hosts
-/// (`localhost`, `127.0.0.1`, `::1`, `10.0.2.2`) or when [allowInsecure] is
-/// true. User info (`https://user:pw@host`) and fragments are rejected: the
+/// Requires `https`; plain `http` is always rejected (also for localhost). User info (`https://user:pw@host`) and fragments are rejected: the
 /// base URL ends up in persisted keys and logs. Throws [ArgumentError]
 /// otherwise.
-Uri validateBaseUrl(String url, {bool allowInsecure = false}) {
+Uri validateBaseUrl(String url, ) {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || uri.host.isEmpty) {
     throw ArgumentError.value(url, 'baseUrl', 'must be an absolute URL');
@@ -22,25 +16,16 @@ Uri validateBaseUrl(String url, {bool allowInsecure = false}) {
       'must not contain user info or a fragment',
     );
   }
-  final scheme = uri.scheme.toLowerCase();
-  if (scheme == 'https') return uri;
-  if (scheme == 'http' &&
-      (allowInsecure || _loopbackHosts.contains(uri.host.toLowerCase()))) {
-    return uri;
-  }
-  throw ArgumentError.value(
-    url,
-    'baseUrl',
-    'must use https (http is only allowed for localhost or with allowInsecure)',
-  );
+  if (uri.scheme.toLowerCase() == 'https') return uri;
+  throw ArgumentError.value(url, 'baseUrl', 'must use https');
 }
 
 /// `ws(s)://host[/prefix]/cable` for a REST [base] already checked by
-/// [validateBaseUrl] (so its scheme is http or https).
+/// [validateBaseUrl] (so its scheme is https).
 Uri zukkoChatCableUri(Uri base) {
   final segments = base.pathSegments.where((s) => s.isNotEmpty).toList();
   return base.replace(
-    scheme: base.scheme.toLowerCase() == 'https' ? 'wss' : 'ws',
+    scheme: 'wss',
     pathSegments: [...segments, 'cable'],
   );
 }

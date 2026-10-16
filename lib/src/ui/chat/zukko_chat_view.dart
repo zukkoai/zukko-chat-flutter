@@ -22,6 +22,11 @@ import 'zukko_chat_style.dart';
 
 export 'chat_header.dart' show ChatViewHeader;
 
+/// Test seam, not exported: replaces `ZukkoChatClient.create` in the widget
+/// tests. Null in production.
+@visibleForTesting
+ZukkoChatClientFactory? debugClientFactory;
+
 /// Header + message list + composer + footer, drawn by the selected
 /// [ZukkoChatStyle]. `ZukkoChat` is a thin wrapper around this
 /// (internal, not exported).
@@ -38,8 +43,6 @@ class ZukkoChatView extends StatefulWidget {
 
   final ZukkoChatInteractions interactions;
 
-  /// Replaces `ZukkoChatClient.create`, see `ZukkoChat.clientFactory`.
-  final ZukkoChatClientFactory? clientFactory;
 
   const ZukkoChatView({
     super.key,
@@ -47,7 +50,6 @@ class ZukkoChatView extends StatefulWidget {
     this.callbacks,
     this.header,
     this.interactions = const ZukkoChatInteractions(),
-    this.clientFactory,
   });
 
   @override
@@ -109,7 +111,7 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
   bool _serverAllowsAudio = true;
 
   ZukkoChatController _createController() {
-    final factory = widget.clientFactory ?? ZukkoChatClient.create;
+    final factory = debugClientFactory ?? ZukkoChatClient.create;
     late final ZukkoChatController controller;
     controller = ZukkoChatController(
       widget.options,
@@ -120,7 +122,6 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
             required websiteToken,
             user,
             enablePersistence = true,
-            allowInsecure = false,
             callbacks,
           }) async {
             final client = await factory(
@@ -128,7 +129,6 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
               websiteToken: websiteToken,
               user: user,
               enablePersistence: enablePersistence,
-              allowInsecure: allowInsecure,
               callbacks: callbacks,
             );
             if (mounted && identical(controller, _controller)) {
@@ -346,7 +346,7 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   style.buildComposer(context, _composerData(), _l10n),
-                  if (o.showBranding) style.buildFooter(context, _l10n),
+                  style.buildFooter(context, _l10n),
                 ],
               ),
             ),
