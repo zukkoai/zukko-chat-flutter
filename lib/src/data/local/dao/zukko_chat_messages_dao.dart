@@ -33,9 +33,11 @@ class PersistedZukkoChatMessagesDao implements ZukkoChatMessagesDao {
   Future<void> saveMessage(ZukkoChatMessage message) =>
       _box.put(_key(message.id), message);
 
-  /// Most messages kept per instance; the oldest go first so the box cannot
-  /// grow without bound.
-  static const maxStored = 500;
+  /// Most messages kept per instance (the newest); the oldest go first so the
+  /// box cannot grow without bound. Equals `MessageSync.pageSize`: only that
+  /// first page is ever shown from cache. A literal because the data layer
+  /// above this one owns the page size.
+  static const maxStored = 20;
 
   @override
   Future<void> saveAllMessages(List<ZukkoChatMessage> messages) async {

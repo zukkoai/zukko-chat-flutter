@@ -84,7 +84,7 @@ class MessageSync {
   /// Fetches the page of messages just older than message id [before]
   /// (oldest first). Remembers them but neither persists them nor moves the
   /// cursor: older pages live in memory only, so they can never push newer
-  /// messages out of the stored newest 500 (`PersistedZukkoChatMessagesDao.maxStored`).
+  /// messages out of the stored newest page (`PersistedZukkoChatMessagesDao.maxStored`).
   Future<List<ZukkoChatMessage>> fetchBefore(int before) async {
     final page = await _service.getMessages(before: before);
     page.forEach(remember);

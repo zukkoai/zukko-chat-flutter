@@ -140,7 +140,7 @@ class ZukkoChatRepositoryImpl implements ZukkoChatRepository {
   }
 
   /// Fetches the newest persisted messages (one page: older ones are loaded
-  /// on demand, rendering a full cache of 500 would be slow).
+  /// from the server on demand and are not stored).
   ///
   /// Calls [ZukkoChatCallbacks.onPersistedMessagesRetrieved] if persisted messages are found
   @override
