@@ -38,7 +38,6 @@ Future<void> _openChat(
           websiteToken: _o.websiteToken,
           style: style,
         ),
-        clientFactory: factory.call,
       ),
     ),
   );

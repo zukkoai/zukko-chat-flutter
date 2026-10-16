@@ -259,7 +259,7 @@ void main() {
 
     test('unreachable server: onError, no throw', () async {
       final client = await ZukkoChatClient.create(
-        baseUrl: 'http://127.0.0.1:1',
+        baseUrl: 'https://127.0.0.1:1',
         websiteToken: FakeChatServer.websiteToken,
         enablePersistence: false,
         callbacks: ZukkoChatCallbacks(onError: errors.add),
@@ -272,17 +272,23 @@ void main() {
 
   // SEC4
   group('create() base url policy', () {
-    test('plain http to a public host throws ArgumentError, nothing is '
-        'opened', () async {
-      await expectLater(
-        ZukkoChatClient.create(
-          baseUrl: 'http://chat.example.com',
-          websiteToken: 'in',
-          enablePersistence: false,
-        ),
-        throwsArgumentError,
-      );
-    });
+    for (final url in [
+      'http://chat.example.com',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ]) {
+      test('plain http "$url" throws ArgumentError, nothing is opened',
+          () async {
+        await expectLater(
+          ZukkoChatClient.create(
+            baseUrl: url,
+            websiteToken: 'in',
+            enablePersistence: false,
+          ),
+          throwsArgumentError,
+        );
+      });
+    }
 
     for (final url in ['ftp://chat.example.com', 'chat.example.com', '']) {
       test('"$url" is refused', () async {
@@ -291,28 +297,12 @@ void main() {
             baseUrl: url,
             websiteToken: 'in',
             enablePersistence: false,
-            allowInsecure: true,
           ),
           throwsArgumentError,
         );
       });
     }
 
-    test('allowInsecure lets http to a non-loopback host through to the '
-        'network layer', () async {
-      final errors = <ZukkoChatException>[];
-
-      final client = await ZukkoChatClient.create(
-        baseUrl: 'http://nonexistent.invalid',
-        websiteToken: 'in',
-        enablePersistence: false,
-        allowInsecure: true,
-        callbacks: ZukkoChatCallbacks(onError: errors.add),
-      );
-
-      expect(errors, isNotEmpty); // unreachable, but it was attempted
-      await client.dispose();
-    });
   });
 
   // F14

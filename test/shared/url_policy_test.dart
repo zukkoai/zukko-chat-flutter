@@ -10,41 +10,21 @@ void main() {
       );
     });
 
-    test('plain http is refused for a public host', () {
-      expect(() => validateBaseUrl('http://example.com'), throwsArgumentError);
-    });
-
-    test('http is accepted for loopback and the Android emulator alias', () {
+    test('plain http is refused for every host, loopback included', () {
       for (final url in [
+        'http://example.com',
         'http://localhost:3000',
         'http://127.0.0.1:8080',
         'http://[::1]:3000',
         'http://10.0.2.2:3000',
         'http://LOCALHOST',
       ]) {
-        expect(validateBaseUrl(url).toString(), isNotEmpty, reason: url);
-      }
-    });
-
-    test('allowInsecure opens up http for any host', () {
-      expect(
-        validateBaseUrl('http://example.com', allowInsecure: true).host,
-        'example.com',
-      );
-    });
-
-    test('a host that merely starts like a loopback is not one', () {
-      for (final url in [
-        'http://localhost.evil.com',
-        'http://127.0.0.1.evil.com',
-        'http://10.0.2.20',
-      ]) {
         expect(() => validateBaseUrl(url), throwsArgumentError, reason: url);
       }
     });
 
     test(
-      'other schemes and non-urls are refused, even when insecure is on',
+      'other schemes and non-urls are refused',
       () {
         for (final url in [
           'ftp://example.com',
@@ -56,7 +36,7 @@ void main() {
           'https://',
         ]) {
           expect(
-            () => validateBaseUrl(url, allowInsecure: true),
+            () => validateBaseUrl(url),
             throwsArgumentError,
             reason: url,
           );
@@ -86,10 +66,9 @@ void main() {
     String cable(String url) => zukkoChatCableUri(Uri.parse(url)).toString();
 
     test('maps scheme and appends /cable', () {
-      expect(cable('http://h'), 'ws://h/cable');
       expect(cable('https://h/'), 'wss://h/cable');
       expect(cable('https://h/prefix'), 'wss://h/prefix/cable');
-      expect(cable('http://h:3000/'), 'ws://h:3000/cable');
+      expect(cable('https://h:3000/'), 'wss://h:3000/cable');
     });
 
     test('a host that merely contains "http" is untouched', () {

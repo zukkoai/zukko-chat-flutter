@@ -115,21 +115,6 @@ void main() {
       expect(factory.calls, 1);
     });
 
-    test('allowInsecure reaches the factory (SEC4)', () async {
-      controller.dispose();
-      factory = FakeFactory();
-      controller = ZukkoChatController(
-        const ZukkoChatOptions(
-          baseUrl: 'http://x.test',
-          websiteToken: 'in',
-          allowInsecure: true,
-        ),
-        clientFactory: factory.call,
-      );
-
-      expect(factory.allowInsecure, isTrue);
-    });
-
     test('callbacks can be swapped while running (F5)', () async {
       var a = 0, b = 0;
       controller.callbacks = ZukkoChatCallbacks(onMessageReceived: (_) => a++);

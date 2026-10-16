@@ -67,7 +67,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _app(ZukkoChat(options: o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: o)),
       );
       // The scope sits inside the view, so look it up from a descendant.
       return LinkPreviewScope.maybeOf(
@@ -95,7 +95,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.pump();
@@ -118,7 +118,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await _settle(tester);
 
@@ -148,7 +148,6 @@ void main() {
           ZukkoChat(
             options: _o,
             callbacks: ZukkoChatCallbacks(onError: errors.add),
-            clientFactory: factory.call,
           ),
         ),
       );
@@ -169,7 +168,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await tester.pump();
 
@@ -190,7 +189,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await tester.pump();
       factory.callbacks!.onMessagesRetrieved!([
@@ -220,7 +219,7 @@ void main() {
       factory.completer.complete(client);
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await _settle(tester);
       await tester.enterText(find.byType(TextField), 'retry me');
@@ -251,15 +250,14 @@ void main() {
           required String websiteToken,
           ZukkoChatUser? user,
           bool enablePersistence = true,
-          bool allowInsecure = false,
           ZukkoChatCallbacks? callbacks,
         }) async {
           created++;
           return FakeClient();
         }
 
-        ZukkoChat page(ZukkoChatOptions o) =>
-            ZukkoChat(options: o, clientFactory: f);
+        debugClientFactory = f;
+        ZukkoChat page(ZukkoChatOptions o) => ZukkoChat(options: o);
         await _pump(tester, _app(page(_o)));
         await _pump(
           tester,
@@ -300,7 +298,6 @@ void main() {
       Widget page(String name) => _app(
         ZukkoChat(
           options: _o,
-          clientFactory: factory.call,
           callbacks: ZukkoChatCallbacks(onError: (_) => log.add(name)),
         ),
       );
@@ -322,7 +319,7 @@ void main() {
     ) async {
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
       await tester.enterText(find.byType(TextField), 'hi');
       await tester.pump();
@@ -357,7 +354,6 @@ void main() {
                 retryLabel: 'Qayta',
               ),
             ),
-            clientFactory: factory.call,
           ),
         ),
       );
@@ -378,7 +374,6 @@ void main() {
         _app(
           ZukkoChat(
             title: 'Support',
-            clientFactory: factory.call,
             options: const ZukkoChatOptions(
               baseUrl: 'b',
               websiteToken: 'i',
@@ -408,7 +403,7 @@ void main() {
       final handle = tester.ensureSemantics();
       await _pump(
         tester,
-        _app(ZukkoChat(options: _o, clientFactory: factory.call)),
+        _app(ZukkoChat(options: _o)),
       );
 
       factory.callbacks!.onConversationIsOnline!();
@@ -438,7 +433,7 @@ void main() {
                 context,
                 MaterialPageRoute<void>(
                   builder: (_) =>
-                      ZukkoChat(options: _o, clientFactory: factory.call),
+                      ZukkoChat(options: _o),
                 ),
               ),
               child: const Text('open'),
@@ -473,7 +468,7 @@ void main() {
         await _pump(
           tester,
           _app(
-            ZukkoChat(title: 'Title', options: _o, clientFactory: factory.call),
+            ZukkoChat(title: 'Title', options: _o),
             dir: dir,
           ),
         );
@@ -499,7 +494,6 @@ void main() {
               websiteToken: 'i',
               l10n: ZukkoChatL10n(poweredByText: 'Quvvat: X'),
             ),
-            clientFactory: factory.call,
           ),
         ),
       );
@@ -508,22 +502,19 @@ void main() {
       expect(find.text('Powered by ZukkoChat'), findsNothing);
     });
 
-    testWidgets('showBranding: false hides the footer (U10)', (tester) async {
+    testWidgets('footer is always shown with default options (U10)', (
+      tester,
+    ) async {
       await _pump(
         tester,
         _app(
           ZukkoChat(
-            options: const ZukkoChatOptions(
-              baseUrl: 'b',
-              websiteToken: 'i',
-              showBranding: false,
-            ),
-            clientFactory: factory.call,
+            options: const ZukkoChatOptions(baseUrl: 'b', websiteToken: 'i'),
           ),
         ),
       );
 
-      expect(find.textContaining('Powered by'), findsNothing);
+      expect(find.textContaining('Powered by'), findsOneWidget);
     });
 
     testWidgets('follows the ambient theme: dark differs from light (U11)', (
@@ -533,7 +524,7 @@ void main() {
         await _pump(
           tester,
           _app(
-            ZukkoChat(options: _o, clientFactory: factory.call),
+            ZukkoChat(options: _o),
             theme: t,
           ),
         );
@@ -555,7 +546,7 @@ void main() {
       await _pump(
         tester,
         _app(
-          ZukkoChat(options: _o, clientFactory: factory.call),
+          ZukkoChat(options: _o),
           theme: ThemeData(extensions: [custom]),
         ),
       );
@@ -575,7 +566,6 @@ void main() {
               websiteToken: 'i',
               theme: explicit,
             ),
-            clientFactory: factory.call,
           ),
           theme: ThemeData(
             extensions: [
@@ -659,7 +649,6 @@ void main() {
                   websiteToken: 'i',
                   style: style,
                 ),
-                clientFactory: factory.call,
                 interactions: ZukkoChatInteractions(onMorePressed: () {}),
               ),
               theme: ThemeData(brightness: brightness),
@@ -702,7 +691,6 @@ void main() {
               enableAttachments: false,
               enableVoiceMessages: false,
             ),
-            clientFactory: factory.call,
           ),
         ),
       );
@@ -712,21 +700,18 @@ void main() {
       expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
     });
 
-    testWidgets('an app bar replaces the style header', (tester) async {
+    testWidgets('the style header shows the title', (tester) async {
       await _pump(
         tester,
         _app(
           ZukkoChat(
             options: _o,
             title: 'Header title',
-            appBar: AppBar(title: const Text('App bar')),
-            clientFactory: factory.call,
           ),
         ),
       );
 
-      expect(find.text('App bar'), findsOneWidget);
-      expect(find.text('Header title'), findsNothing);
+      expect(find.text('Header title'), findsOneWidget);
     });
 
     testWidgets('strings follow the app locale when l10n is null', (
@@ -742,7 +727,7 @@ void main() {
             DefaultWidgetsLocalizations.delegate,
             _FallbackCupertinoDelegate(),
           ],
-          home: ZukkoChat(options: _o, clientFactory: factory.call),
+          home: ZukkoChat(options: _o),
         ),
       );
 

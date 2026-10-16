@@ -1,3 +1,5 @@
+import 'package:zukko_chat_flutter/src/ui/chat/zukko_chat_view.dart'
+    show debugClientFactory;
 import 'dart:async';
 
 import 'package:zukko_chat_flutter/src/data/models/zukko_chat_attachment.dart';
@@ -63,11 +65,14 @@ class FakeClient extends Fake implements ZukkoChatClient {
 
 /// A client factory the test completes by hand.
 class FakeFactory {
+  FakeFactory() {
+    debugClientFactory = call;
+  }
+
   // late: created inside the test body, i.e. in the test's zone (a Completer
   // made in setUp does not deliver errors to listeners of the fake-async zone)
   late Completer<ZukkoChatClient> completer = Completer<ZukkoChatClient>();
   ZukkoChatCallbacks? callbacks;
-  bool? allowInsecure;
   int calls = 0;
 
   Future<ZukkoChatClient> call({
@@ -75,11 +80,9 @@ class FakeFactory {
     required String websiteToken,
     ZukkoChatUser? user,
     bool enablePersistence = true,
-    bool allowInsecure = false,
     ZukkoChatCallbacks? callbacks,
   }) {
     calls++;
-    this.allowInsecure = allowInsecure;
     this.callbacks = callbacks;
     return completer.future;
   }

@@ -145,10 +145,53 @@ class FakeChatServer {
   /// Forget every contact, like a server that no longer knows our JWTs.
   void forgetContacts() => contacts.clear();
 
-  static Future<FakeChatServer> start() async =>
-      FakeChatServer._(await HttpServer.bind(InternetAddress.loopbackIPv4, 0));
+  /// A real TLS server, so the SDK runs through its https-only path with no
+  /// insecure switch. The self-signed cert is generated once per process with
+  /// `openssl` (macOS rejects certs valid for more than ~825 days, so a
+  /// committed long-lived one is not an option) and trusted process-wide.
+  static Future<FakeChatServer> start() async {
+    final dir = await _tls();
+    final ctx = SecurityContext()
+      ..useCertificateChain('${dir.path}/cert.pem')
+      ..usePrivateKey('${dir.path}/key.pem');
+    return FakeChatServer._(
+      await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, ctx),
+    );
+  }
 
-  String get baseUrl => 'http://127.0.0.1:${_server.port}';
+  static Future<Directory>? _tlsDir;
+
+  static Future<Directory> _tls() => _tlsDir ??= () async {
+    final dir = await Directory.systemTemp.createTemp('zukko_fake_tls');
+    final r = await Process.run('openssl', [
+      'req',
+      '-x509',
+      '-newkey',
+      'rsa:2048',
+      '-nodes',
+      '-days',
+      '30',
+      '-keyout',
+      '${dir.path}/key.pem',
+      '-out',
+      '${dir.path}/cert.pem',
+      '-subj',
+      '/CN=127.0.0.1',
+      '-addext',
+      'subjectAltName=IP:127.0.0.1,DNS:localhost',
+      '-addext',
+      'basicConstraints=critical,CA:TRUE',
+      '-addext',
+      'extendedKeyUsage=serverAuth',
+    ]);
+    if (r.exitCode != 0) throw StateError('openssl failed: ${r.stderr}');
+    SecurityContext.defaultContext.setTrustedCertificates(
+      '${dir.path}/cert.pem',
+    );
+    return dir;
+  }();
+
+  String get baseUrl => 'https://127.0.0.1:${_server.port}';
 
   int count(String method, bool Function(String path) where) =>
       calls.where((c) => c.method == method && where(c.path)).length;

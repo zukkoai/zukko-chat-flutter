@@ -166,7 +166,7 @@ void main() {
       for (final e in _locales.entries) {
         if (e.value == _english) continue;
         testWidgets('${style.name} / ${e.key}', (tester) async {
-          final factory = FakeFactory();
+          FakeFactory();
           await tester.pumpWidget(
             MaterialApp(
               locale: e.key,
@@ -182,7 +182,6 @@ void main() {
                   websiteToken: 'in',
                   style: style,
                 ),
-                clientFactory: factory.call,
               ),
             ),
           );

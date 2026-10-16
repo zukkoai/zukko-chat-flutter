@@ -243,7 +243,7 @@ void main() {
           '${(id % 60).toString().padLeft(2, '0')}',
     );
 
-    test('a cache of 500 reports only the newest 20, oldest first', () async {
+    test('a cache saved with 500 messages reports the newest 20, oldest first', () async {
       await storage.messages.saveAllMessages([
         for (var i = 1; i <= 500; i++) m(i),
       ]);
@@ -277,15 +277,15 @@ void main() {
     });
 
     test('older pages never evict the newest cached messages', () async {
-      final newest = [for (var i = 501; i <= 1000; i++) m(i)];
+      final newest = [for (var i = 981; i <= 1000; i++) m(i)];
       await storage.messages.saveAllMessages(newest);
-      service.messagesResult = [for (var i = 481; i <= 500; i++) m(i)];
+      service.messagesResult = [for (var i = 961; i <= 980; i++) m(i)];
 
-      await repo.getOlderMessages(501);
+      await repo.getOlderMessages(981);
 
       final stored = storage.messages.getMessages().map((x) => x.id).toList();
-      expect(stored.length, 500);
-      expect(stored.first, 501);
+      expect(stored.length, 20);
+      expect(stored.first, 981);
       expect(stored.last, 1000);
     });
 

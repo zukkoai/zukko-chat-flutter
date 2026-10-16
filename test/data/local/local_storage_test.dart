@@ -290,9 +290,10 @@ void main() {
       await storage.messages.saveAllMessages(many);
 
       final kept = storage.messages.getMessages();
-      expect(kept, hasLength(PersistedZukkoChatMessagesDao.maxStored));
+      expect(PersistedZukkoChatMessagesDao.maxStored, 20);
+      expect(kept, hasLength(20));
       expect(kept.first.id, 6);
-      expect(kept.last.id, PersistedZukkoChatMessagesDao.maxStored + 5);
+      expect(kept.last.id, 25);
     });
   });
 

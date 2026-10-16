@@ -41,7 +41,6 @@ void main() {
             websiteToken: 'in',
             style: style,
           ),
-          clientFactory: factory.call,
           interactions: interactions,
         ),
       ),
