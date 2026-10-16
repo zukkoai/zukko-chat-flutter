@@ -85,12 +85,18 @@ class SmoothSilkComposer extends StatelessWidget {
             ),
           ),
           const SizedBox(width: SmoothSilkMetrics.sendGap),
-          ComposerSendButton(
-            handle: handle,
-            l10n: l10n,
-            tokens: tokens,
-            size: SmoothSilkMetrics.composerHeight,
-            iconSize: SmoothSilkMetrics.sendIcon,
+          // Same circle as the attach button, and level with it.
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: SmoothSilkMetrics.pillPadding.bottom,
+            ),
+            child: ComposerSendButton(
+              handle: handle,
+              l10n: l10n,
+              tokens: tokens,
+              size: SmoothSilkMetrics.buttonSize,
+              iconSize: SmoothSilkMetrics.sendIcon,
+            ),
           ),
         ],
       ),
