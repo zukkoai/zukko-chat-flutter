@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
@@ -12,7 +14,14 @@ import 'zukko_chat_style.dart';
 ///
 /// [muiTheme] and [builders] are expensive to build, so the view creates
 /// them once per style / theme / strings and passes them in.
-class ChatMessageList extends StatelessWidget {
+///
+/// Auto-scroll is done here, not by flutter_chat_ui: its own logic stops
+/// following new messages for good once the user has dragged up at all
+/// (`_userHasScrolled`), so a reply never showed after a small scroll up.
+/// Here the user's own messages always scroll to the end; an incoming message
+/// (or the typing indicator) does when the list was within one viewport of
+/// the end, so a far-up history reader is not pulled down.
+class ChatMessageList extends StatefulWidget {
   /// Default of [ZukkoChatInteractions.onEndReachedThreshold].
   static const _defaultPaginationThreshold = 0.01;
   static const _bottomPadding = 12.0;
@@ -46,20 +55,99 @@ class ChatMessageList extends StatelessWidget {
   );
 
   @override
+  State<ChatMessageList> createState() => _ChatMessageListState();
+}
+
+class _ChatMessageListState extends State<ChatMessageList> {
+  final _scroll = ScrollController();
+  StreamSubscription<ChatOperation>? _ops;
+  bool _typing = false;
+
+  ZukkoChatController get _controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _attach();
+  }
+
+  @override
+  void didUpdateWidget(ChatMessageList old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      _detach(old.controller);
+      _attach();
+    }
+  }
+
+  void _attach() {
+    _typing = false;
+    _ops = _controller.chat.operationsStream.listen((op) {
+      final m = op.message;
+      if (op.type == ChatOperationType.insert && m != null) {
+        _followEnd(force: m.authorId == _controller.currentUserId);
+      }
+    });
+    _controller.addListener(_onController);
+  }
+
+  void _onController() {
+    final typing = _controller.status == ZukkoChatStatus.typing;
+    if (typing && !_typing) _followEnd();
+    _typing = typing;
+  }
+
+  void _detach(ZukkoChatController c) {
+    c.removeListener(_onController);
+    _ops?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _detach(_controller);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls to the end after the next layout when [force] or the list is
+  /// within one viewport of the end (measured now, before the new item
+  /// grows it). Loading older pages is not an insert, so it never gets here.
+  void _followEnd({bool force = false}) {
+    if (!_scroll.hasClients) return;
+    final p = _scroll.position;
+    if (!force && p.maxScrollExtent - p.pixels > p.viewportDimension) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.linearToEaseOut,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final i = interactions;
+    final controller = _controller;
+    final style = widget.style;
+    final env = widget.env;
+    final i = widget.interactions;
     final onLongPress = i.onMessageLongPress;
-    final withList = builders.copyWith(
+    final withList = widget.builders.copyWith(
       chatAnimatedListBuilder: (context, itemBuilder) => ChatAnimatedList(
         itemBuilder: itemBuilder,
+        scrollController: _scroll,
+        shouldScrollToEndWhenSendingMessage: false,
+        shouldScrollToEndWhenAtBottom: false,
         onEndReached: () async {
           await controller.loadOlder();
           await i.onEndReached?.call();
         },
         paginationThreshold:
-            i.onEndReachedThreshold ?? _defaultPaginationThreshold,
+            i.onEndReachedThreshold ??
+            ChatMessageList._defaultPaginationThreshold,
         handleSafeArea: false,
-        bottomPadding: _bottomPadding,
+        bottomPadding: ChatMessageList._bottomPadding,
         bottomSliver: SliverToBoxAdapter(
           child: ListenableBuilder(
             listenable: controller,
@@ -74,17 +162,18 @@ class ChatMessageList extends StatelessWidget {
     // Its own Material too, and the English strings of material_ui when the
     // app only provides flutter/material localizations.
     return mui.Theme(
-      data: muiTheme,
+      data: widget.muiTheme,
       child: Localizations.override(
         context: context,
         delegates: [mui.DefaultMaterialLocalizations.delegate],
         child: mui.Material(
           type: mui.MaterialType.transparency,
           child: Chat(
+            key: ObjectKey(controller.chat),
             currentUserId: controller.currentUserId,
             resolveUser: controller.resolveUser,
             chatController: controller.chat,
-            onMessageTap: onTap,
+            onMessageTap: widget.onTap,
             onMessageLongPress: onLongPress == null
                 ? null
                 : (context, message, {required index, required details}) =>
