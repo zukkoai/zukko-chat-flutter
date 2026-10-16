@@ -524,7 +524,11 @@ class ZukkoChatController extends ChangeNotifier {
       return;
     }
     // A sent attachment: the server's version has the real urls.
-    final server = hadFiles ? _convert(m, key: echoId) : null;
+    var server = hadFiles ? _convert(m, key: echoId) : null;
+    // The server sends no audio length: keep the recording's own.
+    if (server is AudioMessage && echo is AudioMessage) {
+      server = server.copyWith(duration: echo.duration);
+    }
     _store.upsertLocal(
       ChatMessageStore.merge(echo, (server ?? echo).copyWith(status: status)),
     );

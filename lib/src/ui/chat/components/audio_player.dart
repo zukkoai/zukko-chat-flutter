@@ -69,9 +69,18 @@ class _AudioPlayerBarState extends State<AudioPlayerBar> {
   static const _gap = 10.0;
 
   @override
+  void initState() {
+    super.initState();
+    widget.playback.prime(widget.source, widget.duration);
+  }
+
+  @override
   void didUpdateWidget(AudioPlayerBar old) {
     super.didUpdateWidget(old);
     if (old.source != widget.source) old.playback.release(old.source);
+    if (old.source != widget.source || old.duration != widget.duration) {
+      widget.playback.prime(widget.source, widget.duration);
+    }
   }
 
   @override
