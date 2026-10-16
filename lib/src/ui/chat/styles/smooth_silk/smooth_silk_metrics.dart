@@ -50,6 +50,20 @@ abstract final class SmoothSilkMetrics {
   static const sendIcon = 22.0;
   static const inputMinHeight = 48.0;
 
+  // Recording (hint above the pill; the mic replaces the send button)
+  static const recHintGap = 12.0;
+  static const recPillPadding = EdgeInsets.symmetric(horizontal: 18);
+  static const recMicGap = 10.0;
+  static const recMic = 64.0;
+  static const recMicIcon = 26.0;
+  static const recDot = 9.0;
+  static const recBarWidth = 3.0;
+  static const recBarRadius = 2.0;
+  static const recBarMax = 24.0;
+  static const recBarStrip = 28.0;
+  static const recHintSize = 13.0;
+  static const recChevron = 16.0;
+
   // Header
   static const headerPadding = EdgeInsetsDirectional.fromSTEB(4, 6, 6, 6);
 }

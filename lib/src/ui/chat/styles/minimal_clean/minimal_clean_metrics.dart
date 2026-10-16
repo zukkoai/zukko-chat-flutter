@@ -50,6 +50,23 @@ abstract final class MinimalCleanMetrics {
   static const actionGap = 4.0;
   static const inputMinHeight = 48.0;
 
+  // Recording (timer row, then hint + mic inside the card)
+  static const recCardPadding = EdgeInsets.fromLTRB(6, 10, 6, 6);
+  static const recRowHeight = 40.0;
+  static const recRowPadding = EdgeInsets.symmetric(horizontal: 12);
+  static const recRowGap = 4.0;
+  static const recActionPadding = EdgeInsetsDirectional.only(start: 12);
+  static const recMic = 52.0;
+  static const recMicIcon = 23.0;
+  static const recDot = 8.0;
+  static const recBarWidth = 2.5;
+  static const recBarRadius = 2.0;
+  static const recBarMax = 22.0;
+  static const recBarStrip = 26.0;
+  static const recHintSize = 13.0;
+  static const recChevron = 15.0;
+  static const recChevronGap = 8.0;
+
   // Header
   static const headerPadding = EdgeInsets.symmetric(horizontal: 6, vertical: 6);
   static const headerButtonRadius = 12.0;

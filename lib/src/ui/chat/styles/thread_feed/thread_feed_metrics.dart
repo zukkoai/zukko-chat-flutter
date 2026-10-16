@@ -52,6 +52,20 @@ abstract final class ThreadFeedMetrics {
   static const micIcon = 23.0;
   static const inputMinHeight = 48.0;
 
+  // Recording (hint row above the field and the mic tile)
+  static const recHintPadding = EdgeInsetsDirectional.only(start: 4);
+  static const recHintGap = 10.0;
+  static const recFieldPadding = EdgeInsets.symmetric(horizontal: 14);
+  static const recMic = 56.0;
+  static const recMicIcon = 24.0;
+  static const recDot = 8.0;
+  static const recBarWidth = 3.0;
+  static const recBarRadius = 1.5;
+  static const recBarMax = 22.0;
+  static const recBarStrip = 26.0;
+  static const recHintSize = 13.0;
+  static const recChevron = 15.0;
+
   // Header
   static const headerPadding = EdgeInsetsDirectional.fromSTEB(4, 6, 6, 6);
   static const headerAvatarRadius = 12.0;

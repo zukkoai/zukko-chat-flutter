@@ -287,8 +287,7 @@ class _ZukkoChatViewState extends State<ZukkoChatView>
       context,
       controller: _controller,
       l10n: _l10n,
-      background: style.backgroundColor,
-      foreground: style.foregroundColor,
+      spec: style.attachSheet,
       isMounted: () => mounted,
       notify: _notify,
     );

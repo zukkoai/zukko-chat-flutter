@@ -20,6 +20,9 @@ class SmoothSilkTokens extends ChatBaseTokens {
   /// The "+N" tile over the last gallery image.
   final Color overlay;
 
+  /// Darkens the chat behind the attachment sheet.
+  final Color sheetScrim;
+
   SmoothSilkTokens._(
     super.base, {
     required this.incomingBubble,
@@ -32,6 +35,7 @@ class SmoothSilkTokens extends ChatBaseTokens {
     required this.avatarFill,
     required this.avatarText,
     required this.overlay,
+    required this.sheetScrim,
   }) : super.from();
 
   factory SmoothSilkTokens.from(ZukkoChatTheme theme) {
@@ -71,6 +75,7 @@ class SmoothSilkTokens extends ChatBaseTokens {
       avatarFill: theme.pick(0xFFF8FAFC, 0xFF1F242B),
       avatarText: theme.pick(0xFF4A5A70, 0xFFB4C1D3),
       overlay: const Color(0x66000000),
+      sheetScrim: theme.pick(0x521F2733, 0x99000000),
     );
   }
 }

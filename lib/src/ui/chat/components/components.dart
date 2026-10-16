@@ -3,6 +3,7 @@
 library;
 
 export 'attachment_picker.dart';
+export 'attachment_sheet.dart';
 export 'audio_engine.dart';
 export 'audio_playback.dart';
 export 'audio_player.dart';
@@ -32,4 +33,5 @@ export 'typing_indicator_row.dart';
 export 'voice_capture.dart';
 export 'voice_record_widgets.dart';
 export 'voice_recorder_controller.dart';
+export 'voice_recording_view.dart';
 export 'zoomable_image.dart';

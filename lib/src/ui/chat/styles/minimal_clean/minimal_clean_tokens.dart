@@ -15,6 +15,9 @@ class MinimalCleanTokens extends ChatBaseTokens {
   /// The "+N" tile over the last gallery image.
   final Color overlay;
 
+  /// Darkens the chat behind the attachment sheet.
+  final Color sheetScrim;
+
   MinimalCleanTokens._(
     super.base, {
     required this.divider,
@@ -22,6 +25,7 @@ class MinimalCleanTokens extends ChatBaseTokens {
     required this.composerFill,
     required this.composerBorder,
     required this.overlay,
+    required this.sheetScrim,
   }) : super.from();
 
   factory MinimalCleanTokens.from(ZukkoChatTheme theme) {
@@ -61,6 +65,7 @@ class MinimalCleanTokens extends ChatBaseTokens {
           : theme.pick(0xFFFFFFFF, 0xFF1B1B1A),
       composerBorder: surface((0xFFE4E4E1, 0xFF2C2C2A), 0.14),
       overlay: const Color(0x73000000),
+      sheetScrim: theme.pick(0x38000000, 0x8C000000),
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../zukko_chat_style.dart';
 import '../shared/base_chat_style.dart';
 import 'smooth_silk_message_spec.dart';
 import 'smooth_silk_metrics.dart';
+import 'smooth_silk_attach_sheet.dart';
 import 'smooth_silk_tokens.dart';
 import 'widgets/smooth_silk_composer.dart';
 
@@ -30,6 +31,9 @@ class SmoothSilkStyle extends BaseChatStyle {
         ),
         footerLinkColor: tokens.accent,
       );
+
+  @override
+  late final AttachSheetSpec attachSheet = smoothSilkAttachSheet(tokens);
 
   @override
   late final MessageStyleSpec messageSpec = smoothSilkMessageSpec(tokens);

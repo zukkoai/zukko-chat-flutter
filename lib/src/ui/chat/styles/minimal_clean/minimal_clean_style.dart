@@ -8,6 +8,7 @@ import '../../zukko_chat_style.dart';
 import '../shared/base_chat_style.dart';
 import 'minimal_clean_message_spec.dart';
 import 'minimal_clean_metrics.dart';
+import 'minimal_clean_attach_sheet.dart';
 import 'minimal_clean_tokens.dart';
 import 'widgets/minimal_clean_composer.dart';
 
@@ -31,6 +32,9 @@ class MinimalCleanStyle extends BaseChatStyle {
         footerFontSize: 11,
         footerLinkColor: tokens.accent,
       );
+
+  @override
+  late final AttachSheetSpec attachSheet = minimalCleanAttachSheet(tokens);
 
   @override
   late final MessageStyleSpec messageSpec = minimalCleanMessageSpec(tokens);

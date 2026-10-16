@@ -22,12 +22,17 @@ class ComposerHandle {
   /// Null when voice messages are off.
   final VoiceRecorderController? recorder;
 
+  /// Keeps the mic (and its running press) alive when a style moves it to
+  /// the recording layout.
+  final GlobalKey? micKey;
+
   const ComposerHandle({
     required this.text,
     required this.focusNode,
     required this.canSend,
     required this.send,
     required this.recorder,
+    this.micKey,
   });
 
   bool get isRecording => recorder?.isRecording ?? false;
@@ -68,6 +73,7 @@ class _ComposerShellState extends State<ComposerShell> {
   final _text = TextEditingController();
   final _focus = FocusNode();
   VoiceRecorderController? _recorder;
+  final _micKey = GlobalKey(debugLabel: 'composer-mic');
   bool _canSend = false;
   bool _tooLong = false;
   String _lastText = '';
@@ -146,6 +152,7 @@ class _ComposerShellState extends State<ComposerShell> {
       canSend: _canSend,
       send: _send,
       recorder: _recorder,
+      micKey: _micKey,
     ),
   );
 }

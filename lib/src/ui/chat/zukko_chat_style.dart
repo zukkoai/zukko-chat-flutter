@@ -65,6 +65,9 @@ abstract class ChatStyle {
   /// "Powered by zukko.ai" under the composer.
   Widget buildFooter(BuildContext context, ZukkoChatL10n l10n);
 
+  /// Look of the attachment bottom sheet (photo / file).
+  AttachSheetSpec get attachSheet;
+
   /// Message builders (text, image, gallery, file, audio) and the row wrapper.
   Builders messageBuilders(ChatMessageEnv env);
 }

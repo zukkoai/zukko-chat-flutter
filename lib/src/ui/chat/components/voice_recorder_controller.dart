@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -29,7 +30,12 @@ class VoiceRecorderController extends ChangeNotifier {
     required this.onRecorded,
     required this.onIssue,
     VoiceCapture Function()? capture,
-  }) : _createCapture = capture ?? RecordVoiceCapture.new;
+  }) : _createCapture = capture ?? debugCapture ?? RecordVoiceCapture.new;
+
+  /// Tests: the microphone every recorder made without an explicit one uses
+  /// (composers create their recorder themselves).
+  @visibleForTesting
+  static VoiceCapture Function()? debugCapture;
 
   /// Kept current by the composer across rebuilds.
   ValueChanged<VoiceRecording> onRecorded;
@@ -62,6 +68,10 @@ class VoiceRecorderController extends ChangeNotifier {
   bool get willCancel => _cancelArmed;
   Duration get elapsed => _elapsed;
 
+  /// Live microphone level, 0..1, from the PCM being recorded (drives the
+  /// level bars). Back to 0 when the recording ends.
+  final level = ValueNotifier<double>(0);
+
   Future<void> start() async {
     if (_starting || _recording || _disposed) return;
     _starting = true;
@@ -81,7 +91,7 @@ class VoiceRecorderController extends ChangeNotifier {
         return;
       }
       _pcm.clear();
-      _audio = stream.listen(_pcm.add);
+      _audio = stream.listen(_onAudio);
       _recording = true;
       _cancelArmed = false;
       _elapsed = Duration.zero;
@@ -135,6 +145,14 @@ class VoiceRecorderController extends ChangeNotifier {
     if (_recording) await _stop();
   }
 
+  void _onAudio(Uint8List chunk) {
+    _pcm.add(chunk);
+    if (_disposed) return;
+    final next = pcm16Level(chunk);
+    // Fast attack, slow release: the bars do not flicker.
+    level.value = next > level.value ? next : level.value * 0.7 + next * 0.3;
+  }
+
   void _onTick() {
     _elapsed += _tick;
     if (_elapsed >= maxDuration) {
@@ -151,7 +169,10 @@ class VoiceRecorderController extends ChangeNotifier {
     _recording = false;
     _cancelArmed = false;
     _elapsed = Duration.zero;
-    if (!_disposed) notifyListeners();
+    if (!_disposed) {
+      level.value = 0;
+      notifyListeners();
+    }
     try {
       await _capture?.stop();
     } catch (e) {
@@ -169,6 +190,7 @@ class VoiceRecorderController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _timer?.cancel();
+    level.dispose();
     final capture = _capture;
     final audio = _audio;
     unawaited(() async {
@@ -177,4 +199,20 @@ class VoiceRecorderController extends ChangeNotifier {
     }());
     super.dispose();
   }
+}
+
+/// Loudness of a 16-bit little-endian PCM chunk as 0..1 (-50 dB..-10 dB).
+@visibleForTesting
+double pcm16Level(Uint8List chunk) {
+  final n = chunk.length ~/ 2;
+  if (n == 0) return 0;
+  final data = ByteData.sublistView(chunk);
+  var sum = 0.0;
+  for (var i = 0; i < n; i++) {
+    final v = data.getInt16(i * 2, Endian.little) / 32768;
+    sum += v * v;
+  }
+  final rms = math.sqrt(sum / n);
+  if (rms < 1e-5) return 0;
+  return ((20 * math.log(rms) / math.ln10 + 50) / 40).clamp(0.0, 1.0);
 }

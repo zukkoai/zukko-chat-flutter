@@ -22,6 +22,9 @@ class ThreadFeedTokens extends ChatBaseTokens {
   /// The "+N" tile over the last gallery image.
   final Color overlay;
 
+  /// Darkens the chat behind the attachment sheet.
+  final Color sheetScrim;
+
   /// Author name above a row.
   final TextStyle name;
 
@@ -40,6 +43,7 @@ class ThreadFeedTokens extends ChatBaseTokens {
     required this.online,
     required this.link,
     required this.overlay,
+    required this.sheetScrim,
     required this.name,
   }) : super.from();
 
@@ -86,6 +90,7 @@ class ThreadFeedTokens extends ChatBaseTokens {
       online: theme.pick(0xFF2F9E6E, 0xFF4CC08A),
       link: theme.accentOr((0xFF0F766E, 0xFF6CC8BB)),
       overlay: const Color(0x73141816),
+      sheetScrim: theme.pick(0x47111312, 0x99000000),
       name: theme.font(
         'Onest',
         TextStyle(

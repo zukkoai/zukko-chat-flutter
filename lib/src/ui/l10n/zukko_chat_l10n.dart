@@ -66,6 +66,39 @@ class ZukkoChatL10n {
   /// Attachment sheet: pick a file
   final String attachFileLabel;
 
+  /// Attachment sheet: title
+  final String attachSheetTitle;
+
+  /// Attachment sheet: title with the limit (Minimal Clean); `{maxMb}` is replaced by the limit, see [attachSheetTitleWithLimit]
+  final String attachSheetTitleWithLimitText;
+
+  /// Attachment sheet: subtitle of the photo option
+  final String attachImageHint;
+
+  /// Attachment sheet: longer subtitle of the photo option
+  final String attachImageHintLong;
+
+  /// Attachment sheet: shortest subtitle of the photo option
+  final String attachImageHintShort;
+
+  /// Attachment sheet: subtitle of the file option
+  final String attachFileHint;
+
+  /// Attachment sheet: shorter subtitle of the file option
+  final String attachFileHintShort;
+
+  /// Attachment sheet: note under the options; `{maxMb}` is replaced by the limit, see [attachLimitNote]
+  final String attachLimitNoteText;
+
+  /// Label of a cancel button (attachment sheet)
+  final String cancelLabel;
+
+  /// Recording hint: slide left to cancel (Smooth Silk, Thread Feed)
+  final String voiceSlideLeftToCancel;
+
+  /// Semantics label of the record button while recording
+  final String voiceRecordingButtonLabel;
+
   /// Semantics label of the voice message play button
   final String playLabel;
 
@@ -161,6 +194,17 @@ class ZukkoChatL10n {
     this.voiceMessageLabel = 'Voice message',
     this.attachImageLabel = 'Photo',
     this.attachFileLabel = 'File',
+    this.attachSheetTitle = 'Attach',
+    this.attachSheetTitleWithLimitText = 'Attach · up to {maxMb} MB each',
+    this.attachImageHint = 'From gallery',
+    this.attachImageHintLong = 'Choose from gallery',
+    this.attachImageHintShort = 'Gallery',
+    this.attachFileHint = 'PDF, document, archive',
+    this.attachFileHintShort = 'PDF, document',
+    this.attachLimitNoteText = 'Up to {maxMb} MB per file',
+    this.cancelLabel = 'Cancel',
+    this.voiceSlideLeftToCancel = 'Slide left to cancel',
+    this.voiceRecordingButtonLabel = 'Recording',
     this.playLabel = 'Play',
     this.pauseLabel = 'Pause',
     this.microphoneDeniedText =
@@ -211,6 +255,17 @@ class ZukkoChatL10n {
     voiceMessageLabel: 'Голосовое сообщение',
     attachImageLabel: 'Фото',
     attachFileLabel: 'Файл',
+    attachSheetTitle: 'Прикрепить',
+    attachSheetTitleWithLimitText: 'Прикрепить · до {maxMb} МБ на файл',
+    attachImageHint: 'Из галереи',
+    attachImageHintLong: 'Выбрать из галереи',
+    attachImageHintShort: 'Галерея',
+    attachFileHint: 'PDF, документ, архив',
+    attachFileHintShort: 'PDF, документ',
+    attachLimitNoteText: 'До {maxMb} МБ на файл',
+    cancelLabel: 'Отмена',
+    voiceSlideLeftToCancel: 'Проведите влево для отмены',
+    voiceRecordingButtonLabel: 'Идёт запись',
     playLabel: 'Воспроизвести',
     pauseLabel: 'Пауза',
     microphoneDeniedText:
@@ -261,6 +316,18 @@ class ZukkoChatL10n {
     voiceMessageLabel: 'Ovozli xabar',
     attachImageLabel: 'Rasm',
     attachFileLabel: 'Fayl',
+    attachSheetTitle: 'Biriktirish',
+    attachSheetTitleWithLimitText:
+        'Biriktirish · har bir fayl {maxMb} MB gacha',
+    attachImageHint: 'Galereyadan',
+    attachImageHintLong: 'Galereyadan tanlash',
+    attachImageHintShort: 'Galereya',
+    attachFileHint: 'PDF, hujjat, arxiv',
+    attachFileHintShort: 'PDF, hujjat',
+    attachLimitNoteText: 'Har bir fayl {maxMb} MB gacha',
+    cancelLabel: 'Bekor qilish',
+    voiceSlideLeftToCancel: 'Bekor qilish uchun chapga suring',
+    voiceRecordingButtonLabel: 'Ovoz yozilmoqda',
     playLabel: 'Tinglash',
     pauseLabel: 'Pauza',
     microphoneDeniedText:
@@ -311,6 +378,17 @@ class ZukkoChatL10n {
     voiceMessageLabel: 'Овозли хабар',
     attachImageLabel: 'Расм',
     attachFileLabel: 'Файл',
+    attachSheetTitle: 'Бириктириш',
+    attachSheetTitleWithLimitText: 'Бириктириш · ҳар бир файл {maxMb} МБ гача',
+    attachImageHint: 'Галереядан',
+    attachImageHintLong: 'Галереядан танлаш',
+    attachImageHintShort: 'Галерея',
+    attachFileHint: 'PDF, ҳужжат, архив',
+    attachFileHintShort: 'PDF, ҳужжат',
+    attachLimitNoteText: 'Ҳар бир файл {maxMb} МБ гача',
+    cancelLabel: 'Бекор қилиш',
+    voiceSlideLeftToCancel: 'Бекор қилиш учун чапга суринг',
+    voiceRecordingButtonLabel: 'Овоз ёзилмоқда',
     playLabel: 'Тинглаш',
     pauseLabel: 'Пауза',
     microphoneDeniedText: 'Овозли хабар юбориш учун микрофонга рухсат беринг',
@@ -358,6 +436,17 @@ class ZukkoChatL10n {
     voiceMessageLabel: 'Sesli mesaj',
     attachImageLabel: 'Fotoğraf',
     attachFileLabel: 'Dosya',
+    attachSheetTitle: 'Ekle',
+    attachSheetTitleWithLimitText: 'Ekle · dosya başına en fazla {maxMb} MB',
+    attachImageHint: 'Galeriden',
+    attachImageHintLong: 'Galeriden seç',
+    attachImageHintShort: 'Galeri',
+    attachFileHint: 'PDF, belge, arşiv',
+    attachFileHintShort: 'PDF, belge',
+    attachLimitNoteText: 'Dosya başına en fazla {maxMb} MB',
+    cancelLabel: 'İptal',
+    voiceSlideLeftToCancel: 'İptal için sola kaydırın',
+    voiceRecordingButtonLabel: 'Ses kaydediliyor',
     playLabel: 'Oynat',
     pauseLabel: 'Duraklat',
     microphoneDeniedText: 'Sesli mesaj göndermek için mikrofon izni verin',
@@ -406,6 +495,18 @@ class ZukkoChatL10n {
     voiceMessageLabel: 'Dawıslı xabar',
     attachImageLabel: 'Súwret',
     attachFileLabel: 'Fayl',
+    attachSheetTitle: 'Biriktiriw',
+    attachSheetTitleWithLimitText:
+        'Biriktiriw · hár bir fayl {maxMb} MB ge shekem',
+    attachImageHint: 'Galereyadan',
+    attachImageHintLong: 'Galereyadan saylaw',
+    attachImageHintShort: 'Galereya',
+    attachFileHint: 'PDF, hújjet, arxiv',
+    attachFileHintShort: 'PDF, hújjet',
+    attachLimitNoteText: 'Hár bir fayl {maxMb} MB ge shekem',
+    cancelLabel: 'Biykar etiw',
+    voiceSlideLeftToCancel: 'Biykar etiw ushın shepke súyreń',
+    voiceRecordingButtonLabel: 'Dawıs jazılıp atır',
     playLabel: 'Tıńlaw',
     pauseLabel: 'Pauza',
     microphoneDeniedText: 'Dawıslı xabar jiberiw ushın mikrofonǵa ruqsat beriń',
@@ -457,6 +558,14 @@ class ZukkoChatL10n {
   String tooManyFiles(int maxFiles) =>
       tooManyFilesText.replaceAll('{maxFiles}', '$maxFiles');
 
+  /// [attachSheetTitleWithLimitText] for a limit of [maxMb] megabytes.
+  String attachSheetTitleWithLimit(int maxMb) =>
+      attachSheetTitleWithLimitText.replaceAll('{maxMb}', '$maxMb');
+
+  /// [attachLimitNoteText] for a limit of [maxMb] megabytes.
+  String attachLimitNote(int maxMb) =>
+      attachLimitNoteText.replaceAll('{maxMb}', '$maxMb');
+
   /// [imageIndexLabel] for image [i] (1-based) of [n].
   String imageIndex(int i, int n) =>
       imageIndexLabel.replaceAll('{i}', '$i').replaceAll('{n}', '$n');
@@ -491,6 +600,17 @@ class ZukkoChatL10n {
     voiceMessageLabel,
     attachImageLabel,
     attachFileLabel,
+    attachSheetTitle,
+    attachSheetTitleWithLimitText,
+    attachImageHint,
+    attachImageHintLong,
+    attachImageHintShort,
+    attachFileHint,
+    attachFileHintShort,
+    attachLimitNoteText,
+    cancelLabel,
+    voiceSlideLeftToCancel,
+    voiceRecordingButtonLabel,
     playLabel,
     pauseLabel,
     microphoneDeniedText,

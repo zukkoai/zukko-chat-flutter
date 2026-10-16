@@ -8,6 +8,7 @@ import '../../zukko_chat_style.dart';
 import '../shared/base_chat_style.dart';
 import 'thread_feed_message_spec.dart';
 import 'thread_feed_metrics.dart';
+import 'thread_feed_attach_sheet.dart';
 import 'thread_feed_tokens.dart';
 import 'widgets/thread_feed_composer.dart';
 
@@ -31,6 +32,9 @@ class ThreadFeedStyle extends BaseChatStyle {
         footerFontSize: 11,
         footerLinkColor: tokens.link,
       );
+
+  @override
+  late final AttachSheetSpec attachSheet = threadFeedAttachSheet(tokens);
 
   @override
   late final MessageStyleSpec messageSpec = threadFeedMessageSpec(tokens);

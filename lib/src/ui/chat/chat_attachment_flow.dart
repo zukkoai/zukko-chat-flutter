@@ -14,17 +14,11 @@ Future<void> attachToChat(
   BuildContext context, {
   required ZukkoChatController controller,
   required ZukkoChatL10n l10n,
-  required Color background,
-  required Color foreground,
+  required AttachSheetSpec spec,
   required bool Function() isMounted,
   required void Function(String text) notify,
 }) async {
-  final pick = await pickWithSheet(
-    context,
-    l10n: l10n,
-    background: background,
-    foreground: foreground,
-  );
+  final pick = await pickWithSheet(context, l10n: l10n, spec: spec);
   if (!isMounted()) return;
   final warning = attachmentWarning(l10n, pick);
   if (warning != null) notify(warning);

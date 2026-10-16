@@ -18,8 +18,7 @@ EdgeInsets composerInsets(
   return EdgeInsets.fromLTRB(x, top, x, bottom);
 }
 
-/// The slot of the text: the text field, or the recording bar while a voice
-/// message is being recorded. At least [minHeight] high, it grows with the
+/// The slot of the text field. At least [minHeight] high, it grows with the
 /// text scale instead of clipping.
 class ComposerInput extends StatelessWidget {
   final ComposerHandle handle;
@@ -37,21 +36,6 @@ class ComposerInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recorder = handle.recorder;
-    if (recorder != null && recorder.isRecording) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: minHeight),
-        child: VoiceRecordingBar(
-          recorder: recorder,
-          cancelHint: l10n.voiceCancelHint,
-          releaseToCancel: l10n.voiceReleaseToCancel,
-          timerStyle: tokens.body,
-          hintStyle: tokens.status,
-          dotColor: tokens.error,
-          semanticLabel: l10n.voiceRecordingLabel,
-        ),
-      );
-    }
     return ComposerTextField(
       handle: handle,
       hintText: l10n.inputPlaceholder,
@@ -167,6 +151,9 @@ class ComposerMicButton extends StatelessWidget {
   final double absentWidth;
   final ComposerMicTile? tile;
 
+  /// How the mic looks while recording; null keeps the plain accent look.
+  final VoiceRecordingSpec? recording;
+
   const ComposerMicButton({
     super.key,
     required this.handle,
@@ -176,39 +163,46 @@ class ComposerMicButton extends StatelessWidget {
     this.iconSize = 22,
     this.absentWidth = 0,
     this.tile,
+    this.recording,
   });
 
   @override
   Widget build(BuildContext context) {
     final recorder = handle.recorder;
     if (recorder == null) return SizedBox(width: absentWidth);
-    final recording = recorder.isRecording;
+    final isRecording = recorder.isRecording;
     final t = tile;
-    final Widget visual = t == null
+    final spec = recording;
+    final Widget visual = isRecording && spec != null
+        ? VoiceMicRecording(spec: spec)
+        : t == null
         ? SizedBox.square(
             dimension: size,
             child: Icon(
               Icons.mic_none_rounded,
               size: iconSize,
-              color: recording ? tokens.accent : tokens.icon,
+              color: isRecording ? tokens.accent : tokens.icon,
             ),
           )
         : Container(
             width: t.size,
             height: t.size,
             decoration: BoxDecoration(
-              color: recording ? tokens.accent : t.fill,
+              color: isRecording ? tokens.accent : t.fill,
               borderRadius: BorderRadius.circular(t.radius),
             ),
             child: Icon(
               Icons.mic_none_rounded,
               size: t.iconSize,
-              color: recording ? tokens.onAccent : t.iconColor,
+              color: isRecording ? tokens.onAccent : t.iconColor,
             ),
           );
     return VoiceRecordButton(
+      key: handle.micKey,
       recorder: recorder,
-      semanticLabel: l10n.voiceRecordLabel,
+      semanticLabel: isRecording
+          ? l10n.voiceRecordingButtonLabel
+          : l10n.voiceRecordLabel,
       child: visual,
     );
   }

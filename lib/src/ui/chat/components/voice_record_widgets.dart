@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../../../shared/format.dart';
 import 'voice_recorder_controller.dart';
 
 /// Wraps the microphone visual: long press records, sliding towards the
@@ -46,71 +45,6 @@ class VoiceRecordButton extends StatelessWidget {
         onLongPressCancel: () => unawaited(recorder.cancel()),
         child: child,
       ),
-    );
-  }
-}
-
-/// Replaces the text field while recording: timer and the cancel hint.
-class VoiceRecordingBar extends StatelessWidget {
-  final VoiceRecorderController recorder;
-  final String cancelHint;
-  final String releaseToCancel;
-  final TextStyle timerStyle;
-  final TextStyle hintStyle;
-  final Color dotColor;
-
-  /// Announced to screen readers when the bar appears ("Recording...").
-  final String? semanticLabel;
-
-  const VoiceRecordingBar({
-    super.key,
-    required this.recorder,
-    required this.cancelHint,
-    required this.releaseToCancel,
-    required this.timerStyle,
-    required this.hintStyle,
-    required this.dotColor,
-    this.semanticLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final hint = recorder.willCancel ? releaseToCancel : cancelHint;
-    final label = semanticLabel;
-    final row = Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          formatDuration(recorder.elapsed),
-          style: timerStyle.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            hint,
-            style: hintStyle,
-            textAlign: TextAlign.end,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-    if (label == null) return row;
-    // One live region: announced once on appear and when the hint changes,
-    // not on every timer tick.
-    return Semantics(
-      liveRegion: true,
-      label: '$label. $hint',
-      excludeSemantics: true,
-      child: row,
     );
   }
 }
