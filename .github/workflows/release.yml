@@ -64,5 +64,5 @@ jobs:
             exit 1
           fi
       - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart run build_runner build
       - run: flutter pub publish --force

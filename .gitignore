@@ -79,6 +79,7 @@ build/
 
 # Test / coverage output
 coverage/
+**/test/**/failures/
 lcov.info
 
 # Dart convention: a package does not commit its lockfile (example/pubspec.lock is tracked)
