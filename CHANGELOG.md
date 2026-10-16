@@ -10,7 +10,7 @@ First release of the Zukko fork: a native chat UI on the Zukko Chat Widget API, 
 - Native only: the webview widget and `ChatwootChatDialog` are removed.
 - Single entrypoint `package:zukko_chat_flutter/zukko_chat_flutter.dart`; other library paths stop working.
 - Enum values are lowerCamelCase with unchanged wire codes (`ZukkoChatExceptionType.storageFailed.wire == 'STORAGE_FAILED'`).
-- `baseUrl` must be `https://` (plain `http://` only for localhost or with `allowInsecure: true`).
+- `baseUrl` must be `https://` (plain `http://` is rejected, also for localhost; the socket uses `wss://`).
 - Minimum Dart `^3.13.0`, Flutter `>=3.47.0`.
 
 ### Added
