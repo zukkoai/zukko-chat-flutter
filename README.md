@@ -156,7 +156,7 @@ Add the package:
 
 ```yaml
 dependencies:
-  zukko_chat_flutter: ^0.1.0
+  zukko_chat_flutter: ^1.0.0
 ```
 
 ```
