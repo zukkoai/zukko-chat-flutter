@@ -4,10 +4,11 @@
 .claude/
 CLAUDE.md
 TODO.md
+CHATWOOT-BACKEND.md
 CHANGELOGS/
 /test/
 /example/test/
-doc/ZukkoWidgetSdk.md
+doc/
 
 # Miscellaneous
 *.class

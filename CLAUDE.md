@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Flutter package `zukko_chat_flutter` (Zukko Chat SDK, iOS + Android). Talks to the Zukko Chat server's Widget API.
-Server repo: `/Users/alisherakhmedov/Desktop/Work/microservices/chat`. Server contract + decisions: `doc/ZukkoWidgetSdk.md`. Open work: `TODO.md` (local only, gitignored).
+Server repo: `/Users/alisherakhmedov/Desktop/Work/microservices/chat`. Server contract + decisions: `doc/ZukkoWidgetSdk.md`. Open work: `TODO.md`. Both `doc/` and `TODO.md` are local only (gitignored and pubignored).
 
 ## Owner rules (follow exactly)
 
