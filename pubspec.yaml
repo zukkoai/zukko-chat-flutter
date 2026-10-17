@@ -1,8 +1,8 @@
 name: zukko_chat_flutter
 description: "Native Flutter chat SDK for Zukko Chat: real-time messaging, file and voice attachments, three customizable UI styles, light/dark themes and secure HMAC user identity."
 homepage: https://zukko.ai/en
-repository: https://github.com/alisheraxmedov/zukko-chat-flutter
-issue_tracker: https://github.com/alisheraxmedov/zukko-chat-flutter/issues
+repository: https://github.com/zukkoai/zukko-chat-flutter
+issue_tracker: https://github.com/zukkoai/zukko-chat-flutter/issues
 version: 0.1.0
 
 environment:
