@@ -3,7 +3,7 @@ description: "Native Flutter chat SDK for Zukko Chat: real-time messaging, file 
 homepage: https://zukko.ai/en
 repository: https://github.com/zukkoai/zukko-chat-flutter
 issue_tracker: https://github.com/zukkoai/zukko-chat-flutter/issues
-version: 1.0.0
+version: 1.0.1
 
 environment:
   sdk: "^3.13.0"
