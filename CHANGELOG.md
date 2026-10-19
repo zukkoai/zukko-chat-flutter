@@ -1,3 +1,7 @@
+## 1.0.1 - 2026-10-19
+
+- README: logos shown as fixed-size badges, style demo GIFs load on pub.dev.
+
 ## 1.0.0 - 2026-10-17
 
 First release.
